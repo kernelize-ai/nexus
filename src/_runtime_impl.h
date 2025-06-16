@@ -38,8 +38,8 @@ namespace nexus {
                     (*fn)(pn, &val, &size);
                 return val;
             }
-            template <>
-            const std::string getProperty<std::string>(nxs_property pn) const;
+
+            const std::string getProperty(nxs_property pn) const;
 
             template <nxs_function Tfn, typename... Args>
             nxs_int runAPIFunction(Args... args) {

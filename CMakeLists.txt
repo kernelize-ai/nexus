@@ -8,11 +8,35 @@ endif()
 
 include(ExternalProject)
 
+set(CMAKE_C_COMPILER clang)
+set(CMAKE_CXX_COMPILER clang++)
 set(CMAKE_CXX_STANDARD 17)
-
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
+if(CMAKE_SYSTEM_NAME MATCHES "Linux")
+
+    set(CMAKE_CXX_FLAGS_INIT "-stdlib=libc++")
+    set(CMAKE_EXE_LINKER_FLAGS_INIT "-stdlib=libc++")
+
+endif()
+
 project(nexus CXX C)
+
+if(CMAKE_SYSTEM_NAME MATCHES "Linux")
+
+    set(LINUX TRUE)
+    set(ENV{PLATFORM_OS} "Linux")
+    message(STATUS "Target system: Linux")
+
+elseif(CMAKE_SYSTEM_NAME MATCHES "Darwin")
+
+    set(MACOS TRUE)
+    set(ENV{PLATFORM_OS} "MacOS")
+    message(STATUS "Target system: MacOS")
+
+endif()
+
 #include(CTest)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
@@ -81,13 +105,6 @@ include_directories(${PROJECT_SOURCE_DIR}/third_party/magic_enum/include)
 
 # link_directories(${LLVM_LIBRARY_DIR})
 #add_subdirectory(include)
-
-# TODO: Figure out which target is sufficient to fix errors; NEXUS is
-# apparently not enough. Currently set linking libstdc++fs for all targets
-# to support some old version GCC compilers like 8.3.0.
-if (NOT WIN32 AND NOT APPLE AND NOT BSD)
-  link_libraries(stdc++fs)
-endif()
 
 # -----
 add_subdirectory(third_party/json json)

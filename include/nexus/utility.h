@@ -2,6 +2,7 @@
 #define NEXUS_UTILITY_H
 
 #include <functional>
+#include <vector>
 #include <string>
 
 namespace nexus {

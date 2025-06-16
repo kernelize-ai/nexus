@@ -1,4 +1,6 @@
 
+#include <cstring>
+
 #include <nexus/buffer.h>
 #include <nexus/system.h>
 #include <nexus/log.h>

@@ -3,8 +3,10 @@
 
 #include <memory>
 #include <vector>
-#include <nexus-api.h>
+#include <optional>
 
+
+#include <nexus-api.h>
 #include <nexus/property.h>
 
 namespace nexus {
