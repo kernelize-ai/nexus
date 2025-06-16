@@ -76,7 +76,7 @@ First clone the repo.
 git clone https://github.com/kernelize-ai/nexus.git
 cd nexus
 ## ??
-git submodule init --update
+git submodule update --init
 ```
 
 Then create the environment.
