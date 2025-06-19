@@ -1,6 +1,8 @@
 
 if(LINUX)
 
+    include_directories(include)
+
     include(CheckLanguage)
     check_language(CUDA)
 
