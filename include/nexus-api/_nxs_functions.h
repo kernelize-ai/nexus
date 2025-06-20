@@ -3,6 +3,8 @@
 
 /* clang-format off */
 
+#include <string>
+
 #if defined(NEXUS_API_GENERATE_FUNC_DECL)
 /************************************************************************
  * Generate the Function declarations
@@ -368,7 +370,6 @@ NEXUS_API_FUNC(nxs_status, FinalizeCommand,
     nxs_int group_size,
     nxs_int grid_size
 )
-
 
 
 #ifdef NEXUS_API_GENERATE_FUNC_ENUM

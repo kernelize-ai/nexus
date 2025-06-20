@@ -24,7 +24,7 @@ if(LINUX)
 
     endif()
 
-    add_subdirectory(hip)
+    #add_subdirectory(hip)
 
 elseif(MACOS)
 

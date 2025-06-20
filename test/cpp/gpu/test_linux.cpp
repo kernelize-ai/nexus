@@ -8,45 +8,39 @@ std::vector<std::string_view> nexusArgs;
 
 int main() {
   auto sys = nexus::getSystem();
-  /*auto rt = sys.getRuntime(1);
+  auto rt = sys.getRuntime(0);
 
-  auto count = rt.getDevices().size();
-
-  std::cout << "RUNTIME: " << rt.getProp<std::string>(NP_Name) << " - " << count
-  << std::endl;
-
-  for (int i = 0; i < count; ++i) {
-    auto dev = rt.getDevice(i);
-    std::cout << "  Device: " << dev.getProp<std::string>(NP_Name) << " - " <<
-  dev.getProp<std::string>(NP_Architecture) << std::endl;
-  }
-  std::vector<char> data(1024, 1);
-  std::vector<float> vecA(1024, 1.0);
-  std::vector<float> vecB(1024, 2.0);
-  std::vector<float> vecResult_GPU(1024, 0.0); // For GPU result
-
-  size_t size = 1024 * sizeof(float);
+  auto devCount = rt.getDeviceCount();
 
   auto dev0 = rt.getDevice(0);
 
-  // std::ifstream f("kernel.so", std::ios::binary);
-  // std::vector<char> soData;
-  // soData.insert(soData.begin(), std::istream_iterator<char>(f),
-  std::istream_iterator<char>());
-
-  auto nlib = dev0.createLibrary("kernel.so");
-
+  auto nlib = dev0.createLibrary("cuda_kernels/add_vectors.ptx");
   auto kern = nlib.getKernel("add_vectors");
-  std::cout << "   Kernel: " << kern.getId() << std::endl;
 
+  //auto kernelID = dev0.loadKernel("add_vectors");
+
+  std::cout << "Kernel ID: " << kern.getId() << std::endl;
+
+  size_t size = 1024 * sizeof(float);
+
+  std::vector<float> vecA(1024, 1.0);
   auto buf0 = dev0.createBuffer(size, vecA.data());
+  std::cout << "Buffer 0 ID: " << buf0.getId() << std::endl;
+
+  std::vector<float> vecB(1024, 2.0);
   auto buf1 = dev0.createBuffer(size, vecB.data());
-  auto buf2 = dev0.createBuffer(size, vecResult_GPU.data());
+  std::cout << "Buffer 1 ID: " << buf1.getId() << std::endl;
+
+  std::vector<float> vecC(1024, 0.0);
+  auto buf2 = dev0.createBuffer(size, vecC.data());
+  std::cout << "Buffer 2 ID: " << buf2.getId() << std::endl;
 
   auto sched = dev0.createSchedule();
 
   auto cmd = sched.createCommand(kern);
-  cmd.setArgument(0, buf0);
+
+
+  cmd.setArgument(0, buf0); 
   cmd.setArgument(1, buf1);
   cmd.setArgument(2, buf2);
 
@@ -54,6 +48,7 @@ int main() {
 
   sched.run();
 
+  std::vector<float> vecResult_GPU(1024, 0.0); // For GPU result
   buf2.copy(vecResult_GPU.data());
 
   int i = 0;
@@ -62,8 +57,9 @@ int main() {
       std::cout << "Fail: result[" << i << "] = " << v << std::endl;
     }
     ++i;
-  }*/
-  std::cout << "Test PASSED" << std::endl;
+  }
 
+  std::cout << std::endl << "Linux Test PASSED" << std::endl << std::endl;
+  
   return 0;
 }
