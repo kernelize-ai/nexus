@@ -10,7 +10,11 @@ if(LINUX)
 
         enable_language(CUDA)
         set(CUDA_AVAILABLE TRUE)
+
+        find_package(CUDAToolkit REQUIRED)
+
         add_subdirectory(cuda)
+
 
     else()
 

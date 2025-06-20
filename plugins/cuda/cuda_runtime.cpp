@@ -4,6 +4,10 @@
 #include <vector>
 #include <iostream>
 #include <optional>
+#include <memory>
+
+#include <cuda_runtime.h>
+#include <cuda.h>
 
 #define NXSAPI_LOGGING
 #include <runtime_device.h>
@@ -19,16 +23,32 @@
 class CudaRuntime {
   std::vector<void *> objects;
 
-
 public:
 
-  Devices *cDevices;
-
+  Devices cDevices;
 
   CudaRuntime() {
-    Device dev = Device();
+
+    CUresult cuResult = cuInit(0);
+
+    NXSAPI_LOG(NXSAPI_STATUS_NOTE, "CUDA Runtime initialized with result: " << cuResult);
+
+    probeCudaDevices();
+
   }
-  ~CudaRuntime() {
+
+  ~CudaRuntime() = default;
+
+  void probeCudaDevices() {
+    int deviceCount;
+    cudaGetDeviceCount(&deviceCount);
+    
+    for (int i = 0; i < deviceCount; i++) {
+        cudaDeviceProp prop;
+        cudaGetDeviceProperties(&prop, i);
+
+        this->cDevices.emplace_back(prop.name, prop.uuid.bytes, prop.pciBusID);
+    }
   }
 
   nxs_int getDeviceCount() const {

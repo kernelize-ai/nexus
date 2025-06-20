@@ -3,7 +3,6 @@
 
 #include <string>
 #include <vector>
-#include <memory>
 
 enum class DeviceType {
     GPU = 0,
@@ -25,33 +24,28 @@ struct DeviceID {
 class Device {
 public:
 
-    Device() {};
-    ~Device() {};
+    Device(char* name, char* uuid, int busID): busID(busID)
+    {
+        if (name)
+            this->name = name;
 
-    // No copy, allow move
+        if (uuid)
+            this->uuid = uuid;
+    }
+
+    ~Device() = default;
+
     Device(const Device&) = delete;
     Device& operator=(const Device&) = delete;
     Device(Device&&) = default;
     Device& operator=(Device&&) = default;
 
-    // Basic device info
-    bool probe();
-    bool is_present() const { return state_ == DeviceState::PRESENT || state_ == DeviceState::ACTIVE; }
-    DeviceType get_device_type() const { return device_type_; }
-    DeviceState get_state() const { return state_; }
-    const DeviceID& get_device_id() const { return device_id_; }
-    const std::string& get_sysfs_path() const { return sysfs_path_; }
-
 private:
 
-    DeviceID device_id_;
-    DeviceType device_type_;
-    DeviceState state_ = DeviceState::UNKNOWN;
-    std::string sysfs_path_;
+    std::string name;
+    std::string uuid;
+    int  busID = 0;
     
-    bool parse_device_info();
-    DeviceType determine_device_type() const;
-
 };
 
     typedef std::vector<Device> Devices;
