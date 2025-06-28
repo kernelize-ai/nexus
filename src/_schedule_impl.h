@@ -19,10 +19,10 @@ class ScheduleImpl : public Impl {
 
   Command getCommand(Kernel kern);
 
-  nxs_status run(nxs_bool blocking);
+  nxs_status run(Stream stream, nxs_bool blocking);
 
  private:
-  Objects<Command> commands;
+  Commands commands;
 };
 }  // namespace detail
 }  // namespace nexus

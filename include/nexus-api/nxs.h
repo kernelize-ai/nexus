@@ -86,9 +86,10 @@ enum _nxs_status {
     NXS_InvalidLibrary                       = -84,
     NXS_InvalidRuntime                       = -85,
     NXS_InvalidSchedule                      = -86,
-    NXS_InvalidSystem                        = -87,
+    NXS_InvalidStream                        = -87,
+    NXS_InvalidSystem                        = -88,
 
-    NXS_STATUS_MIN                           = -87,
+    NXS_STATUS_MIN                           = -88,
     NXS_STATUS_MAX                           = 0,
     NXS_STATUS_PREFIX_LEN                    = 4
 };

@@ -38,9 +38,9 @@ Command ScheduleImpl::getCommand(Kernel kern) {
   return cmd;
 }
 
-nxs_status ScheduleImpl::run(nxs_bool blocking) {
+nxs_status ScheduleImpl::run(Stream stream, nxs_bool blocking) {
   auto *rt = getParentOfType<RuntimeImpl>();
-  return (nxs_status)rt->runAPIFunction<NF_nxsRunSchedule>(getId(), blocking);
+  return (nxs_status)rt->runAPIFunction<NF_nxsRunSchedule>(getId(), stream.getId(), blocking);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -54,4 +54,4 @@ std::optional<Property> Schedule::getProperty(nxs_int prop) const {
 
 Command Schedule::createCommand(Kernel kern) { NEXUS_OBJ_MCALL(Command(), getCommand, kern); }
 
-nxs_status Schedule::run(nxs_bool blocking) { NEXUS_OBJ_MCALL(NXS_InvalidSchedule, run, blocking); }
+nxs_status Schedule::run(Stream stream, nxs_bool blocking) { NEXUS_OBJ_MCALL(NXS_InvalidSchedule, run, stream, blocking); }

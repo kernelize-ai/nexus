@@ -10,12 +10,11 @@
 /// @brief  NOT USED, see json in Device or nexus-api
 namespace nexus {
 
-using Prop = std::variant<nxs_long, nxs_double, std::string>;
 using PropIntVec = std::vector<nxs_long>;
 using PropFltVec = std::vector<nxs_double>;
 using PropStrVec = std::vector<std::string>;
 
-using PropVariant = std::variant<Prop, PropStrVec, PropIntVec, PropFltVec>;
+using PropVariant = std::variant<nxs_long, nxs_double, std::string, PropStrVec, PropIntVec, PropFltVec>;
 
 class Property : public PropVariant {
  public:
@@ -23,12 +22,12 @@ class Property : public PropVariant {
 
   template <nxs_property Tnp>
   typename nxsPropertyType<Tnp>::type getValue() const {
-    return std::get<typename nxsPropertyType<Tnp>::type>(std::get<Prop>(*this));
+    return std::get<typename nxsPropertyType<Tnp>::type>(*this);
   }
 
   template <typename T>
   T getValue() const {
-    return std::get<T>(std::get<Prop>(*this));
+    return std::get<T>(*this);
   }
 
   template <typename T>

@@ -12,6 +12,7 @@ add_library(nexus-api SHARED
     device.cpp
     device_db.cpp
     utility.cpp
+    stream.cpp
     system.cpp
     runtime.cpp
     ${CMAKE_SOURCE_DIR}/api-src/nxs_api.cpp

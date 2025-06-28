@@ -9,6 +9,8 @@
 #include <nexus/library.h>
 #include <nexus/properties.h>
 #include <nexus/runtime.h>
+#include <nexus/schedule.h>
+#include <nexus/stream.h>
 #include <nexus/system.h>
 
 #endif  // NEXUS_H

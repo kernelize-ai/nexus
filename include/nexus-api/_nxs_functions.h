@@ -183,6 +183,35 @@ NEXUS_API_FUNC(nxs_status, GetKernelProperty,
 )
 
 /************************************************************************
+ * @def CreateStream
+ * @brief Create stream on the device
+ * @return Negative value is an error status.
+ *         Non-negative is the bufferId.
+ ***********************************************************************/
+NEXUS_API_FUNC(nxs_int, CreateStream,
+    nxs_int device_id,
+    nxs_uint stream_properties
+)
+/************************************************************************
+ * @def GetStreamProperty
+ * @brief Return Stream properties 
+ ***********************************************************************/
+NEXUS_API_FUNC(nxs_status, GetStreamProperty,
+    nxs_int stream_id,
+    nxs_uint stream_property_id,
+    void *property_value,
+    size_t* property_value_size
+)
+/************************************************************************
+ * @def ReleaseStream
+ * @brief Release the buffer on the device
+  * @return Error status or Succes.
+***********************************************************************/
+NEXUS_API_FUNC(nxs_status, ReleaseStream,
+    nxs_int stream_id
+)
+
+/************************************************************************
  * @def CreateSchedule
  * @brief Create schedule on the device
  * @return Negative value is an error status.
@@ -209,6 +238,7 @@ NEXUS_API_FUNC(nxs_status, GetScheduleProperty,
 ***********************************************************************/
 NEXUS_API_FUNC(nxs_status, RunSchedule,
     nxs_int schedule_id,
+    nxs_int stream_id,
     nxs_bool blocking
 )
 /************************************************************************

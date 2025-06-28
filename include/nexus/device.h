@@ -6,6 +6,7 @@
 #include <nexus/library.h>
 #include <nexus/properties.h>
 #include <nexus/schedule.h>
+#include <nexus/stream.h>
 
 #include <optional>
 #include <string>
@@ -35,14 +36,17 @@ class Device : public Object<detail::DeviceImpl, detail::RuntimeImpl> {
   // Runtime functions
   Librarys getLibraries() const;
   Schedules getSchedules() const;
-
+  Streams getStreams() const;
+  
+  Stream createStream();
   Schedule createSchedule();
-
+  
   Library createLibrary(void *libraryData, size_t librarySize);
   Library createLibrary(const std::string &libraryPath);
 
   Buffer createBuffer(size_t _sz, const void *_hostData = nullptr);
   Buffer copyBuffer(Buffer buf);
+  Buffers getBuffers() const;
 };
 
 typedef Objects<Device> Devices;

@@ -100,6 +100,14 @@ Schedule detail::DeviceImpl::createSchedule() {
   return sched;
 }
 
+Stream detail::DeviceImpl::createStream() {
+  NEXUS_LOG(NEXUS_STATUS_NOTE, "  createStream");
+  APICALL(nxsCreateStream, getId(), 0);
+  Stream stream(detail::Impl(this, apiResult));
+  streams.add(stream);
+  return stream;
+}
+
 Buffer detail::DeviceImpl::createBuffer(size_t size, const char *data) {
   NEXUS_LOG(NEXUS_STATUS_NOTE, "  createBuffer");
   APICALL(nxsCreateBuffer, getId(), size, 0, (void *)data);
@@ -134,6 +142,12 @@ Properties Device::getInfo() const { NEXUS_OBJ_MCALL(Properties(), getInfo); }
 Librarys Device::getLibraries() const { NEXUS_OBJ_MCALL(Librarys(), getLibraries); }
 
 Schedules Device::getSchedules() const { NEXUS_OBJ_MCALL(Schedules(), getSchedules); }
+
+Streams Device::getStreams() const { NEXUS_OBJ_MCALL(Streams(), getStreams); }
+
+Buffers Device::getBuffers() const { NEXUS_OBJ_MCALL(Buffers(), getBuffers); }
+
+Stream Device::createStream() { NEXUS_OBJ_MCALL(Stream(), createStream); }
 
 Schedule Device::createSchedule() { NEXUS_OBJ_MCALL(Schedule(), createSchedule); }
 

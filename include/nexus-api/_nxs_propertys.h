@@ -59,6 +59,7 @@ typedef std::string _prop_str;
 typedef std::vector<nxs_long> _prop_int_vec;
 typedef std::vector<nxs_double> _prop_flt_vec;
 typedef std::vector<std::string> _prop_str_vec;
+typedef std::vector<void *> _prop_obj_vec;
 
 template <nxs_property Tnp>
 struct nxsPropertyType { typedef void *type; };
@@ -68,6 +69,7 @@ typedef char * _prop_str;
 typedef void * _prop_int_vec;
 typedef void * _prop_flt_vec;
 typedef void * _prop_str_vec;
+typedef void * _prop_obj_vec;
 #endif
 
 // Generate the Property typedefs
@@ -113,8 +115,19 @@ NEXUS_API_PROP(Version,         _prop_str,        "Version String")
 NEXUS_API_PROP(MajorVersion,    _prop_int,        "Major Version")
 NEXUS_API_PROP(MinorVersion,    _prop_int,        "Minor Version")
 
-NEXUS_API_PROP(CoreSubsystem,   _prop_str_vec,    "Core Subsystem Hierarchy")
-NEXUS_API_PROP(MemorySubsystem, _prop_str_vec,    "Memory Subsystem Hierarchy")
+NEXUS_API_PROP(CoreSubsystem,   _prop_obj_vec,    "Core Subsystem Hierarchy")
+NEXUS_API_PROP(MemorySubsystem, _prop_obj_vec,    "Memory Subsystem Hierarchy")
+
+NEXUS_API_PROP(Limits,          _prop_obj_vec,    "System limits")
+
+NEXUS_API_PROP(MaxThreadsPerThreadgroup, _prop_int,    "Max threads per threadgroup")
+NEXUS_API_PROP(MaxThreadgroupsPerCore,   _prop_int,    "Max threadgroups per Core")
+NEXUS_API_PROP(MaxThreadgroupMemorySize, _prop_int,    "Max threadgroup memory size")
+
+NEXUS_API_PROP(Location,        _prop_str,        "Location")
+NEXUS_API_PROP(MaxTransferRate, _prop_int,        "Max transfer rate (bytes/sec)")
+NEXUS_API_PROP(UnifiedMemory,   _prop_int,        "Unified Memory")
+NEXUS_API_PROP(MaxBufferSize,   _prop_int,        "Max buffer size")
 
 NEXUS_API_PROP(DataTypes,       _prop_str_vec,    "Data Types")
 NEXUS_API_PROP(ClockModes,      _prop_str_vec,    "Clock Modes")

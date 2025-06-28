@@ -18,7 +18,7 @@ class DeviceImpl : public Impl {
   Buffers buffers;
   Librarys libraries;
   Schedules schedules;
-
+  Streams streams;
  public:
   DeviceImpl(Impl base);
   virtual ~DeviceImpl();
@@ -35,10 +35,14 @@ class DeviceImpl : public Impl {
   // Runtime functions
   Librarys getLibraries() const { return libraries; }
   Schedules getSchedules() const { return schedules; }
+  Streams getStreams() const { return streams; }
+  Buffers getBuffers() const { return buffers; }
 
+  Stream createStream();
+  Schedule createSchedule();
+  
   Library createLibrary(const std::string &path);
   Library createLibrary(void *libraryData, size_t size);
-  Schedule createSchedule();
 
   Buffer createBuffer(size_t size, const char *data = nullptr);
   Buffer copyBuffer(Buffer buf);

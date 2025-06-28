@@ -35,6 +35,17 @@ class Command : public Object<detail::CommandImpl, detail::ScheduleImpl> {
 
 typedef Objects<Command> Commands;
 
+class Event : public Command {
+ public:
+ typedef std::function<void(nxs_status)> Callback;
+
+  Event(detail::Impl owner);
+
+  nxs_status setCallback(Callback callback);
+
+  nxs_status wait();
+};
+
 }  // namespace nexus
 
 #endif  // NEXUS_COMMAND_H

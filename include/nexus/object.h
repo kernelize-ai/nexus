@@ -91,6 +91,8 @@ class Objects {
  public:
   Objects() : objects(std::make_shared<ObjectVec>()) {}
 
+  operator bool() const { return objects && !objects->empty(); }
+  
   nxs_int size() const { return objects->size(); }
   nxs_int add(Tobject obj) {
     objects->push_back(obj);

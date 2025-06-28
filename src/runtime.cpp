@@ -96,10 +96,10 @@ void RuntimeImpl::loadPlugin() {
       !runtimeFns[NF_nxsGetDeviceProperty])
     return;
 
-  // Load device properties
+  // Load devices
   if (auto deviceCount = getProperty(NP_Size)) {
     for (int i = 0; i < deviceCount->getValue<nxs_long>(); ++i)
-      devices.add(Impl(this, i));
+      devices.add(Impl(this, i)); // DEVICE IDs MUST BE 0..N
   }
 }
 

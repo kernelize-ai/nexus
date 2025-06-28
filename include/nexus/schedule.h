@@ -3,9 +3,8 @@
 
 #include <nexus-api.h>
 #include <nexus/command.h>
+#include <nexus/stream.h>
 #include <nexus/object.h>
-
-#include <list>
 
 namespace nexus {
 
@@ -28,7 +27,10 @@ class Schedule : public Object<detail::ScheduleImpl, detail::DeviceImpl> {
 
   Command createCommand(Kernel kern);
 
-  nxs_status run(nxs_bool blocking = true);
+  Event createEvent();
+  nxs_status addEvent(Event event);
+
+  nxs_status run(Stream stream = Stream(), nxs_bool blocking = true);
 };
 
 typedef Objects<Schedule> Schedules;
