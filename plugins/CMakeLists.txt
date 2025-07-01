@@ -1,7 +1,9 @@
 
-if(LINUX)
+include_directories(include)
 
-    include_directories(include)
+add_subdirectory(cpu)
+
+if(LINUX)
 
     include(CheckLanguage)
     check_language(CUDA)

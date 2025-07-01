@@ -6,8 +6,6 @@ if(POLICY CMP0116)
   cmake_policy(SET CMP0116 OLD)
 endif()
 
-include(ExternalProject)
-
 set(CMAKE_C_COMPILER clang)
 set(CMAKE_CXX_COMPILER clang++)
 set(CMAKE_CXX_STANDARD 17)
@@ -103,11 +101,11 @@ endif()
 include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${PROJECT_SOURCE_DIR}/third_party/magic_enum/include)
 
-# link_directories(${LLVM_LIBRARY_DIR})
-#add_subdirectory(include)
-
 # -----
 add_subdirectory(third_party/json json)
+
+# ------
+# Core API source directory
 add_subdirectory(src)
 
 # ------

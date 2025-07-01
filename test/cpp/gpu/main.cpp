@@ -1,5 +1,6 @@
 #include <nexus.h>
 
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <numeric>
@@ -7,38 +8,54 @@
 std::vector<std::string_view> nexusArgs;
 
 int main() {
-
   auto sys = nexus::getSystem();
-  /*auto rt = sys.getRuntime(1);
+  auto runtimes = sys.getRuntimes();
+
+  // Find the first runtime with a valid device
+  nexus::Runtime rt;
+  nexus::Device dev0;
+
+  for (auto runtime : runtimes) {
+    auto type = runtime.getProp<std::string>(NP_Type);
+    if (type == "gpu") {
+      auto devices = runtime.getDevices();
+      if (!devices.empty()) {
+        rt = runtime;
+        dev0 = devices[0];
+        break;
+      }
+    }
+  }
+
+  if (!rt || !dev0) {
+    std::cout << "No runtime with valid devices found" << std::endl;
+    return 1;
+  }
 
   auto count = rt.getDevices().size();
 
   std::cout << "RUNTIME: " << rt.getProp<std::string>(NP_Name) << " - " << count
-  << std::endl;
+            << std::endl;
 
   for (int i = 0; i < count; ++i) {
     auto dev = rt.getDevice(i);
-    std::cout << "  Device: " << dev.getProp<std::string>(NP_Name) << " - " <<
-  dev.getProp<std::string>(NP_Architecture) << std::endl;
+    std::cout << "  Device: " << dev.getProp<std::string>(NP_Name) << " - "
+              << dev.getProp<std::string>(NP_Architecture) << std::endl;
   }
   std::vector<char> data(1024, 1);
   std::vector<float> vecA(1024, 1.0);
   std::vector<float> vecB(1024, 2.0);
-  std::vector<float> vecResult_GPU(1024, 0.0); // For GPU result
+  std::vector<float> vecResult_GPU(1024, 0.0);  // For GPU result
 
   size_t size = 1024 * sizeof(float);
 
-  auto dev0 = rt.getDevice(0);
+  const char *metallib = std::getenv("NEXUS_TEST_LIB");
+  if (metallib == nullptr) metallib = "kernel.metallib";
 
-  // std::ifstream f("kernel.so", std::ios::binary);
-  // std::vector<char> soData;
-  // soData.insert(soData.begin(), std::istream_iterator<char>(f),
-  std::istream_iterator<char>());
-
-  auto nlib = dev0.createLibrary("kernel.so");
+  auto nlib = dev0.createLibrary(metallib);
 
   auto kern = nlib.getKernel("add_vectors");
-  std::cout << "   Kernel: " << kern.getId() << std::endl;
+  if (!kern) return -1;
 
   auto buf0 = dev0.createBuffer(size, vecA.data());
   auto buf1 = dev0.createBuffer(size, vecB.data());
@@ -63,7 +80,7 @@ int main() {
       std::cout << "Fail: result[" << i << "] = " << v << std::endl;
     }
     ++i;
-  }*/
+  }
   std::cout << "Test PASSED" << std::endl;
 
   return 0;

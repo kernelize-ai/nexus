@@ -143,6 +143,8 @@
 #include <optional>
 #include <vector>
 
+#include "rt_utilities.h"
+
 #define NXSAPI_LOGGING
 #include <nexus-api.h>
 
@@ -225,19 +227,23 @@ nxsGetRuntimeProperty(nxs_uint runtime_property_id, void *property_value,
 
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "getRuntimeProperty " << runtime_property_id);
 
-  /* lookup HIP equivalent */
   /* return value size */
   /* return value */
   switch (runtime_property_id) {
-    case NP_Name: {
-      const char *name = "metal";
-      if (property_value != NULL) {
-        strncpy((char *)property_value, name, strlen(name) + 1);
-      } else if (property_value_size != NULL) {
-        *property_value_size = strlen(name);
-      }
-      break;
-    }
+    case NP_Name:
+      return rt_getPropertyStr(property_value, property_value_size, "metal");
+    case NP_Type:
+      return rt_getPropertyStr(property_value, property_value_size, "gpu");
+    case NP_Vendor:
+      return rt_getPropertyStr(property_value, property_value_size, "apple");
+    case NP_Architecture:
+      return rt_getPropertyStr(property_value, property_value_size, "metal");
+    case NP_Version:
+      return rt_getPropertyStr(property_value, property_value_size, "1.0");
+    case NP_MajorVersion:
+      return rt_getPropertyInt(property_value, property_value_size, 1);
+    case NP_MinorVersion:
+      return rt_getPropertyInt(property_value, property_value_size, 0);
     case NP_Size: {
       nxs_long size = getRuntime()->getDeviceCount();
       auto sz = sizeof(size);
@@ -266,19 +272,6 @@ nxsGetDeviceProperty(nxs_int device_id, nxs_uint device_property_id,
   auto dev = getRuntime()->getObject<MTL::Device>(device_id);
   if (!dev) return NXS_InvalidDevice;
   auto device = *dev;
-
-  auto getStr = [&](const char *name, size_t len) {
-    if (property_value != NULL) {
-      if (property_value_size == NULL)
-        return NXS_InvalidArgSize;
-      else if (*property_value_size < len)
-        return NXS_InvalidArgValue;
-      strncpy((char *)property_value, name, len);
-    } else if (property_value_size != NULL) {
-      *property_value_size = len;
-    }
-    return NXS_Success;
-  };
 
   //    uint64_t                        registryID() const;
   //     MTL::Size                       maxThreadsPerThreadgroup() const;
@@ -338,17 +331,17 @@ nxsGetDeviceProperty(nxs_int device_id, nxs_uint device_property_id,
     case NP_Name: {
       std::string name =
           device->name()->cString(NS::StringEncoding::ASCIIStringEncoding);
-      return getStr(name.c_str(), name.size() + 1);
+      return rt_getPropertyStr(property_value, property_value_size, name);
     }
     case NP_Vendor:
-      return getStr("apple", 6);
+      return rt_getPropertyStr(property_value, property_value_size, "apple");
     case NP_Type:
-      return getStr("gpu", 4);
+      return rt_getPropertyStr(property_value, property_value_size, "gpu");
     case NP_Architecture: {
       auto arch = device->architecture();
       std::string name =
           arch->name()->cString(NS::StringEncoding::ASCIIStringEncoding);
-      return getStr(name.c_str(), name.size() + 1);
+      return rt_getPropertyStr(property_value, property_value_size, name);
     }
 
     default:

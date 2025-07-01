@@ -40,10 +40,12 @@ detail::DeviceImpl::~DeviceImpl() {
 
 void detail::DeviceImpl::release() {
   NEXUS_LOG(NEXUS_STATUS_NOTE, "    release: " << getId());
+  // Tear down order is important for backend plugins
   buffers.clear();
 
-  libraries.clear();
   schedules.clear();
+  streams.clear();
+  libraries.clear();
 }
 
 std::optional<Property> detail::DeviceImpl::getProperty(nxs_int prop) const {
@@ -77,7 +79,7 @@ std::optional<Property> detail::DeviceImpl::getProperty(nxs_int prop) const {
 
 // Runtime functions
 Library detail::DeviceImpl::createLibrary(void *data, size_t size) {
-  NEXUS_LOG(NEXUS_STATUS_NOTE, "  createLibrary");
+  NEXUS_LOG(NEXUS_STATUS_NOTE, "  createLibrary - Size: " << size);
   APICALL(nxsCreateLibrary, getId(), data, size);
   Library lib(detail::Impl(this, apiResult));
   libraries.add(lib);
@@ -85,7 +87,7 @@ Library detail::DeviceImpl::createLibrary(void *data, size_t size) {
 }
 
 Library detail::DeviceImpl::createLibrary(const std::string &path) {
-  NEXUS_LOG(NEXUS_STATUS_NOTE, "  createLibrary");
+  NEXUS_LOG(NEXUS_STATUS_NOTE, "  createLibrary - Path: " << path);
   APICALL(nxsCreateLibraryFromFile, getId(), path.c_str());
   Library lib(detail::Impl(this, apiResult));
   libraries.add(lib);

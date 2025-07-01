@@ -64,6 +64,7 @@ class Object {
 
   operator bool() const { return impl && nxs_valid_id(getId()); }
   bool operator==(const Object &that) const { return impl == that.impl; }
+  bool operator!=(const Object &that) const { return impl != that.impl; }
 
   void release() { impl.clear(); }
 
@@ -92,8 +93,12 @@ class Objects {
   Objects() : objects(std::make_shared<ObjectVec>()) {}
 
   operator bool() const { return objects && !objects->empty(); }
-  
+  bool operator==(const Objects &that) const { return objects == that.objects; }
+  bool operator!=(const Objects &that) const { return objects != that.objects; }
+
   nxs_int size() const { return objects->size(); }
+  bool empty() const { return objects->empty(); }
+
   nxs_int add(Tobject obj) {
     objects->push_back(obj);
     return objects->size() - 1;
@@ -102,6 +107,8 @@ class Objects {
     if (idx >= 0 && idx < objects->size()) return (*objects)[idx];
     return Tobject();
   }
+  Tobject operator[](nxs_int idx) const { return get(idx); }
+
   void clear() { objects->clear(); }
 
   typename ObjectVec::iterator begin() const { return objects->begin(); }
