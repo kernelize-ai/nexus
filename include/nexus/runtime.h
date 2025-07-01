@@ -20,7 +20,6 @@ class Runtime : public Object<detail::RuntimeImpl> {
   nxs_int getId() const override;
 
   Devices getDevices() const;
-  nxs_int getDeviceCount() const;
   Device getDevice(nxs_uint deviceId) const;
 
   // Get Runtime Property Value

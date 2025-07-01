@@ -47,7 +47,6 @@ class Device : public Object<detail::DeviceImpl> {
   Buffer createBuffer(size_t _sz, const void *_hostData = nullptr);
   Buffer copyBuffer(Buffer buf);
   Buffers getBuffers() const;
-
 };
 
 typedef Objects<Device> Devices;

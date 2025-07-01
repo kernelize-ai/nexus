@@ -17,13 +17,15 @@ void delete_fn(void *obj) {
 }
 
 class Object {
+
+ public:
+
   Object *parent;
   void *obj;
   bool is_owned;
   typedef std::vector<nxs_int> children_t;
   children_t children;
 
- public:
   Object(Object *parent = nullptr, void *obj = nullptr, bool is_owned = true) {
     this->parent = parent;
     this->obj = obj;

@@ -110,11 +110,7 @@ Runtime::Runtime(detail::Impl owner, const std::string &libraryPath)
 
 nxs_int Runtime::getId() const { NEXUS_OBJ_MCALL(NXS_InvalidRuntime, getId); }
 
-nxs_int Runtime::getDeviceCount() const {
-  return get()->getDevices().size();
-}
-
-Devices Runtime::getDevices() const { return get()->getDevices(); }
+Devices Runtime::getDevices() const { NEXUS_OBJ_MCALL(Devices(), getDevices); }
 
 Device Runtime::getDevice(nxs_uint deviceId) const {
   NEXUS_OBJ_MCALL(Device(), getDevice, deviceId);

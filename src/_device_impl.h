@@ -48,7 +48,6 @@ class DeviceImpl : public Impl {
 
   Buffer createBuffer(size_t size, const char *data = nullptr);
   Buffer copyBuffer(Buffer buf);
-
 };
 
 }  // namespace detail
