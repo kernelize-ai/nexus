@@ -1,6 +1,9 @@
 #include <assert.h>
 #include <cpuinfo.h>
 #include <dlfcn.h>
+#include <rt_buffer.h>
+#include <rt_object.h>
+#include <rt_runtime.h>
 #include <rt_utilities.h>
 #include <string.h>
 
@@ -14,105 +17,18 @@
 
 #define NXSAPI_LOG_MODULE "cpu"
 
-class RTBuffer {
-  char *buf;
-  size_t sz;
-  bool is_owned;
+using namespace nxs;
 
+class CpuRuntime : public rt::Runtime {
  public:
-  RTBuffer(size_t size, void *host_ptr = nullptr, bool is_owned = false)
-      : buf((char *)host_ptr), sz(size), is_owned(is_owned) {
-    if (host_ptr && is_owned) {
-      buf = (char *)malloc(size);
-      memcpy(buf, host_ptr, size);
-    }
-  }
-  ~RTBuffer() {
-    if (is_owned && buf) free(buf);
-  }
-  char *data() { return buf; }
-  size_t size() { return sz; }
-  template <typename T>
-  T *get() {
-    return (T *)buf;
-  }
-};
-
-class RTObject {
-  void *obj;
-  bool is_owned;
-  std::vector<nxs_int> children;
-
- public:
-  RTObject(void *obj, bool is_owned = true) {
-    this->obj = obj;
-    this->is_owned = obj ? is_owned : false;
-  }
-  virtual ~RTObject() {}
-  operator bool() const { return obj != nullptr || is_owned; }
-
-  template <typename T = void>
-  T *get() const {
-    return static_cast<T *>(obj);
-  }
-
-  template <typename T = void>
-  void release() {
-    children.clear();
-    if constexpr (!std::is_same_v<T, void>) {
-      if (is_owned && obj) delete static_cast<T *>(obj);
-    }
-    obj = nullptr;
-    is_owned = false;
-  }
-  std::vector<nxs_int> &getChildren() { return children; }
-  void addChild(nxs_int child, nxs_int index = -1) {
-    if (index < 0)
-      children.push_back(child);
-    else {
-      if (index >= children.size()) children.resize(index + 1);
-      children[index] = child;
-    }
-  }
-};
-
-class CpuRuntime {
-  std::vector<RTObject> objects;
-
- public:
-  CpuRuntime() {
-    objects.reserve(1024);
+  CpuRuntime() : rt::Runtime() {
     cpuinfo_initialize();
     for (size_t i = 0; i < cpuinfo_get_processors_count(); i++) {
       auto *cpu = cpuinfo_get_processor(i);
-      objects.emplace_back((void *)cpu, false);
+      addObject((void *)cpu, false);
     }
   }
-  ~CpuRuntime() {
-    // for (auto &obj : objects)
-    //   obj.release();
-  }
-
-  nxs_int addObject(void *obj, bool is_owned = true) {
-    objects.emplace_back(obj, is_owned);
-    return objects.size() - 1;
-  }
-
-  std::optional<RTObject *> getObject(nxs_int id) {
-    if (id < 0 || id >= objects.size()) return std::nullopt;
-    if (objects[id]) return &objects[id];
-    return std::nullopt;
-  }
-  template <typename T>
-  bool dropObject(nxs_int id) {
-    if (id < 0 || id >= objects.size()) return false;
-    auto &obj = objects[id];
-    if (obj) {
-      obj.release<T>();
-      return true;
-    }
-    return false;
-  }
+  ~CpuRuntime() {}
 };
 
 CpuRuntime *getRuntime() {
@@ -143,25 +59,25 @@ nxsGetRuntimeProperty(nxs_uint runtime_property_id, void *property_value,
   /* return value */
   switch (runtime_property_id) {
     case NP_Name:
-      return rt_getPropertyStr(property_value, property_value_size,
-                               "cpu-generic");
+      return rt::getPropertyStr(property_value, property_value_size,
+                                "cpu-generic");
     case NP_Size:
-      return rt_getPropertyInt(property_value, property_value_size, 1);
+      return rt::getPropertyInt(property_value, property_value_size, 1);
     case NP_Vendor: {
       auto name = magic_enum::enum_name(proc->core->vendor);
-      return rt_getPropertyStr(property_value, property_value_size,
-                               name.data());
+      return rt::getPropertyStr(property_value, property_value_size,
+                                name.data());
     }
     case NP_Type:
-      return rt_getPropertyStr(property_value, property_value_size, "cpu");
+      return rt::getPropertyStr(property_value, property_value_size, "cpu");
     case NP_ID: {
-      return rt_getPropertyInt(property_value, property_value_size,
-                               cpuinfo_has_arm_sme2() ? 1 : 0);
+      return rt::getPropertyInt(property_value, property_value_size,
+                                cpuinfo_has_arm_sme2() ? 1 : 0);
     }
     case NP_Architecture: {
       auto name = magic_enum::enum_name(arch->uarch);
-      return rt_getPropertyStr(property_value, property_value_size,
-                               name.data());
+      return rt::getPropertyStr(property_value, property_value_size,
+                                name.data());
     }
     default:
       return NXS_InvalidProperty;
@@ -187,11 +103,11 @@ nxsGetDeviceProperty(nxs_int device_id, nxs_uint device_property_id,
       // return getStr(property_value, property_value_size, device->core);
     }
     case NP_Type:
-      return rt_getPropertyStr(property_value, property_value_size, "cpu");
+      return rt::getPropertyStr(property_value, property_value_size, "cpu");
     case NP_Architecture: {
       auto archName = magic_enum::enum_name(device->core->uarch);
-      return rt_getPropertyStr(property_value, property_value_size,
-                               archName.data());
+      return rt::getPropertyStr(property_value, property_value_size,
+                                archName.data());
     }
 
     default:
@@ -213,7 +129,7 @@ extern "C" nxs_int NXS_API_CALL nxsCreateBuffer(nxs_int device_id, size_t size,
   if (!dev) return NXS_InvalidDevice;
 
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createBuffer " << size);
-  RTBuffer *buf = new RTBuffer(size, host_ptr, true);
+  rt::Buffer *buf = new rt::Buffer(size, host_ptr, true);
   return rt->addObject(buf, true);
 }
 
@@ -227,7 +143,7 @@ extern "C" nxs_status NXS_API_CALL nxsCopyBuffer(nxs_int buffer_id,
   auto rt = getRuntime();
   auto buf = rt->getObject(buffer_id);
   if (!buf) return NXS_InvalidBuffer;
-  auto bufObj = (*buf)->get<RTBuffer>();
+  auto bufObj = (*buf)->get<rt::Buffer>();
   memcpy(host_ptr, bufObj->data(), bufObj->size());
   return NXS_Success;
 }
@@ -239,7 +155,8 @@ extern "C" nxs_status NXS_API_CALL nxsCopyBuffer(nxs_int buffer_id,
  ***********************************************************************/
 extern "C" nxs_status NXS_API_CALL nxsReleaseBuffer(nxs_int buffer_id) {
   auto rt = getRuntime();
-  if (!rt->dropObject<RTBuffer>(buffer_id)) return NXS_InvalidBuffer;
+  if (!rt->dropObject(buffer_id, rt::delete_fn<rt::Buffer>))
+    return NXS_InvalidBuffer;
   return NXS_Success;
 }
 
@@ -296,7 +213,7 @@ nxsCreateLibraryFromFile(nxs_int device_id, const char *library_path) {
     NXSAPI_LOG(NXSAPI_STATUS_ERR, "createLibraryFromFile " << dlerror());
     return NXS_InvalidLibrary;
   }
-  return rt->addObject(lib, false);
+  return rt->addObject(lib);
 }
 
 /************************************************************************
@@ -323,7 +240,7 @@ extern "C" nxs_status NXS_API_CALL nxsReleaseLibrary(nxs_int library_id) {
   auto lib = rt->getObject(library_id);
   if (!lib) return NXS_InvalidLibrary;
   dlclose((*lib)->get<void>());
-  rt->dropObject<void>(library_id);
+  rt->dropObject(library_id);
   return NXS_Success;
 }
 
@@ -344,7 +261,7 @@ extern "C" nxs_int NXS_API_CALL nxsGetKernel(nxs_int library_id,
     NXSAPI_LOG(NXSAPI_STATUS_ERR, "getKernel " << dlerror());
     return NXS_InvalidKernel;
   }
-  return rt->addObject(func, false);
+  return rt->addObject(func);
 }
 
 /************************************************************************
@@ -373,7 +290,7 @@ nxsGetKernelProperty(nxs_int kernel_id, nxs_uint kernel_property_id,
  ***********************************************************************/
 extern "C" nxs_status NXS_API_CALL nxsReleaseKernel(nxs_int kernel_id) {
   auto rt = getRuntime();
-  if (!rt->dropObject<void>(kernel_id)) return NXS_InvalidKernel;
+  if (!rt->dropObject(kernel_id)) return NXS_InvalidKernel;
   return NXS_Success;
 }
 
@@ -420,9 +337,7 @@ extern "C" nxs_int NXS_API_CALL nxsCreateSchedule(nxs_int device_id,
   auto dev = rt->getObject(device_id);
   if (!dev) return NXS_InvalidDevice;
 
-  char *name = new char[10];
-  strcpy(name, "schedule");
-  return rt->addObject(name, true);
+  return rt->addObject();
 }
 
 /************************************************************************
@@ -440,8 +355,10 @@ extern "C" nxs_status NXS_API_CALL nxsRunSchedule(nxs_int schedule_id,
   for (auto cmdId : (*sched)->getChildren()) {
     auto cmd = rt->getObject(cmdId);
     if (!cmd) return NXS_InvalidCommand;
-    auto func = (*cmd)->get<void>();
-    if (!func) return NXS_InvalidCommand;
+    auto kernel = rt->get<rt::Object>(cmdId);
+    if (!kernel) return NXS_InvalidKernel;
+    auto func = (*kernel)->get<void>();
+    if (!func) return NXS_InvalidKernel;
     auto &args = (*cmd)->getChildren();
 
     if (args.size() >= 32) {
@@ -449,16 +366,16 @@ extern "C" nxs_status NXS_API_CALL nxsRunSchedule(nxs_int schedule_id,
       return NXS_InvalidCommand;
     }
     std::vector<char> exData(1024 * 1024);  // 1MB extra buffer for args
-    RTBuffer exBuf(exData.size(), exData.data(),
-                   false);                     // extra buffer for args
-    std::vector<RTBuffer *> bufs(32, &exBuf);  // max 32 args
+    rt::Buffer exBuf(exData.size(), exData.data(),
+                     false);                     // extra buffer for args
+    std::vector<rt::Buffer *> bufs(32, &exBuf);  // max 32 args
     for (size_t i = 0; i < args.size(); i++) {
       auto buf = rt->getObject(args[i]);
       if (!buf) return NXS_InvalidBuffer;
-      bufs[i] = (*buf)->get<RTBuffer>();
+      bufs[i] = (*buf)->get<rt::Buffer>();
     }
     std::vector<int64_t> coords{0, 0, 0};
-    RTBuffer coordsBuf(sizeof(coords), coords.data());
+    rt::Buffer coordsBuf(sizeof(coords), coords.data());
     bufs[args.size()] = &coordsBuf;
 
     // call func with bufs + dims (int64[3], int64[3], int64[3])
@@ -495,22 +412,7 @@ extern "C" nxs_status NXS_API_CALL nxsRunSchedule(nxs_int schedule_id,
     }
   }
 
-  // auto stream = rt->getObject<MTL::CommandQueue>(stream_id);
-  // if (stream)
-  //   assert((*cmdbuf)->commandQueue() == *stream);
-
-  // (*cmdbuf)->enqueue();
-
-  // (*cmdbuf)->commit();
   if (blocking) {
-    // (*cmdbuf)->waitUntilCompleted();  // Synchronous wait for simplicity
-    // if ((*cmdbuf)->status() == MTL::CommandBufferStatusError) {
-    //   NXSAPI_LOG(
-    //       NXSAPI_STATUS_ERR,
-    //       "runSchedule: "
-    //           << (*cmdbuf)->error()->localizedDescription()->utf8String());
-    //   return NXS_InvalidEvent;
-    // }
   }
   return NXS_Success;
 }
@@ -522,8 +424,7 @@ extern "C" nxs_status NXS_API_CALL nxsRunSchedule(nxs_int schedule_id,
  ***********************************************************************/
 extern "C" nxs_status NXS_API_CALL nxsReleaseSchedule(nxs_int schedule_id) {
   auto rt = getRuntime();
-  if (!rt->dropObject<char>(schedule_id))
-    return NXS_InvalidBuildOptions;  // fix
+  if (!rt->dropObject(schedule_id)) return NXS_InvalidBuildOptions;  // fix
   return NXS_Success;
 }
 
@@ -540,7 +441,8 @@ extern "C" nxs_int NXS_API_CALL nxsCreateCommand(nxs_int schedule_id,
   if (!sched) return NXS_InvalidBuildOptions;  // fix
   auto kernel = rt->getObject(kernel_id);
   if (!kernel) return NXS_InvalidKernel;
-  auto cmdId = rt->addObject((*kernel)->get<void>(), false);
+
+  auto cmdId = rt->addObject(*kernel, false);
   if (nxs_success(cmdId)) (*sched)->addChild(cmdId);
   return cmdId;
 }
@@ -562,6 +464,7 @@ extern "C" nxs_status NXS_API_CALL nxsSetCommandArgument(nxs_int command_id,
   if (!cmd) return NXS_InvalidCommand;
   auto buf = rt->getObject(buffer_id);
   if (!buf) return NXS_InvalidBuffer;
+
   (*cmd)->addChild(buffer_id, argument_index);
   return NXS_Success;
 }
@@ -582,9 +485,9 @@ extern "C" nxs_status NXS_API_CALL nxsFinalizeCommand(nxs_int command_id,
   int64_t global_size[3] = {grid_size, 1, 1};
   int64_t local_size[3] = {group_size, 1, 1};
   (*cmd)->addChild(rt->addObject(
-      new RTBuffer(sizeof(global_size), global_size, true), true));
-  (*cmd)->addChild(
-      rt->addObject(new RTBuffer(sizeof(local_size), local_size, true), true));
+      new rt::Buffer(sizeof(global_size), global_size, true), true));
+  (*cmd)->addChild(rt->addObject(
+      new rt::Buffer(sizeof(local_size), local_size, true), true));
   return NXS_Success;
 }
 
@@ -595,6 +498,6 @@ extern "C" nxs_status NXS_API_CALL nxsFinalizeCommand(nxs_int command_id,
  ***********************************************************************/
 extern "C" nxs_status NXS_API_CALL nxsReleaseCommand(nxs_int command_id) {
   auto rt = getRuntime();
-  if (!rt->dropObject<void>(command_id)) return NXS_InvalidBuildOptions;  // fix
+  if (!rt->dropObject(command_id)) return NXS_InvalidBuildOptions;  // fix
   return NXS_Success;
 }

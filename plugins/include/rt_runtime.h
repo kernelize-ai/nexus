@@ -1,0 +1,43 @@
+#ifndef RT_RUNTIME_H
+#define RT_RUNTIME_H
+
+#include <nexus-api.h>
+#include <rt_object.h>
+
+namespace nxs {
+namespace rt {
+
+class Runtime {
+  std::vector<rt::Object> objects;
+
+ public:
+  Runtime() { objects.reserve(1024); }
+  ~Runtime() {}
+
+  nxs_int addObject(void *obj = nullptr, bool is_owned = false) {
+    objects.emplace_back(obj, is_owned);
+    return objects.size() - 1;
+  }
+
+  std::optional<rt::Object *> getObject(nxs_int id) {
+    if (id < 0 || id >= objects.size()) return std::nullopt;
+    return &objects[id];
+  }
+
+  template <typename T>
+  std::optional<T *> get(nxs_int id) {
+    if (auto obj = getObject(id)) return (*obj)->get<T>();
+    return std::nullopt;
+  }
+
+  bool dropObject(nxs_int id, release_fn_t fn = nullptr) {
+    if (id < 0 || id >= objects.size()) return false;
+    objects[id].release(fn);
+    return true;
+  }
+};
+
+}  // namespace rt
+}  // namespace nxs
+
+#endif  // RT_RUNTIME_H

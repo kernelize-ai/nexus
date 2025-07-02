@@ -5,9 +5,12 @@
 
 #include <string>
 
-static nxs_status rt_getPropertyStr(void *property_value,
-                                    size_t *property_value_size,
-                                    const char *name, size_t len) {
+namespace nxs {
+namespace rt {
+
+static nxs_status getPropertyStr(void *property_value,
+                                 size_t *property_value_size, const char *name,
+                                 size_t len) {
   if (property_value != NULL) {
     if (property_value_size == NULL)
       return NXS_InvalidArgSize;
@@ -20,16 +23,15 @@ static nxs_status rt_getPropertyStr(void *property_value,
   return NXS_Success;
 }
 
-static nxs_status rt_getPropertyStr(void *property_value,
-                                    size_t *property_value_size,
-                                    const std::string &value) {
-  return rt_getPropertyStr(property_value, property_value_size, value.c_str(),
-                           value.size());
+static nxs_status getPropertyStr(void *property_value,
+                                 size_t *property_value_size,
+                                 const std::string &value) {
+  return getPropertyStr(property_value, property_value_size, value.c_str(),
+                        value.size());
 }
 
-static nxs_status rt_getPropertyInt(void *property_value,
-                                    size_t *property_value_size,
-                                    nxs_long value) {
+static nxs_status getPropertyInt(void *property_value,
+                                 size_t *property_value_size, nxs_long value) {
   if (property_value != NULL) {
     if (property_value_size == NULL)
       return NXS_InvalidArgSize;
@@ -41,5 +43,8 @@ static nxs_status rt_getPropertyInt(void *property_value,
   }
   return NXS_Success;
 }
+
+}  // namespace rt
+}  // namespace nxs
 
 #endif  // RT_UTILITIES_H
