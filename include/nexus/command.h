@@ -6,6 +6,7 @@
 #include <nexus/kernel.h>
 #include <nexus/object.h>
 
+#include <functional>
 #include <list>
 
 namespace nexus {
