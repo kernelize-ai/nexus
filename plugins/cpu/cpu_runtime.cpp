@@ -7,6 +7,7 @@
 #include <rt_utilities.h>
 #include <string.h>
 
+#include <functional>
 #include <iostream>
 #include <magic_enum/magic_enum.hpp>
 #include <optional>
@@ -388,22 +389,17 @@ extern "C" nxs_status NXS_API_CALL nxsRunSchedule(nxs_int schedule_id,
           coords[1] = j;
           coords[2] = k;
           try {
-            ((void (*)(void *, void *, void *, void *, void *, void *, void *,
-                       void *, void *, void *, void *, void *, void *, void *,
-                       void *, void *, void *, void *, void *, void *, void *,
-                       void *, void *, void *, void *, void *, void *, void *,
-                       void *, void *, void *, void *))func)(
-                bufs[0]->data(), bufs[1]->data(), bufs[2]->data(),
-                bufs[3]->data(), bufs[4]->data(), bufs[5]->data(),
-                bufs[6]->data(), bufs[7]->data(), bufs[8]->data(),
-                bufs[9]->data(), bufs[10]->data(), bufs[11]->data(),
-                bufs[12]->data(), bufs[13]->data(), bufs[14]->data(),
-                bufs[15]->data(), bufs[16]->data(), bufs[17]->data(),
-                bufs[18]->data(), bufs[19]->data(), bufs[20]->data(),
-                bufs[21]->data(), bufs[22]->data(), bufs[23]->data(),
-                bufs[24]->data(), bufs[25]->data(), bufs[26]->data(),
-                bufs[27]->data(), bufs[28]->data(), bufs[29]->data(),
-                bufs[30]->data(), bufs[31]->data());
+            std::invoke((void (*)(...))func, bufs[0]->data(), bufs[1]->data(),
+                        bufs[2]->data(), bufs[3]->data(), bufs[4]->data(),
+                        bufs[5]->data(), bufs[6]->data(), bufs[7]->data(),
+                        bufs[8]->data(), bufs[9]->data(), bufs[10]->data(),
+                        bufs[11]->data(), bufs[12]->data(), bufs[13]->data(),
+                        bufs[14]->data(), bufs[15]->data(), bufs[16]->data(),
+                        bufs[17]->data(), bufs[18]->data(), bufs[19]->data(),
+                        bufs[20]->data(), bufs[21]->data(), bufs[22]->data(),
+                        bufs[23]->data(), bufs[24]->data(), bufs[25]->data(),
+                        bufs[26]->data(), bufs[27]->data(), bufs[28]->data(),
+                        bufs[29]->data(), bufs[30]->data(), bufs[31]->data());
           } catch (const std::exception &e) {
             NXSAPI_LOG(NXSAPI_STATUS_ERR, "runSchedule: " << e.what());
           }
