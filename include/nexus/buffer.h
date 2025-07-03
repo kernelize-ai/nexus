@@ -10,14 +10,11 @@ namespace nexus {
 class Device;
 
 namespace detail {
-class SystemImpl;
 class BufferImpl;
 }  // namespace detail
 
 // System class
-class Buffer : public Object<detail::BufferImpl, detail::SystemImpl> {
-  friend OwnerTy;
-
+class Buffer : public Object<detail::BufferImpl> {
  public:
   Buffer(detail::Impl base, size_t _sz, const void *_hostData = nullptr);
   Buffer(detail::Impl base, nxs_int devId, size_t _sz,

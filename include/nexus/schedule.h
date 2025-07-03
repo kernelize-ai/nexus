@@ -9,14 +9,11 @@
 namespace nexus {
 
 namespace detail {
-class DeviceImpl;  // owner
 class ScheduleImpl;
 }  // namespace detail
 
 // System class
-class Schedule : public Object<detail::ScheduleImpl, detail::DeviceImpl> {
-  friend OwnerTy;
-
+class Schedule : public Object<detail::ScheduleImpl> {
  public:
   Schedule(detail::Impl owner);
   using Object::Object;
@@ -26,9 +23,9 @@ class Schedule : public Object<detail::ScheduleImpl, detail::DeviceImpl> {
   std::optional<Property> getProperty(nxs_int prop) const override;
 
   Command createCommand(Kernel kern);
-
-  Event createEvent();
-  nxs_status addEvent(Event event);
+  Command createSignalCommand(nxs_int signal_value = 1);
+  Command createSignalCommand(Event event, nxs_int signal_value = 1);
+  Command createWaitCommand(Event event, nxs_int wait_value = 1);
 
   nxs_status run(Stream stream = Stream(), nxs_bool blocking = true);
 };

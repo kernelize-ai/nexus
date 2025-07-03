@@ -9,13 +9,10 @@ namespace nexus {
 
 namespace detail {
 class RuntimeImpl;
-class SystemImpl;
 }  // namespace detail
 
 // Runtime class
-class Runtime : public Object<detail::RuntimeImpl, detail::SystemImpl> {
-  friend OwnerTy;
-
+class Runtime : public Object<detail::RuntimeImpl> {
  public:
   Runtime(detail::Impl owner, const std::string& libraryPath);
   using Object::Object;

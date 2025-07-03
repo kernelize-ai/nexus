@@ -4,19 +4,14 @@
 #include <nexus-api.h>
 #include <nexus/object.h>
 
-#include <list>
-
 namespace nexus {
 
 namespace detail {
-class LibraryImpl;  // owner
 class KernelImpl;
 }  // namespace detail
 
 // System class
-class Kernel : public Object<detail::KernelImpl, detail::LibraryImpl> {
-  friend OwnerTy;
-
+class Kernel : public Object<detail::KernelImpl> {
  public:
   Kernel(detail::Impl owner, const std::string &kernelName);
   using Object::Object;

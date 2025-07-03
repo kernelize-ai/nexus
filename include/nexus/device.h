@@ -3,6 +3,7 @@
 
 #include <nexus-api.h>
 #include <nexus/buffer.h>
+#include <nexus/event.h>
 #include <nexus/library.h>
 #include <nexus/properties.h>
 #include <nexus/schedule.h>
@@ -14,14 +15,11 @@
 namespace nexus {
 
 namespace detail {
-class RuntimeImpl;  // owner
 class DeviceImpl;
 }  // namespace detail
 
 // Device class
-class Device : public Object<detail::DeviceImpl, detail::RuntimeImpl> {
-  friend OwnerTy;
-
+class Device : public Object<detail::DeviceImpl> {
  public:
   Device(detail::Impl base);
   using Object::Object;
@@ -37,10 +35,12 @@ class Device : public Object<detail::DeviceImpl, detail::RuntimeImpl> {
   Librarys getLibraries() const;
   Schedules getSchedules() const;
   Streams getStreams() const;
-  
+  Events getEvents() const;
+
   Stream createStream();
   Schedule createSchedule();
-  
+  Event createEvent();
+
   Library createLibrary(void *libraryData, size_t librarySize);
   Library createLibrary(const std::string &libraryPath);
 

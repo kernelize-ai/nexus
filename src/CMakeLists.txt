@@ -8,6 +8,7 @@ add_library(nexus-api SHARED
     kernel.cpp
     library.cpp
     command.cpp
+    event.cpp
     schedule.cpp
     device.cpp
     device_db.cpp

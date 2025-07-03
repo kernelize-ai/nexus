@@ -42,14 +42,13 @@ class Impl {
 }  // namespace detail
 
 // Facade base-class
-template <typename Timpl, typename Towner = void>
+template <typename Timpl>
 class Object {
   // set of runtimes
   typedef std::shared_ptr<Timpl> ImplRef;
   ImplRef impl;
 
  public:
-  typedef Towner OwnerTy;
 
   template <typename... Args>
   Object(detail::Impl owner, Args... args)

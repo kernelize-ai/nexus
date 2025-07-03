@@ -7,14 +7,11 @@
 namespace nexus {
 
 namespace detail {
-class DeviceImpl;  // owner
 class StreamImpl;
 }  // namespace detail
 
 // System class
-class Stream : public Object<detail::StreamImpl, detail::DeviceImpl> {
-  friend OwnerTy;
-
+class Stream : public Object<detail::StreamImpl> {
  public:
   Stream(detail::Impl owner);
   using Object::Object;

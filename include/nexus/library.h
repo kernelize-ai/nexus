@@ -5,19 +5,14 @@
 #include <nexus/kernel.h>
 #include <nexus/object.h>
 
-#include <list>
-
 namespace nexus {
 
 namespace detail {
-class DeviceImpl;  // owner
 class LibraryImpl;
 }  // namespace detail
 
 // System class
-class Library : public Object<detail::LibraryImpl, detail::DeviceImpl> {
-  friend OwnerTy;
-
+class Library : public Object<detail::LibraryImpl> {
  public:
   Library(detail::Impl owner);
   using Object::Object;
