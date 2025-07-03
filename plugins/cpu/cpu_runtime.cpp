@@ -360,6 +360,13 @@ extern "C" nxs_status NXS_API_CALL nxsRunSchedule(nxs_int schedule_id,
     if (!kernel) return NXS_InvalidKernel;
     auto func = (*kernel)->get<void>();
     if (!func) return NXS_InvalidKernel;
+    auto func_ptr = (void (*)(void *, void *, void *, void *, void *, void *,
+                              void *, void *, void *, void *, void *, void *,
+                              void *, void *, void *, void *, void *, void *,
+                              void *, void *, void *, void *, void *, void *,
+                              void *, void *, void *, void *, void *, void *,
+                              void *, void *))func;
+
     auto &args = (*cmd)->getChildren();
 
     if (args.size() >= 32) {
@@ -389,7 +396,7 @@ extern "C" nxs_status NXS_API_CALL nxsRunSchedule(nxs_int schedule_id,
           coords[1] = j;
           coords[2] = k;
           try {
-            std::invoke((void (*)(...))func, bufs[0]->data(), bufs[1]->data(),
+            std::invoke(func_ptr, bufs[0]->data(), bufs[1]->data(),
                         bufs[2]->data(), bufs[3]->data(), bufs[4]->data(),
                         bufs[5]->data(), bufs[6]->data(), bufs[7]->data(),
                         bufs[8]->data(), bufs[9]->data(), bufs[10]->data(),
