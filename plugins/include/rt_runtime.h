@@ -1,6 +1,8 @@
 #ifndef RT_RUNTIME_H
 #define RT_RUNTIME_H
 
+#include <optional>
+
 #include <nexus-api.h>
 #include <rt_object.h>
 
