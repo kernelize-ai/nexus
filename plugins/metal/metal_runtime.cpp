@@ -175,7 +175,7 @@ class MetalRuntime : public rt::Runtime {
     for (int i = 0; i < mDevices->count(); ++i) {
       auto *dev = mDevices->object<MTL::Device>(i);
       queues.push_back(dev->newCommandQueue());
-      addObject(dev, true);
+      addObject(nullptr, dev, true);
     }
   }
   ~MetalRuntime() {
@@ -339,7 +339,9 @@ extern "C" nxs_int NXS_API_CALL nxsCreateBuffer(nxs_int device_id, size_t size,
                                                 nxs_uint mem_flags,
                                                 void *host_ptr) {
   auto rt = getRuntime();
-  auto dev = rt->get<MTL::Device>(device_id);
+  auto parent = rt->getObject(device_id);
+  if (!parent) return NXS_InvalidDevice;
+  auto dev = (*parent)->get<MTL::Device>();
   if (!dev) return NXS_InvalidDevice;
 
   MTL::ResourceOptions bopts = MTL::ResourceStorageModeShared;  // unified?
@@ -347,11 +349,11 @@ extern "C" nxs_int NXS_API_CALL nxsCreateBuffer(nxs_int device_id, size_t size,
 
   MTL::Buffer *buf;
   if (host_ptr != nullptr)
-    buf = (*dev)->newBuffer(host_ptr, size, bopts);
+    buf = dev->newBuffer(host_ptr, size, bopts);
   else
-    buf = (*dev)->newBuffer(size, bopts);
+    buf = dev->newBuffer(size, bopts);
 
-  return rt->addObject(buf, true);
+  return rt->addObject(*parent, buf, true);
 }
 
 /************************************************************************
@@ -364,7 +366,7 @@ extern "C" nxs_status NXS_API_CALL nxsCopyBuffer(nxs_int buffer_id,
   auto rt = getRuntime();
   auto buf = rt->get<MTL::Buffer>(buffer_id);
   if (!buf) return NXS_InvalidBuffer;
-  memcpy(host_ptr, (*buf)->contents(), (*buf)->length());
+  std::memcpy(host_ptr, (*buf)->contents(), (*buf)->length());
   return NXS_Success;
 }
 
@@ -389,7 +391,9 @@ extern "C" nxs_int NXS_API_CALL nxsCreateLibrary(nxs_int device_id,
                                                  void *library_data,
                                                  nxs_uint data_size) {
   auto rt = getRuntime();
-  auto dev = rt->get<MTL::Device>(device_id);
+  auto parent = rt->getObject(device_id);
+  if (!parent) return NXS_InvalidDevice;
+  auto dev = (*parent)->get<MTL::Device>();
   if (!dev) return NXS_InvalidDevice;
 
   // NS::Array *binArr = NS::Array::alloc();
@@ -399,7 +403,7 @@ extern "C" nxs_int NXS_API_CALL nxsCreateLibrary(nxs_int device_id,
   dispatch_data_t data = (dispatch_data_t)library_data;
   NS::Error *pError = nullptr;
   // MTL::Library *pLibrary = device->newLibrary(data, &pError);
-  MTL::Library *pLibrary = (*dev)->newLibrary(
+  MTL::Library *pLibrary = dev->newLibrary(
       NS::String::string("kernel.so", NS::UTF8StringEncoding), &pError);
   NXSAPI_LOG(NXSAPI_STATUS_NOTE,
              "createLibrary " << (int64_t)pError << " - " << (int64_t)pLibrary);
@@ -409,7 +413,7 @@ extern "C" nxs_int NXS_API_CALL nxsCreateLibrary(nxs_int device_id,
         "createLibrary " << pError->localizedDescription()->utf8String());
     return NXS_InvalidLibrary;
   }
-  return rt->addObject(pLibrary, true);
+  return rt->addObject(*parent, pLibrary, true);
 }
 
 /************************************************************************
@@ -422,10 +426,12 @@ nxsCreateLibraryFromFile(nxs_int device_id, const char *library_path) {
   NXSAPI_LOG(NXSAPI_STATUS_NOTE,
              "createLibraryFromFile " << device_id << " - " << library_path);
   auto rt = getRuntime();
-  auto dev = rt->get<MTL::Device>(device_id);
+  auto parent = rt->getObject(device_id);
+  if (!parent) return NXS_InvalidDevice;
+  auto dev = (*parent)->get<MTL::Device>();
   if (!dev) return NXS_InvalidDevice;
   NS::Error *pError = nullptr;
-  MTL::Library *pLibrary = (*dev)->newLibrary(
+  MTL::Library *pLibrary = dev->newLibrary(
       NS::String::string(library_path, NS::UTF8StringEncoding), &pError);
   if (pError) {
     NXSAPI_LOG(
@@ -433,7 +439,7 @@ nxsCreateLibraryFromFile(nxs_int device_id, const char *library_path) {
         "createLibrary " << pError->localizedDescription()->utf8String());
     return NXS_InvalidLibrary;
   }
-  return rt->addObject(pLibrary, true);
+  return rt->addObject(*parent, pLibrary, true);
 }
 
 /************************************************************************
@@ -475,25 +481,27 @@ extern "C" nxs_int NXS_API_CALL nxsGetKernel(nxs_int library_id,
   NXSAPI_LOG(NXSAPI_STATUS_NOTE,
              "getKernel " << library_id << " - " << kernel_name);
   auto rt = getRuntime();
-  auto lib = rt->get<MTL::Library>(library_id);
+  auto parent = rt->getObject(library_id);
+  if (!parent) return NXS_InvalidLibrary;
+  auto lib = (*parent)->get<MTL::Library>();
   if (!lib) return NXS_InvalidProgram;
   NS::Error *pError = nullptr;
-  MTL::Function *func = (*lib)->newFunction(
+  MTL::Function *func = lib->newFunction(
       NS::String::string(kernel_name, NS::UTF8StringEncoding));
   if (!func) {
     NXSAPI_LOG(NXSAPI_STATUS_ERR,
                "getKernel " << pError->localizedDescription()->utf8String());
     return NXS_InvalidKernel;
   }
-  rt->addObject(func, true);
-  MTL::ComputePipelineState *pipeState = (*lib)->device()->newComputePipelineState(func, &pError);
+  rt->addObject(*parent, func, true);
+  MTL::ComputePipelineState *pipeState = lib->device()->newComputePipelineState(func, &pError);
   if (!pipeState) {
     NXSAPI_LOG(NXSAPI_STATUS_ERR,
                "getKernel->ComputePipelineState " << pError->localizedDescription()->utf8String());
     return NXS_InvalidKernel;
   }
 
-  return rt->addObject(pipeState, true);
+  return rt->addObject(*parent, pipeState, true);
 }
 
 /************************************************************************
@@ -542,12 +550,14 @@ extern "C" nxs_status nxsGetKernelProperty(
 extern "C" nxs_int nxsCreateStream(nxs_int device_id,
                                      nxs_uint stream_properties) {
   auto rt = getRuntime();
-  auto dev = rt->get<MTL::Device>(device_id);
+  auto parent = rt->getObject(device_id);
+  if (!parent) return NXS_InvalidDevice;
+  auto dev = (*parent)->get<MTL::Device>();
   if (!dev) return NXS_InvalidDevice;
 
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createStream");
-  MTL::CommandQueue *stream = (*dev)->newCommandQueue();
-  return rt->addObject(stream, true);
+  MTL::CommandQueue *stream = dev->newCommandQueue();
+  return rt->addObject(*parent, stream, true);
 }
 
 /************************************************************************
@@ -571,14 +581,16 @@ extern "C" nxs_status NXS_API_CALL nxsReleaseStream(nxs_int stream_id) {
 extern "C" nxs_int nxsCreateSchedule(nxs_int device_id,
                                      nxs_uint sched_properties) {
   auto rt = getRuntime();
-  auto dev = rt->get<MTL::Device>(device_id);
+  auto parent = rt->getObject(device_id);
+  if (!parent) return NXS_InvalidDevice;
+  auto dev = (*parent)->get<MTL::Device>();
   if (!dev) return NXS_InvalidDevice;
 
   //// NEEDS DEFERRED CREATION UNTIL MAPPED TO A STREAM
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createSchedule");
   auto *queue = rt->getQueue(device_id);
   MTL::CommandBuffer *cmdBuf = queue->commandBuffer();
-  return rt->addObject(cmdBuf, true);
+  return rt->addObject(*parent, cmdBuf, true);
 }
 
 /************************************************************************
@@ -588,22 +600,24 @@ extern "C" nxs_int nxsCreateSchedule(nxs_int device_id,
  ***********************************************************************/
 extern "C" nxs_status nxsRunSchedule(nxs_int schedule_id, nxs_int stream_id, nxs_bool blocking) {
   auto rt = getRuntime();
-  auto cmdbuf = rt->get<MTL::CommandBuffer>(schedule_id);
-  if (!cmdbuf) return NXS_InvalidDevice;
+  auto parent = rt->getObject(schedule_id);
+  if (!parent) return NXS_InvalidSchedule;
+  auto cmdbuf = (*parent)->get<MTL::CommandBuffer>();
+  if (!cmdbuf) return NXS_InvalidSchedule;
   auto stream = rt->get<MTL::CommandQueue>(stream_id);
   if (stream)
-    assert((*cmdbuf)->commandQueue() == *stream);
+    assert(cmdbuf->commandQueue() == *stream);
 
-  (*cmdbuf)->enqueue();
+  cmdbuf->enqueue();
 
-  (*cmdbuf)->commit();
+  cmdbuf->commit();
   if (blocking) {
-    (*cmdbuf)->waitUntilCompleted();  // Synchronous wait for simplicity
-    if ((*cmdbuf)->status() == MTL::CommandBufferStatusError) {
+    cmdbuf->waitUntilCompleted();  // Synchronous wait for simplicity
+    if (cmdbuf->status() == MTL::CommandBufferStatusError) {
       NXSAPI_LOG(
           NXSAPI_STATUS_ERR,
           "runSchedule: "
-              << (*cmdbuf)->error()->localizedDescription()->utf8String());
+              << cmdbuf->error()->localizedDescription()->utf8String());
       return NXS_InvalidEvent;
     }
   }
@@ -618,7 +632,7 @@ extern "C" nxs_status nxsRunSchedule(nxs_int schedule_id, nxs_int stream_id, nxs
 extern "C" nxs_status NXS_API_CALL nxsReleaseSchedule(nxs_int schedule_id) {
   auto rt = getRuntime();
   if (!rt->dropObject(schedule_id, release_fn<MTL::CommandBuffer>))
-    return NXS_InvalidBuildOptions;  // fix
+    return NXS_InvalidSchedule;
   return NXS_Success;
 }
 
@@ -631,22 +645,20 @@ extern "C" nxs_status NXS_API_CALL nxsReleaseSchedule(nxs_int schedule_id) {
 extern "C" nxs_int NXS_API_CALL nxsCreateCommand(nxs_int schedule_id,
                                                  nxs_int kernel_id) {
   auto rt = getRuntime();
-  auto cmdbuf = rt->get<MTL::CommandBuffer>(schedule_id);
-  if (!cmdbuf) return NXS_InvalidBuildOptions;  // fix
+  auto parent = rt->getObject(schedule_id);
+  if (!parent) return NXS_InvalidSchedule;
+  auto cmdbuf = (*parent)->get<MTL::CommandBuffer>();
+  if (!cmdbuf) return NXS_InvalidSchedule;
+  auto pipeState = rt->get<MTL::ComputePipelineState>(kernel_id);
+  if (!pipeState) return NXS_InvalidKernel;
 
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createCommand");
-  MTL::ComputeCommandEncoder *command = (*cmdbuf)->computeCommandEncoder();
-  auto res = rt->addObject(command, true);
+  MTL::ComputeCommandEncoder *command = cmdbuf->computeCommandEncoder();
+  auto res = rt->addObject(*parent, command, true);
 
   // Add the kernel
-  if (nxs_success(kernel_id)) {
-    if (auto pipeState = rt->get<MTL::ComputePipelineState>(kernel_id)) {
-      command->setComputePipelineState(*pipeState);
-    } else {
-      // test before creating Command
-      return NXS_InvalidKernel;
-    }
-  }
+  command->setComputePipelineState(*pipeState);
+
   return res;
 }
 
@@ -664,9 +676,9 @@ extern "C" nxs_status NXS_API_CALL nxsSetCommandArgument(nxs_int command_id,
                                                   << buffer_id);
   auto rt = getRuntime();
   auto cmd = rt->get<MTL::ComputeCommandEncoder>(command_id);
-  if (!cmd) return NXS_InvalidCommandQueue;  // fix
+  if (!cmd) return NXS_InvalidCommand;
   auto buf = rt->get<MTL::Buffer>(buffer_id);
-  if (!buf) return NXS_InvalidBufferSize;  // fix
+  if (!buf) return NXS_InvalidBuffer;
   (*cmd)->setBuffer(*buf, 0, argument_index);
   return NXS_Success;
 }
@@ -682,7 +694,7 @@ extern "C" nxs_status NXS_API_CALL nxsFinalizeCommand(nxs_int command_id,
                                                       nxs_int grid_size) {
   auto rt = getRuntime();
   auto cmd = rt->get<MTL::ComputeCommandEncoder>(command_id);
-  if (!cmd) return NXS_InvalidCommandQueue;  // fix
+  if (!cmd) return NXS_InvalidCommand;
 
   MTL::Size gridSize = MTL::Size(grid_size, 1, 1);
 #if 0
@@ -707,7 +719,7 @@ extern "C" nxs_status NXS_API_CALL nxsFinalizeCommand(nxs_int command_id,
 extern "C" nxs_status NXS_API_CALL nxsReleaseCommand(nxs_int command_id) {
   auto rt = getRuntime();
   if (!rt->dropObject(command_id, release_fn<MTL::ComputeCommandEncoder>))
-    return NXS_InvalidBuildOptions;  // fix
+    return NXS_InvalidCommand;
   return NXS_Success;
 }
 

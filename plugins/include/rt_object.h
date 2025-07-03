@@ -17,13 +17,15 @@ void delete_fn(void *obj) {
 }
 
 class Object {
+  Object *parent;
   void *obj;
   bool is_owned;
   typedef std::vector<nxs_int> children_t;
   children_t children;
 
  public:
-  Object(void *obj = nullptr, bool is_owned = true) {
+  Object(Object *parent = nullptr, void *obj = nullptr, bool is_owned = true) {
+    this->parent = parent;
     this->obj = obj;
     this->is_owned = obj ? is_owned : false;
   }
@@ -45,6 +47,7 @@ class Object {
     obj = nullptr;
     is_owned = false;
   }
+  Object *getParent() { return parent; }
   children_t &getChildren() { return children; }
   void addChild(nxs_int child, nxs_int index = -1) {
     if (index < 0)

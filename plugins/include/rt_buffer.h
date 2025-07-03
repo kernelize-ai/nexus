@@ -3,6 +3,8 @@
 
 #include <nexus-api.h>
 
+#include <cstring>
+
 namespace nxs {
 namespace rt {
 
@@ -14,9 +16,10 @@ class Buffer {
  public:
   Buffer(size_t size, void *host_ptr = nullptr, bool is_owned = false)
       : buf((char *)host_ptr), sz(size), is_owned(is_owned) {
-    if (host_ptr && is_owned) {
+    if (is_owned) {
       buf = (char *)malloc(size);
-      memcpy(buf, host_ptr, size);
+      if (host_ptr)
+        std::memcpy((void *)buf, host_ptr, size);
     }
   }
   ~Buffer() {
@@ -27,6 +30,9 @@ class Buffer {
   template <typename T>
   T *get() {
     return reinterpret_cast<T *>(buf);
+  }
+  static void delete_fn(void *obj) {
+    delete static_cast<Buffer *>(obj);
   }
 };
 

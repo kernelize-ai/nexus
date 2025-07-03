@@ -14,8 +14,8 @@ class Runtime {
   Runtime() { objects.reserve(1024); }
   ~Runtime() {}
 
-  nxs_int addObject(void *obj = nullptr, bool is_owned = false) {
-    objects.emplace_back(obj, is_owned);
+  nxs_int addObject(Object *parent, void *obj = nullptr, bool is_owned = false) {
+    objects.emplace_back(parent, obj, is_owned);
     return objects.size() - 1;
   }
 
