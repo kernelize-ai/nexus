@@ -15,7 +15,7 @@ class CommandImpl : public Impl {
   /// @brief Construct a Platform for the current system
   CommandImpl(Impl owner, Kernel kern) : Impl(owner), kernel(kern) {
     NEXUS_LOG(NEXUS_STATUS_NOTE, "    Command: " << getId());
-
+    arguments.reserve(16); // TODO: get from kernel
     // TODO: gather kernel argument details
   }
 
@@ -38,9 +38,12 @@ class CommandImpl : public Impl {
     return std::nullopt;
   }
 
+  Kernel getKernel() const { return kernel; }
+  Event getEvent() const { return event; }
+
   nxs_status setArgument(nxs_uint index, Buffer buffer) {
     if (event) return NXS_InvalidArgIndex;
-    arguments[index] = buffer;
+    addArgument(index, buffer);
     auto *rt = getParentOfType<RuntimeImpl>();
     return (nxs_status)rt->runAPIFunction<NF_nxsSetCommandArgument>(
         getId(), index, buffer.getId());
@@ -56,6 +59,13 @@ class CommandImpl : public Impl {
  private:
   Kernel kernel;
   Event event;
+
+  void addArgument(nxs_uint index, Buffer buffer) {
+    if (index >= arguments.size())
+      arguments.resize(index + 1);
+    arguments[index] = buffer;
+  }
+
   std::vector<Buffer> arguments;
 };
 }  // namespace detail
@@ -70,6 +80,14 @@ nxs_int Command::getId() const { NEXUS_OBJ_MCALL(NXS_InvalidCommand, getId); }
 
 std::optional<Property> Command::getProperty(nxs_int prop) const {
   NEXUS_OBJ_MCALL(std::nullopt, getProperty, prop);
+}
+
+Kernel Command::getKernel() const {
+  NEXUS_OBJ_MCALL(Kernel(), getKernel);
+}
+
+Event Command::getEvent() const {
+  NEXUS_OBJ_MCALL(Event(), getEvent);
 }
 
 nxs_status Command::setArgument(nxs_uint index, Buffer buffer) {

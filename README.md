@@ -31,12 +31,16 @@ dev0_arch = dev0.get_property_str('Architecture')
 buf0 = dev0.create_buffer(tensor0)
 buf1 = dev0.create_buffer((1024,1024), dtype='fp16')
 
+# Create event for synchronization
+event = dev0.create_event(nexus.event_type.Shared)
+
 sched0 = dev0.create_schedule()
 
 cmd0 = sched0.create_command(kernel)
-...
+signal_cmd = sched0.create_signal_command(event, 1)
 
-sched0.run()
+sched0.run(blocking=False)
+event.wait(1)  # Wait for completion
 ```
 
 ### C++ Source API
@@ -70,29 +74,71 @@ The Runtime Plugin C-API is a thin wrapper for clean dynamic library loading to 
 
 ## Building Nexus
 
-First clone the repo.
+### Quick Start
+
+For a quick setup, see the [Quick Start Guide](docs/Quick_Start.md).
+
+### Detailed Build Instructions
+
+First clone the repo with submodules:
 
 ```shell
-git clone https://github.com/kernelize-ai/nexus.git
+git clone --recursive https://github.com/kernelize-ai/nexus.git
 cd nexus
-## ??
-git submodule update --init
 ```
 
-Then create the environment.
+Then build with CMake:
+
+```shell
+mkdir build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release -DNEXUS_BUILD_PYTHON_MODULE=ON -DNEXUS_BUILD_PLUGINS=ON
+make -j$(nproc)  # Linux/macOS
+# or
+cmake --build . --config Release --parallel  # Windows
+```
+
+For detailed build instructions, dependencies, and troubleshooting, see the [Build and CI Documentation](docs/Build_and_CI.md).
+
+### Python Environment (Alternative)
+
+You can also use a Python virtual environment:
 
 ```shell
 python3 -m venv .venv --prompt nexus
-source .venv/bin/activate
-```
-
-Now build and install in your python.
-
-```shell
-pip install -e .
+source .venv/bin/activate  # Linux/macOS
+# or
+.venv\Scripts\activate  # Windows
+pip install -r requirements.txt
 ```
 
 ## Testing
 
-Try test/pynexus/test.py
-(still needs kernel.so)
+Run the test suite:
+
+```shell
+cd build
+ctest --output-on-failure
+```
+
+For Python-specific tests:
+
+```shell
+python test/pynexus/test.py
+```
+
+## Continuous Integration
+
+The project uses GitHub Actions for continuous integration, building on:
+- **Linux** (Ubuntu): GCC compiler, Debug and Release builds
+- **macOS**: Clang compiler, Debug and Release builds
+
+See the [Build and CI Documentation](docs/Build_and_CI.md) for details on the CI setup and how to run builds locally.
+
+## Documentation
+
+- [Quick Start Guide](docs/Quick_Start.md) - Get up and running quickly
+- [Core API](docs/Core_API.md) - C++ API documentation
+- [Python API](docs/Python_API.md) - Python bindings documentation
+- [Plugin API](docs/Plugin_API.md) - Plugin development guide
+- [JSON API](docs/JSON_API.md) - JSON interface documentation
+- [Build and CI](docs/Build_and_CI.md) - Build instructions and CI setup

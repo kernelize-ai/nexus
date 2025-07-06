@@ -45,6 +45,8 @@ Represents a hardware device.
 - `get_info()`: Get device properties (as a Properties object).
 - `create_buffer(data or size)`: Create a buffer on this device.
 - `copy_buffer(buffer)`: Copy a buffer to this device.
+- `create_event(event_type=nexus.event_type.Shared)`: Create an event for synchronization.
+- `get_events()`: Get all events associated with this device.
 - `load_library(filepath)`: Load a kernel library.
 - `create_schedule()`: Create a command schedule.
 - `create_stream()`: Create a command stream (if supported).
@@ -61,15 +63,24 @@ Represents a loaded kernel library.
 #### Kernel
 Represents a compiled kernel.
 
+#### Event
+Represents a synchronization primitive.
+- `signal(value=1)`: Signal the event with a specific value.
+- `wait(value=1)`: Wait for the event to be signaled with a specific value.
+- `get_property_*`: Query event properties.
+
 #### Schedule
 Represents a command schedule.
 - `create_command(kernel)`: Create a command for a kernel.
-- `run()`: Execute the schedule.
+- `create_signal_command(event, value=1)`: Create a signal command for an event.
+- `create_wait_command(event, value=1)`: Create a wait command for an event.
+- `run(stream=None, blocking=True)`: Execute the schedule.
 
 #### Command
 Represents a kernel execution command.
 - `set_buffer(index, buffer)`: Set a buffer as a kernel argument.
 - `finalize(group_size, grid_size)`: Finalize the command for execution.
+- `get_event()`: Get the associated event (for signal/wait commands).
 
 #### Properties
 Represents a set of properties (device, buffer, etc.).
@@ -159,6 +170,57 @@ cmd_args = command.get_property_int_vec("Arguments")
 - Property names are case-sensitive and must match the schema or backend.
 - Enum values are available in the `nexus.property` submodule for convenience and type safety.
 - Hierarchical paths allow access to nested properties, such as memory subsystem details or device features.
+
+---
+
+## Event Types and Synchronization
+
+Nexus supports three types of events for different synchronization patterns:
+
+### Event Types
+
+- **`nexus.event_type.Shared`**: Shared events for cross-queue synchronization
+- **`nexus.event_type.Signal`**: Signal events for simple completion notifications  
+- **`nexus.event_type.Fence`**: Fence events for kernel completion synchronization
+
+### Basic Event Usage
+
+```python
+import nexus
+
+# Create an event
+event = device.create_event(nexus.event_type.Shared)
+
+# Signal the event
+event.signal(1)
+
+# Wait for the event
+event.wait(1)
+```
+
+### Event-Based Synchronization
+
+```python
+# Create event and schedule
+event = device.create_event()
+schedule = device.create_schedule()
+
+# Add kernel command
+cmd = schedule.create_command(kernel)
+cmd.set_buffer(0, input_buffer)
+cmd.finalize(256, 1024)
+
+# Add signal command
+signal_cmd = schedule.create_signal_command(event, 1)
+
+# Run schedule non-blocking
+schedule.run(blocking=False)
+
+# Wait for completion
+event.wait(1)
+```
+
+For detailed event documentation, see [Event API](Event_API.md).
 
 ### Advanced: Property Vectors
 

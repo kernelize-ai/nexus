@@ -39,7 +39,7 @@ class Device : public Object<detail::DeviceImpl> {
 
   Stream createStream();
   Schedule createSchedule();
-  Event createEvent();
+  Event createEvent(nxs_event_type event_type = NXS_EventType_Shared);
 
   Library createLibrary(void *libraryData, size_t librarySize);
   Library createLibrary(const std::string &libraryPath);

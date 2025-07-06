@@ -133,8 +133,12 @@ namespace nexus {
         // Runtime functions
         Librarys getLibraries() const;
         Schedules getSchedules() const;
+        Streams getStreams() const;
+        Events getEvents() const;
 
         Schedule createSchedule();
+        Stream createStream();
+        Event createEvent(nxs_event_type event_type = NXS_EventType_Shared);
         Library createLibrary(void *libraryData, size_t librarySize);
         Library createLibrary(const std::string &libraryPath);
         Buffer createBuffer(size_t _sz, const void *_hostData = nullptr);
@@ -148,10 +152,40 @@ namespace nexus {
 **Methods:**
 - `getInfo()`: Get device information
 - `createSchedule()`: Create a new command schedule
+- `createStream()`: Create a command stream
+- `createEvent(nxs_event_type event_type)`: Create an event for synchronization
+- `getEvents()`: Get all events associated with this device
 - `createLibrary(void *libraryData, size_t librarySize)`: Create library from binary data
 - `createLibrary(const std::string &libraryPath)`: Create library from file
 - `createBuffer(size_t sz, const void *hostData)`: Create device buffer
 - `copyBuffer(Buffer buf)`: Copy buffer to this device
+
+#### Event
+
+Synchronization primitive for coordinating execution between host and device.
+
+```cpp
+namespace nexus {
+    class Event : public Object<detail::EventImpl> {
+    public:
+        Event(detail::Impl owner, nxs_int value = 1);
+        using Object::Object;
+
+        nxs_int getId() const override;
+        std::optional<Property> getProperty(nxs_int prop) const override;
+
+        nxs_status signal(nxs_int value = 1);
+        nxs_status wait(nxs_int value = 1);
+    };
+
+    typedef Objects<Event> Events;
+}
+```
+
+**Methods:**
+- `signal(nxs_int value)`: Signal the event with a specific value
+- `wait(nxs_int value)`: Wait for the event to be signaled with a specific value
+- `getProperty(nxs_int prop)`: Get event properties
 
 #### Buffer
 
@@ -242,7 +276,10 @@ namespace nexus {
         std::optional<Property> getProperty(nxs_int prop) const override;
 
         Command createCommand(Kernel kern);
-        nxs_status run(nxs_bool blocking = true);
+        Command createSignalCommand(nxs_int signal_value = 1);
+        Command createSignalCommand(Event event, nxs_int signal_value = 1);
+        Command createWaitCommand(Event event, nxs_int wait_value = 1);
+        nxs_status run(Stream stream = Stream(), nxs_bool blocking = true);
     };
 
     typedef Objects<Schedule> Schedules;
@@ -251,7 +288,10 @@ namespace nexus {
 
 **Methods:**
 - `createCommand(Kernel kern)`: Create a new command for the kernel
-- `run(nxs_bool blocking)`: Execute the schedule
+- `createSignalCommand(nxs_int signal_value)`: Create a signal command with default event
+- `createSignalCommand(Event event, nxs_int signal_value)`: Create a signal command for specific event
+- `createWaitCommand(Event event, nxs_int wait_value)`: Create a wait command for an event
+- `run(Stream stream, nxs_bool blocking)`: Execute the schedule on a stream
 
 #### Command
 
@@ -262,10 +302,14 @@ namespace nexus {
     class Command : public Object<detail::CommandImpl, detail::ScheduleImpl> {
     public:
         Command(detail::Impl owner, Kernel kern);
+        Command(detail::Impl owner, Event event);
         using Object::Object;
 
         nxs_int getId() const override;
         std::optional<Property> getProperty(nxs_int prop) const override;
+
+        Kernel getKernel() const;
+        Event getEvent() const;
 
         nxs_status setArgument(nxs_uint index, Buffer buffer) const;
         nxs_status finalize(nxs_int gridSize, nxs_int groupSize);
@@ -276,6 +320,8 @@ namespace nexus {
 ```
 
 **Methods:**
+- `getKernel()`: Get the associated kernel (for kernel commands)
+- `getEvent()`: Get the associated event (for signal/wait commands)
 - `setArgument(nxs_uint index, Buffer buffer)`: Set kernel argument
 - `finalize(nxs_int gridSize, nxs_int groupSize)`: Finalize command with execution parameters
 
@@ -314,6 +360,32 @@ namespace nexus {
         std::optional<Property> getProperty(const std::vector<nxs_int> &propPath) const;
     };
 }
+```
+
+### Event Types
+
+Nexus supports three types of events for different synchronization patterns:
+
+```cpp
+enum _nxs_event_type {
+    NXS_EventType_Shared = 0,  // Shared events for cross-queue synchronization
+    NXS_EventType_Signal = 1,  // Signal events for simple completion notifications
+    NXS_EventType_Fence = 2,   // Fence events for kernel completion synchronization
+};
+typedef enum _nxs_event_type nxs_event_type;
+```
+
+### Command Types
+
+Commands can be of different types depending on their purpose:
+
+```cpp
+enum _nxs_command_type {
+    NXS_CommandType_Dispatch = 0,  // Kernel dispatch command
+    NXS_CommandType_Signal = 1,    // Signal event command
+    NXS_CommandType_Wait = 2,      // Wait for event command
+};
+typedef enum _nxs_command_type nxs_command_type;
 ```
 
 ### Error Codes

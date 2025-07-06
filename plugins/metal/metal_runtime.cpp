@@ -194,6 +194,99 @@ MetalRuntime *getRuntime() {
   return &s_runtime;
 }
 
+////////////////////////////////////////////////////////////////////////////
+// Metal Command
+////////////////////////////////////////////////////////////////////////////
+class MetalCommand {
+  nxs_int id;
+  nxs_command_type type;
+  nxs_int event_value;
+  nxs_int group_size;
+  nxs_int grid_size;
+ public:
+  MetalCommand(nxs_int id, nxs_command_type type, nxs_int event_value = 0)
+   : id(id), type(type), event_value(event_value), group_size(1), grid_size(1) {}
+  nxs_status createCommand(MetalRuntime *rt, rt::Object *cobj, MTL::CommandBuffer *cmdbuf) {
+    NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createCommand " << id << " - " << type);
+
+    switch (type) {
+      case NXS_CommandType_Dispatch: {
+        auto kernel = rt->get<MTL::ComputePipelineState>(id);
+        if (!kernel) return NXS_InvalidKernel;
+        auto *command = cmdbuf->computeCommandEncoder();
+        command->setComputePipelineState(*kernel);
+        int idx = 0;
+        for (auto arg : cobj->getChildren()) {
+          auto buf = rt->get<MTL::Buffer>(arg);
+          if (!buf) return NXS_InvalidBuffer;
+          command->setBuffer(*buf, 0, idx++);
+        }
+        command->dispatchThreads(MTL::Size(grid_size, 1, 1), MTL::Size(group_size, 1, 1));
+        command->endEncoding();
+        return NXS_Success;
+      }
+      case NXS_CommandType_Signal: {
+        auto event = rt->get<MTL::Event>(id);
+        if (!event) return NXS_InvalidEvent;
+        cmdbuf->encodeSignalEvent(*event, event_value);
+        return NXS_Success;
+      }
+      case NXS_CommandType_Wait: {
+        auto event = rt->get<MTL::Event>(id);
+        if (!event) return NXS_InvalidEvent;
+        cmdbuf->encodeWait(*event, event_value);
+        return NXS_Success;
+      }
+      default:
+        return NXS_InvalidCommand;
+    }
+  }
+  void setDimensions(nxs_int group_size, nxs_int grid_size) {
+    this->group_size = group_size;
+    this->grid_size = grid_size;
+  }
+  void release() {
+    // TODO: release the command buffer
+  }
+};
+
+////////////////////////////////////////////////////////////////////////////
+// Metal Schedule
+// - Metal does not support running a command_buffer on multiple command queues
+// - We need to create a command buffer for each command queue
+// - so command buffer creation is deferred until the schedule is run
+////////////////////////////////////////////////////////////////////////////
+class MetalSchedule {
+  std::unordered_map<MTL::CommandQueue *, MTL::CommandBuffer *> cmdbufs;
+ public:
+  MetalSchedule() {
+  }
+  ~MetalSchedule() {
+    for (auto cmdbuf : cmdbufs) {
+      cmdbuf.second->release();
+    }
+  }
+
+  MTL::CommandBuffer *getCommandBuffer(MetalRuntime *rt, rt::Object *sched, MTL::CommandQueue *queue) {
+    auto ii = cmdbufs.find(queue);
+    if (ii != cmdbufs.end())
+      return ii->second;
+
+    auto *cmdbuf = queue->commandBuffer();
+    cmdbufs[queue] = cmdbuf;
+    // Add all the commands to the command buffer
+    for (auto cmd_id : sched->getChildren()) {
+      auto cobj = rt->getObject(cmd_id);
+      if (!cobj) continue;
+      auto *cmd = (*cobj)->get<MetalCommand>();
+      if (!cmd) continue;
+      cmd->createCommand(rt, *cobj, cmdbuf);
+    }
+    return cmdbuf;
+  }
+};
+
+
 /************************************************************************
  * @def GetRuntimeProperty
  * @brief Return Runtime properties 
@@ -542,6 +635,86 @@ extern "C" nxs_status nxsGetKernelProperty(
 }
 
 /************************************************************************
+ * @def CreateEvent
+ * @brief Create event on the device
+ * @return Negative value is an error status.
+ *         Non-negative is the bufferId.
+ ***********************************************************************/
+extern "C" nxs_int nxsCreateEvent(nxs_int device_id, nxs_event_type event_type) {
+  auto rt = getRuntime();
+  auto parent = rt->getObject(device_id);
+  if (!parent) return NXS_InvalidDevice;
+  auto dev = (*parent)->get<MTL::Device>();
+  if (!dev) return NXS_InvalidDevice;
+
+  MTL::Event *event = nullptr;
+  if (event_type == NXS_EventType_Shared) {
+    event = dev->newSharedEvent();
+  } else if (event_type == NXS_EventType_Signal) {
+    event = dev->newEvent();
+  } else if (event_type == NXS_EventType_Fence) {
+    //event = dev->newFence();
+    return NXS_InvalidEvent;
+  }
+  return rt->addObject(*parent, event, true);
+}
+/************************************************************************
+ * @def GetEventProperty
+ * @brief Return Event properties 
+ ***********************************************************************/
+extern "C" nxs_status nxsGetEventProperty(
+  nxs_int event_id,
+  nxs_uint event_property_id,
+  void *property_value,
+  size_t* property_value_size
+) {
+  return NXS_Success;
+}
+/************************************************************************
+ * @def SignalEvent
+ * @brief Signal an event 
+ ***********************************************************************/
+extern "C" nxs_status nxsSignalEvent(
+  nxs_int event_id,
+  nxs_int signal_value
+) {
+  auto rt = getRuntime();
+  auto obj = rt->getObject(event_id);
+  if (!obj) return NXS_InvalidEvent;
+  auto event = (*obj)->get<MTL::SharedEvent>();
+  if (!event) return NXS_InvalidEvent;
+  event->setSignaledValue(signal_value);
+  return NXS_Success;
+}
+/************************************************************************
+ * @def WaitEvent
+ * @brief Wait for an event 
+ ***********************************************************************/
+extern "C" nxs_status nxsWaitEvent(
+  nxs_int event_id,
+  nxs_int wait_value
+) {
+  auto rt = getRuntime();
+  auto obj = rt->getObject(event_id);
+  if (!obj) return NXS_InvalidEvent;
+  auto event = (*obj)->get<MTL::SharedEvent>();
+  if (!event) return NXS_InvalidEvent;
+  event->waitUntilSignaledValue(wait_value, 1000000000); // 1 second timeout
+  return NXS_Success;
+}
+/************************************************************************
+ * @def ReleaseEvent
+ * @brief Release an event on the device
+ * @return Error status or Succes.
+ ***********************************************************************/
+ nxs_status NXS_API_CALL nxsReleaseEvent(nxs_int event_id) {
+  auto rt = getRuntime();
+  if (!rt->dropObject(event_id, release_fn<MTL::SharedEvent>))
+    return NXS_InvalidEvent;
+  return NXS_Success;
+}
+
+/************************************************************************
  * @def CreateStream
  * @brief Create stream on the device
  * @return Negative value is an error status.
@@ -555,11 +728,23 @@ extern "C" nxs_int nxsCreateStream(nxs_int device_id,
   auto dev = (*parent)->get<MTL::Device>();
   if (!dev) return NXS_InvalidDevice;
 
+  // TODO: Get the default command queue for the first Stream
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createStream");
-  MTL::CommandQueue *stream = dev->newCommandQueue();
-  return rt->addObject(*parent, stream, true);
+  MTL::CommandQueue *queue = dev->newCommandQueue();
+  return rt->addObject(*parent, queue, true);
 }
-
+/************************************************************************
+ * @def GetStreamProperty
+ * @brief Return Stream properties 
+ ***********************************************************************/
+extern "C" nxs_status nxsGetStreamProperty(
+  nxs_int stream_id,
+  nxs_uint stream_property_id,
+  void *property_value,
+  size_t* property_value_size
+) {
+  return NXS_Success;
+}
 /************************************************************************
  * @def ReleaseStream
  * @brief Release the stream on the device
@@ -586,11 +771,9 @@ extern "C" nxs_int nxsCreateSchedule(nxs_int device_id,
   auto dev = (*parent)->get<MTL::Device>();
   if (!dev) return NXS_InvalidDevice;
 
-  //// NEEDS DEFERRED CREATION UNTIL MAPPED TO A STREAM
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createSchedule");
-  auto *queue = rt->getQueue(device_id);
-  MTL::CommandBuffer *cmdBuf = queue->commandBuffer();
-  return rt->addObject(*parent, cmdBuf, true);
+  auto *sched = new MetalSchedule();
+  return rt->addObject(*parent, sched, true);
 }
 
 /************************************************************************
@@ -602,11 +785,13 @@ extern "C" nxs_status nxsRunSchedule(nxs_int schedule_id, nxs_int stream_id, nxs
   auto rt = getRuntime();
   auto parent = rt->getObject(schedule_id);
   if (!parent) return NXS_InvalidSchedule;
-  auto cmdbuf = (*parent)->get<MTL::CommandBuffer>();
-  if (!cmdbuf) return NXS_InvalidSchedule;
+  auto sched = (*parent)->get<MetalSchedule>(); 
+  if (!sched) return NXS_InvalidSchedule;
   auto stream = rt->get<MTL::CommandQueue>(stream_id);
-  if (stream)
-    assert(cmdbuf->commandQueue() == *stream);
+  if (!stream) return NXS_InvalidStream;
+
+  auto *cmdbuf = sched->getCommandBuffer(rt, *parent, *stream);
+  if (!cmdbuf) return NXS_InvalidSchedule;
 
   cmdbuf->enqueue();
 
@@ -631,7 +816,7 @@ extern "C" nxs_status nxsRunSchedule(nxs_int schedule_id, nxs_int stream_id, nxs
  ***********************************************************************/
 extern "C" nxs_status NXS_API_CALL nxsReleaseSchedule(nxs_int schedule_id) {
   auto rt = getRuntime();
-  if (!rt->dropObject(schedule_id, release_fn<MTL::CommandBuffer>))
+  if (!rt->dropObject(schedule_id, rt::delete_fn<MetalSchedule>))
     return NXS_InvalidSchedule;
   return NXS_Success;
 }
@@ -647,18 +832,63 @@ extern "C" nxs_int NXS_API_CALL nxsCreateCommand(nxs_int schedule_id,
   auto rt = getRuntime();
   auto parent = rt->getObject(schedule_id);
   if (!parent) return NXS_InvalidSchedule;
-  auto cmdbuf = (*parent)->get<MTL::CommandBuffer>();
-  if (!cmdbuf) return NXS_InvalidSchedule;
+  auto sched = (*parent)->get<MetalSchedule>();
+  if (!sched) return NXS_InvalidSchedule;
   auto pipeState = rt->get<MTL::ComputePipelineState>(kernel_id);
   if (!pipeState) return NXS_InvalidKernel;
 
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createCommand");
-  MTL::ComputeCommandEncoder *command = cmdbuf->computeCommandEncoder();
-  auto res = rt->addObject(*parent, command, true);
 
-  // Add the kernel
-  command->setComputePipelineState(*pipeState);
+  auto *cmd = new MetalCommand(kernel_id, NXS_CommandType_Dispatch);
+  auto res = rt->addObject(*parent, cmd, true);
+  (*parent)->addChild(res);
+  return res;
+}
 
+/************************************************************************
+ * @def CreateSignalCommand
+ * @brief Create signal command on the device
+ * @return Negative value is an error status.
+ *         Non-negative is the bufferId.
+ ***********************************************************************/
+extern "C" nxs_int NXS_API_CALL nxsCreateSignalCommand(nxs_int schedule_id,
+                                                 nxs_int event_id,
+                                                 nxs_int signal_value) {
+  auto rt = getRuntime();
+  auto parent = rt->getObject(schedule_id);
+  if (!parent) return NXS_InvalidSchedule;
+  auto sched = (*parent)->get<MetalSchedule>();
+  if (!sched) return NXS_InvalidSchedule;
+  auto event = rt->get<MTL::Event>(event_id);
+  if (!event) return NXS_InvalidEvent;
+
+  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createSignalCommand");
+  auto *cmd = new MetalCommand(event_id, NXS_CommandType_Signal, signal_value);
+  auto res = rt->addObject(*parent, cmd, true);
+  (*parent)->addChild(res);
+  return res;
+}
+/************************************************************************
+ * @def CreateWaitCommand
+ * @brief Create wait command on the device
+ * @return Negative value is an error status.
+ *         Non-negative is the bufferId.
+ ***********************************************************************/
+extern "C" nxs_int NXS_API_CALL nxsCreateWaitCommand(nxs_int schedule_id,
+                                                 nxs_int event_id,
+                                                 nxs_int wait_value) {
+  auto rt = getRuntime();
+  auto parent = rt->getObject(schedule_id);
+  if (!parent) return NXS_InvalidSchedule;
+  auto sched = (*parent)->get<MetalSchedule>();
+  if (!sched) return NXS_InvalidSchedule;
+  auto event = rt->get<MTL::Event>(event_id);
+  if (!event) return NXS_InvalidEvent;
+
+  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createWaitCommand");
+  auto *cmd = new MetalCommand(event_id, NXS_CommandType_Wait, wait_value);
+  auto res = rt->addObject(*parent, cmd, true);
+  (*parent)->addChild(res);
   return res;
 }
 
@@ -675,11 +905,14 @@ extern "C" nxs_status NXS_API_CALL nxsSetCommandArgument(nxs_int command_id,
                                                   << argument_index << " - "
                                                   << buffer_id);
   auto rt = getRuntime();
-  auto cmd = rt->get<MTL::ComputeCommandEncoder>(command_id);
+  auto parent = rt->getObject(command_id);
+  if (!parent) return NXS_InvalidCommand;
+  auto *cmd = (*parent)->get<MetalCommand>();
   if (!cmd) return NXS_InvalidCommand;
   auto buf = rt->get<MTL::Buffer>(buffer_id);
   if (!buf) return NXS_InvalidBuffer;
-  (*cmd)->setBuffer(*buf, 0, argument_index);
+  // TODO: needs retained buffer
+  (*parent)->addChild(buffer_id, argument_index);
   return NXS_Success;
 }
 
@@ -693,20 +926,10 @@ extern "C" nxs_status NXS_API_CALL nxsFinalizeCommand(nxs_int command_id,
                                                       nxs_int group_size,
                                                       nxs_int grid_size) {
   auto rt = getRuntime();
-  auto cmd = rt->get<MTL::ComputeCommandEncoder>(command_id);
+  auto cmd = rt->get<MetalCommand>(command_id);
   if (!cmd) return NXS_InvalidCommand;
 
-  MTL::Size gridSize = MTL::Size(grid_size, 1, 1);
-#if 0
-  NS::UInteger threadGroupSize = pAddPSO->maxTotalThreadsPerThreadgroup();
-  if (threadGroupSize > ARRAY_LENGTH) {
-    threadGroupSize = ARRAY_LENGTH;
-  }
-#endif
-  MTL::Size threadgroupSize = MTL::Size(group_size, 1, 1);
-
-  (*cmd)->dispatchThreads(gridSize, threadgroupSize);
-  (*cmd)->endEncoding();
+  (*cmd)->setDimensions(group_size, grid_size);
 
   return NXS_Success;
 }
@@ -718,7 +941,7 @@ extern "C" nxs_status NXS_API_CALL nxsFinalizeCommand(nxs_int command_id,
  ***********************************************************************/
 extern "C" nxs_status NXS_API_CALL nxsReleaseCommand(nxs_int command_id) {
   auto rt = getRuntime();
-  if (!rt->dropObject(command_id, release_fn<MTL::ComputeCommandEncoder>))
+  if (!rt->dropObject(command_id, release_fn<MetalCommand>))
     return NXS_InvalidCommand;
   return NXS_Success;
 }

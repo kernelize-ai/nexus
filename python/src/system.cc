@@ -199,6 +199,16 @@ void pynexus::init_system_bindings(py::module &m) {
   propEnum.export_values();
 
   //////////////////////////////////////////////////////////////////////////
+  // Generate python enum for nxs_event_type
+  // - added to `event_type` submodule for scoping
+  auto meventType = m.def_submodule("event_type");
+  auto eventTypeEnum = py::enum_<nxs_event_type>(meventType, "nxs_event_type", py::module_local());
+  eventTypeEnum.value("Shared", NXS_EventType_Shared);
+  eventTypeEnum.value("Signal", NXS_EventType_Signal);
+  eventTypeEnum.value("Fence", NXS_EventType_Fence);
+  eventTypeEnum.export_values();
+
+  //////////////////////////////////////////////////////////////////////////
   // Add Nexus Object types and methods
   //////////////////////////////////////////////////////////////////////////
 
@@ -264,8 +274,15 @@ void pynexus::init_system_bindings(py::module &m) {
         return self.getKernel(name);
       });
 
+  make_object_class<Stream>(m, "_stream");
+  make_object_class<Event>(m, "_event")
+      .def("signal", [](Event &self, int signal_value) { return self.signal(signal_value); }, py::arg("signal_value") = 1)
+      .def("wait", [](Event &self, int wait_value) { return self.wait(wait_value); }, py::arg("wait_value") = 1);
+
   make_object_class<Command>(m, "_command")
-      .def("set_buffer",
+      .def("get_event", [](Command &self) { return self.getEvent(); })
+      .def("get_kernel", [](Command &self) { return self.getKernel(); })
+      .def("set_arg",
            [](Command &self, int index, Buffer buf) {
              return self.setArgument(index, buf);
            })
@@ -275,19 +292,36 @@ void pynexus::init_system_bindings(py::module &m) {
 
   make_object_class<Schedule>(m, "_schedule")
       .def("create_command",
-           [](Schedule &self, Kernel kernel) {
-             return self.createCommand(kernel);
-           })
-      .def("run", [](Schedule &self) { return self.run(); });
+           [](Schedule &self, Kernel kernel, std::vector<Buffer> buffers, std::vector<int> dims) {
+             auto cmd = self.createCommand(kernel);
+             int idx = 0;
+             for (auto &buf : buffers) {
+               cmd.setArgument(idx++, buf);
+             }
+             if (cmd && dims.size() == 2 && dims[0] > 0 && dims[1] > 0) {
+               cmd.finalize(dims[0], dims[1]);
+             }
+             return cmd;
+           }, py::arg("kernel"), py::arg("buffers") = std::vector<Buffer>(), py::arg("dims") = std::vector<int>())
+      .def("create_signal",
+           [](Schedule &self, Event event, int signal_value) {
+             return self.createSignalCommand(event, signal_value);
+           }, py::arg("event") = Event(), py::arg("signal_value") = 1)
+      .def("create_wait",
+           [](Schedule &self, Event event, int wait_value) {
+             return self.createWaitCommand(event, wait_value);
+           }, py::arg("event"), py::arg("wait_value") = 1)
+      .def("run", [](Schedule &self, Stream &stream, nxs_bool blocking) { return self.run(stream, blocking); },
+           py::arg("stream") = Stream(), py::arg("blocking") = true);
 
-  make_object_class<Stream>(m, "_stream");
-
+  // Object Containers
   make_objects_class<Buffer>(m, "_buffers");
   make_objects_class<Kernel>(m, "_kernels");
   make_objects_class<Library>(m, "_libraries");
   make_objects_class<Command>(m, "_commands");
   make_objects_class<Schedule>(m, "_schedules");
   make_objects_class<Stream>(m, "_streams");
+  make_objects_class<Event>(m, "_events");
 
   make_object_class<Device>(m, "_device")
       .def("get_info", [](Device &self) { return self.getInfo(); })
@@ -306,6 +340,9 @@ void pynexus::init_system_bindings(py::module &m) {
              return self.createLibrary(filepath);
            })
       .def("get_libraries", [](Device &self) { return self.getLibraries(); })
+      .def("create_event", [](Device &self, nxs_event_type event_type) { return self.createEvent(event_type); },
+           py::arg("event_type") = NXS_EventType_Shared)
+      .def("get_events", [](Device &self) { return self.getEvents(); })
       .def("create_stream", [](Device &self) { return self.createStream(); })
       .def("get_streams", [](Device &self) { return self.getStreams(); })
       .def("create_schedule",

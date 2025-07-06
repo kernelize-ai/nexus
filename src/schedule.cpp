@@ -49,6 +49,10 @@ Command ScheduleImpl::createSignalCommand(nxs_int signal_value) {
 }
 
 Command ScheduleImpl::createSignalCommand(Event event, nxs_int signal_value) {
+  if (!event) {
+    auto *dev = getParentOfType<DeviceImpl>();
+    event = dev->createEvent();
+  }
   auto *rt = getParentOfType<RuntimeImpl>();
   nxs_int cid = rt->runAPIFunction<NF_nxsCreateSignalCommand>(getId(), event.getId(), signal_value);
   Command cmd(detail::Impl(this, cid), event);

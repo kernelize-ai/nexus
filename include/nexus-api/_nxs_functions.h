@@ -189,7 +189,8 @@ NEXUS_API_FUNC(nxs_status, GetKernelProperty,
  *         Non-negative is the bufferId.
  ***********************************************************************/
 NEXUS_API_FUNC(nxs_int, CreateEvent,
-    nxs_int device_id
+    nxs_int device_id,
+    nxs_event_type event_type
 )
 /************************************************************************
  * @def GetEventProperty
@@ -296,7 +297,7 @@ NEXUS_API_FUNC(nxs_status, ReleaseSchedule,
 
 /************************************************************************
  * @def CreateCommand
- * @brief Create command buffer on the device
+ * @brief Create command to launch a kernel on the device
  * @return Negative value is an error status.
  *         Non-negative is the bufferId.
  ***********************************************************************/
@@ -305,8 +306,8 @@ NEXUS_API_FUNC(nxs_int, CreateCommand,
     nxs_int kernel_id
 )
 /************************************************************************
- * @def CreateCommand
- * @brief Create command buffer on the device
+ * @def CreateSignalCommand
+ * @brief Create command to signal an event on the device
  * @return Negative value is an error status.
  *         Non-negative is the bufferId.
  ***********************************************************************/
@@ -316,8 +317,8 @@ NEXUS_API_FUNC(nxs_int, CreateSignalCommand,
     nxs_int signal_value
 )
 /************************************************************************
- * @def CreateCommand
- * @brief Create command buffer on the device
+ * @def CreateWaitCommand
+ * @brief Create command to wait on an event on the device
  * @return Negative value is an error status.
  *         Non-negative is the bufferId.
  ***********************************************************************/

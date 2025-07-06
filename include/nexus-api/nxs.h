@@ -96,10 +96,103 @@ enum _nxs_status {
 
 typedef enum _nxs_status nxs_status;
 
+/* ID test functions*/
 inline nxs_bool nxs_success(nxs_int result) { return result >= 0; }
 inline nxs_bool nxs_failed(nxs_int result) { return result < 0; }
 
 inline nxs_bool nxs_valid_id(nxs_int id) { return id >= 0; }
+
+
+/* ENUM nxs_event_type
+ *
+ * NXS_EventType_Shared:
+ *   - Event is shared between multiple command queues
+ *   - Event is signaled when a signal command for this event is complete
+ *   - Event is waited on by multiple command queues for specific signal values
+ * NXS_EventType_Signal:
+ *   - Event is signaled when a signal command is complete
+ *   - Event is waited on by a wait command queue
+ * NXS_EventType_Fence:
+ *   - Event is signaled when a kernel command is complete
+ *   - Event is waited on by a kernel command
+ */
+enum _nxs_event_type {
+    NXS_EventType_Shared = 0,
+    NXS_EventType_Signal = 1,
+    NXS_EventType_Fence = 2,
+};
+typedef enum _nxs_event_type nxs_event_type;
+
+/* ENUM nxs_event_status */
+/*
+ * NXS_EventStatus_Submitted:
+ *   - Event is submitted to a command queue
+ * NXS_EventStatus_Running:
+ *   - Event is running
+ * NXS_EventStatus_Complete:
+ *   - Event is complete
+ * NXS_EventStatus_Error:
+ *   - Event has an error
+ * NXS_EventStatus_Canceled:
+ *   - Event was canceled
+ */
+enum _nxs_event_status {
+    NXS_EventStatus_Submitted = 0,
+    NXS_EventStatus_Running = 1,
+    NXS_EventStatus_Complete = 2,
+    NXS_EventStatus_Error = 3,
+    NXS_EventStatus_Canceled = 4,
+};
+typedef enum _nxs_event_status nxs_event_status;
+
+/* ENUM nxs_command_type */
+/*
+ * NXS_CommandType_Dispatch:
+ *   - Command is a kernel dispatch
+ * NXS_CommandType_Signal:
+ *   - Command is a signal command
+ * NXS_CommandType_Wait:
+ *   - Command is a wait command
+ */
+enum _nxs_command_type {
+    NXS_CommandType_Dispatch = 0,
+    NXS_CommandType_Signal = 1,
+    NXS_CommandType_Wait = 2,
+};
+typedef enum _nxs_command_type nxs_command_type;
+
+/* ENUM nxs_execution_type
+ *
+ * NXS_ExecutionType_Blocking:
+ *   - Command is blocking
+ * NXS_ExecutionType_NonBlocking:
+ *   - Command is non-blocking
+ */
+enum _nxs_execution_type {
+    NXS_ExecutionType_Blocking = 0,
+    NXS_ExecutionType_NonBlocking = 1,
+};
+typedef enum _nxs_execution_type nxs_execution_type;
+
+/* ENUM nxs_command_queue_properties
+ *
+ * NXS_CommandQueueProperty_OutOfOrderExecution:
+ *   - Command queue supports out-of-order execution
+ * NXS_CommandQueueProperty_Profiling:
+ *   - Command queue supports profiling
+ * NXS_CommandQueueProperty_OnDevice:
+ *   - Command queue supports on-device execution
+ * NXS_CommandQueueProperty_OnDeviceDefault:
+ *   - Command queue supports on-device default execution
+ */
+enum _nxs_command_queue_properties {
+    NXS_CommandQueueProperty_OutOfOrderExecution = 0,
+    NXS_CommandQueueProperty_Profiling = 1,
+    NXS_CommandQueueProperty_OnDevice = 2,
+    NXS_CommandQueueProperty_OnDeviceDefault = 3,
+};
+typedef enum _nxs_command_queue_properties nxs_command_queue_properties;
+
 
 /* nxs_bool */
 #define NXS_FALSE                                    0
