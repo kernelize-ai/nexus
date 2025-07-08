@@ -13,6 +13,8 @@
 #include <optional>
 #include <vector>
 
+#include "uarch_to_string.h"
+
 #define NXSAPI_LOGGING
 #include <nexus-api.h>
 
@@ -106,9 +108,9 @@ nxsGetDeviceProperty(nxs_int device_id, nxs_uint device_property_id,
     case NP_Type:
       return rt::getPropertyStr(property_value, property_value_size, "cpu");
     case NP_Architecture: {
-      auto archName = magic_enum::enum_name(device->core->uarch);
+      auto archName = nxs::cpu_util::uarch_to_string(device->core->uarch);
       return rt::getPropertyStr(property_value, property_value_size,
-                                archName.data());
+                                archName);
     }
 
     default:
