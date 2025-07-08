@@ -15,7 +15,7 @@ SystemImpl::SystemImpl(int) {
   NEXUS_LOG(NEXUS_STATUS_NOTE, "CTOR");
   iterateEnvPaths("NEXUS_RUNTIME_PATH", "./runtime_libs",
                   [&](const std::string &path, const std::string &name) {
-                    Runtime rt(detail::Impl(this, runtimes.size()), path);
+                    Runtime rt(detail::Impl(this, runtimes.size()), path, name.substr(name.find("lib") + 3, name.find("_") - 3));
                     runtimes.add(rt);
                   });
 }
@@ -59,6 +59,7 @@ Buffers System::getBuffers() const { NEXUS_OBJ_MCALL(Buffers(), getBuffers); }
 Runtimes System::getRuntimes() const { NEXUS_OBJ_MCALL(Runtimes(), getRuntimes); }
 
 Runtime System::getRuntime(int idx) const { NEXUS_OBJ_MCALL(Runtime(), getRuntime, idx); }
+Runtime System::getRuntime(std::string name) const { NEXUS_OBJ_MCALL(Runtime(), getRuntime, name); }
 
 Buffer System::createBuffer(size_t sz, const void *hostData) {
   NEXUS_OBJ_MCALL(Buffer(), createBuffer, sz, hostData);

@@ -18,6 +18,8 @@ test_editable_package() {
   pip install -r requirements.txt
   pip install -e .
 
+  python3 test/pynexus/test-linux-cuda.py
+
   cd /tmp
 
   python -c "import nexus; nexus.get_runtimes(); print(nexus.__file__)"

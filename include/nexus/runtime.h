@@ -14,7 +14,10 @@ class RuntimeImpl;
 // Runtime class
 class Runtime : public Object<detail::RuntimeImpl> {
  public:
-  Runtime(detail::Impl owner, const std::string& libraryPath);
+
+  std::string name;
+
+  Runtime(detail::Impl owner, const std::string& libraryPath, const std::string& name);
   using Object::Object;
 
   nxs_int getId() const override;

@@ -6,7 +6,7 @@
 
 int main() {
   auto sys = nexus::getSystem();
-  auto rt = sys.getRuntime(1);
+  auto rt = sys.getRuntime("cuda");
 
   auto devCount = rt.getProperty(NP_Size);
 

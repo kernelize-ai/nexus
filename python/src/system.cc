@@ -358,6 +358,7 @@ void pynexus::init_system_bindings(py::module &m) {
       .def("get_devices", [](Runtime &self) { return self.getDevices(); });
 
   // query
+  m.def("get_runtime", [](const std::string &name) { return nexus::getSystem().getRuntime(name); });
   m.def("get_runtimes", []() { return nexus::getSystem().getRuntimes(); });
   m.def("get_device_info", []() { return *nexus::getDeviceInfoDB(); });
   m.def("lookup_device_info",

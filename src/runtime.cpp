@@ -105,8 +105,8 @@ void RuntimeImpl::loadPlugin() {
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
-Runtime::Runtime(detail::Impl owner, const std::string &libraryPath)
-    : Object(owner, libraryPath) {}
+Runtime::Runtime(detail::Impl owner, const std::string &libraryPath, const std::string &name)
+    : Object(owner, libraryPath), name(name) {}
 
 nxs_int Runtime::getId() const { NEXUS_OBJ_MCALL(NXS_InvalidRuntime, getId); }
 
