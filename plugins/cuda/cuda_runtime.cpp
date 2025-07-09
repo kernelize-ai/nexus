@@ -4,86 +4,68 @@
 #include <vector>
 #include <iostream>
 #include <optional>
-#include <memory>
+#include <fstream>
+#include <filesystem>
 
 #include <cuda_runtime.h>
 #include <cuda.h>
 
-#define NXSAPI_LOGGING
-#include <runtime_device.h>
+//#define NXSAPI_LOGGING - Breaks curesult??
 #include <nexus-api.h>
 
-#define NS_PRIVATE_IMPLEMENTATION
-#define MTL_PRIVATE_IMPLEMENTATION
-#define MTK_PRIVATE_IMPLEMENTATION
-#define CA_PRIVATE_IMPLEMENTATION
+#include <rt_utilities.h>
+#include <rt_runtime.h>
+#include <rt_object.h>
+#include <cuda_library.h>
+#include <cuda_kernel.h>
+#include <rt_buffer.h>
+#include <rt_command.h>
+
+#include <cuda_device.h>
 
 #define NXSAPI_LOG_MODULE "cuda"
 
-class CudaRuntime {
-  std::vector<void *> objects;
+using namespace nxs;
+
+class CudaRuntime : public rt::Runtime {
 
 public:
 
-  Devices cDevices;
+  nxs_int numDevices;
 
-  CudaRuntime() {
+  CudaRuntime() : rt::Runtime() {
+    CHECK_CU(cuInit(0));
 
-    CUresult cuResult = cuInit(0);
+    setupCudaDevices();
+
+    if (this->getNumObjects() == 0) {
+      NXSAPI_LOG(NXSAPI_STATUS_ERR, "No Cuda devices found.");
+      return;
+    }
+
+    numDevices = this->getNumObjects();
 
     NXSAPI_LOG(NXSAPI_STATUS_NOTE, "CUDA Runtime initialized with result: " << cuResult);
-
-    probeCudaDevices();
-
   }
-
   ~CudaRuntime() = default;
 
-  void probeCudaDevices() {
+  void setupCudaDevices() {
     int deviceCount;
     cudaGetDeviceCount(&deviceCount);
     
     for (int i = 0; i < deviceCount; i++) {
-        cudaDeviceProp prop;
-        cudaGetDeviceProperties(&prop, i);
+      cudaDeviceProp prop;
+      cudaGetDeviceProperties(&prop, i);
 
-        this->cDevices.emplace_back(prop.name, prop.uuid.bytes, prop.pciBusID);
+      CudaDevice *device = new CudaDevice(prop.name, prop.uuid.bytes, prop.pciBusID, i, this);
+      addObject(this, device);
     }
   }
 
   nxs_int getDeviceCount() const {
-    return 0;
-  }
-
-  nxs_int addObject(void *obj) {
-    objects.push_back(obj);
-    return objects.size() - 1;
-  }
-
-  /*MTL::CommandQueue *getQueue(nxs_int id) const {
-    return queues[id];
-  }*/
-
-  template <typename T>
-  std::optional<T*> getObject(nxs_int id) const {
-    if (id < 0 || id >= objects.size())
-      return std::nullopt;
-    if (auto *obj = static_cast<T *>(objects[id])) // not type checking
-      return obj;
-    return std::nullopt;
-  }
-  template <typename T>
-  std::optional<T*> dropObject(nxs_int id) {
-    if (id < 0 || id >= objects.size())
-      return std::nullopt;
-    if (auto *obj = static_cast<T *>(objects[id])) { // @@@ check types
-      objects[id] = nullptr;
-      return obj;
-    }
-    return std::nullopt;
+    return numDevices;
   }
 };
-
 
 CudaRuntime *getRuntime() {
   static CudaRuntime s_runtime;
@@ -104,9 +86,6 @@ nxsGetRuntimeProperty(
 
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "getRuntimeProperty " << runtime_property_id);
 
-  /* lookup HIP equivalent */
-  /* return value size */
-  /* return value */
   switch (runtime_property_id) {
     case NP_Name: {
       const char *name = "metal";
@@ -139,11 +118,6 @@ nxsGetDeviceCount()
 {
   return getRuntime()->getDeviceCount();
 }
-
-/*
- * Get the number of supported platforms on this system. 
- * On POCL, this trivially reduces to 1 - POCL itself.
- */ 
 
 extern "C" nxs_status NXS_API_CALL
 nxsGetDeviceProperty(
@@ -198,56 +172,45 @@ nxsGetDeviceProperty(
  */ 
 extern "C" nxs_status NXS_API_CALL
 nxsGetDevicePropertyFromPath(
-    nxs_int device_id,
-    nxs_uint property_path_count,
-    nxs_uint *property_id,
-    void *property_value,
-    size_t* property_value_size
+  nxs_int device_id,
+  nxs_uint property_path_count,
+  nxs_uint *property_id,
+  void *property_value,
+  size_t* property_value_size
 )
 {
-  if (property_path_count == 1)
-    return nxsGetDeviceProperty(device_id, *property_id, property_value, property_value_size);
-  switch (property_id[0]) {
-    case NP_CoreSubsystem:
-      break;
-    case NP_MemorySubsystem:
-      break;
-    default:
-      return NXS_InvalidProperty;
-  }
+  // if (property_path_count == 1)
+  //   return nxsGetDeviceProperty(device_id, *property_id, property_value, property_value_size);
+  // switch (property_id[0]) {
+  //   case NP_CoreSubsystem:
+  //     break;
+  //   case NP_MemorySubsystem:
+  //     break;
+  //   default:
+  //     return NXS_InvalidProperty;
+  // }
   return NXS_Success;
 }
 
 /*
  * Allocate a buffer on the device.
  */
-/*
-extern "C" nxs_int NXS_API_CALL
-nxsCreateBuffer(
-  nxs_int device_id,
-  size_t size,
-  nxs_uint mem_flags,
-  void* host_ptr
-)
+extern "C" nxs_int NXS_API_CALL nxsCreateBuffer(nxs_int device_id, size_t size,
+                                                nxs_uint mem_flags,
+                                                void *host_ptr)
 {
   auto rt = getRuntime();
-  auto dev = rt->getObject<MTL::Device>(device_id);
-  if (!dev)
-    return NXS_InvalidDevice;
+  auto deviceObject = rt->getObject(device_id);
+  if (!deviceObject || !*deviceObject) return NXS_InvalidDevice;
+  
+  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createBuffer: " << size);
 
-  MTL::ResourceOptions bopts = MTL::ResourceStorageModeShared; // unified?
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createBuffer " << size);
+  CudaBuffer *buf = new CudaBuffer(*deviceObject, device_id, size, host_ptr, true);
 
-  MTL::Buffer *buf;
-  if (host_ptr != nullptr)
-    buf = (*dev)->newBuffer(host_ptr, size, bopts);
-  else
-    buf = (*dev)->newBuffer(size, bopts);
-
-  return rt->addObject(buf);
+  return rt->addObject(*deviceObject, buf, true);
 }
-*/
-/*
+
+
 extern "C" nxs_status NXS_API_CALL
 nxsCopyBuffer(
   nxs_int buffer_id,
@@ -255,13 +218,21 @@ nxsCopyBuffer(
 )
 {
   auto rt = getRuntime();
-  auto buf = rt->dropObject<MTL::Buffer>(buffer_id);
-  if (!buf)
-    return NXS_InvalidBuildOptions; // fix
-  memcpy(host_ptr, (*buf)->contents(), (*buf)->length());
-  return NXS_Success;
+
+  auto bufferObject = rt->getObject(buffer_id);
+  auto buffer = bufferObject ? (*bufferObject)->get<CudaBuffer>() : nullptr;
+  if (!buffer)
+    return NXS_InvalidBuffer;
+
+  auto device = buffer->getParent()->get<CudaDevice>();
+  if (!device) return NXS_InvalidDevice;
+
+  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "copyBuffer " << buffer->size());
+
+  return device->copyBuffer(host_ptr, buffer);
 }
-*/
+
+
 /*
  * Release a buffer on the device.
  */
@@ -280,10 +251,10 @@ nxsReleaseBuffer(
   return NXS_Success;
 }
 */
+
 /*
  * Allocate a buffer on the device.
  */
-/*
 extern "C" nxs_int NXS_API_CALL
 nxsCreateLibrary(
   nxs_int device_id,
@@ -292,54 +263,52 @@ nxsCreateLibrary(
 )
 {
   auto rt = getRuntime();
-  auto dev = rt->getObject<MTL::Device>(device_id);
-  if (!dev)
-  return NXS_InvalidDevice;
 
-  // NS::Array *binArr = NS::Array::alloc();
-  // MTL::StitchedLibraryDescriptor *libDesc = MTL::StitchedLibraryDescriptor::alloc();
-  // libDesc->init(); // IS THIS NECESSARY?
-  // libDesc->setBinaryArchives(binArr);
-  dispatch_data_t data = (dispatch_data_t)library_data;
-  NS::Error *pError = nullptr;
-  // MTL::Library *pLibrary = device->newLibrary(data, &pError);
-  MTL::Library *pLibrary = (*dev)->newLibrary(
-    NS::String::string("kernel.so", NS::UTF8StringEncoding), &pError
-  );
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createLibrary " << (int64_t)pError << " - " << (int64_t)pLibrary);
-  if (pError) {
-    NXSAPI_LOG(NXSAPI_STATUS_ERR, "createLibrary " << pError->localizedDescription()->utf8String());
-    return NXS_InvalidProgram;
+  auto deviceObject = rt->getObject(device_id);
+  if (deviceObject) {
+    CudaDevice& device = *static_cast<CudaDevice*>(*deviceObject);
+
+    CHECK_CUDA(cudaSetDevice(device.deviceID));
+
+    auto devLib = device.createLibrary(library_data, data_size);
+    return devLib;
   }
-  return rt->addObject(pLibrary);
+
+  return NXS_InvalidLibrary;
 }
-*/
+
 /*
  * Allocate a buffer on the device.
  */
-/*
 extern "C" nxs_int NXS_API_CALL
 nxsCreateLibraryFromFile(
   nxs_int device_id,
   const char *library_path
 )
 {
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createLibraryFromFile " << device_id << " - " << library_path);
   auto rt = getRuntime();
-  auto dev = rt->getObject<MTL::Device>(device_id);
-  if (!dev)
-    return NXS_InvalidDevice;
-  NS::Error *pError = nullptr;
-  MTL::Library *pLibrary = (*dev)->newLibrary(
-    NS::String::string(library_path, NS::UTF8StringEncoding), &pError
-  );
-  if (pError) {
-    NXSAPI_LOG(NXSAPI_STATUS_ERR, "createLibrary " << pError->localizedDescription()->utf8String());
-    return NXS_InvalidProgram;
+
+  std::ifstream file(library_path);
+  if (!file.is_open()) {
+   std::cout << "Failed to open file\n";
+   return NXS_InvalidLibrary;
   }
-  return rt->addObject(pLibrary);
+  
+  std::ostringstream ss;
+  ss << file.rdbuf();
+  std::string s = ss.str();
+
+  auto deviceObject = rt->getObject(device_id);
+  auto device = deviceObject ? (*deviceObject)->get<CudaDevice>() : nullptr;
+  if (!device)
+   return NXS_InvalidDevice;
+
+  CHECK_CUDA(cudaSetDevice(device->deviceID));
+
+  auto result = device->createLibrary((void *)s.c_str(), s.size());  
+  return result;
 }
-*/
+
 /*
  * Release a Library.
  */
@@ -357,31 +326,31 @@ nxsReleaseLibrary(
   return NXS_Success;
 }
 */
+
 /*
  * Lookup a Kernel in a Library.
  */
-/*
 extern "C" nxs_int NXS_API_CALL
-nxsGetKernel(
-  nxs_int library_id,
-  const char *kernel_name
-)
-{
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "getKernel " << library_id << " - " << kernel_name);
+nxsGetKernel(nxs_int library_id, const char *kernel_name) {
   auto rt = getRuntime();
-  auto lib = rt->getObject<MTL::Library>(library_id);
-  if (!lib)
-    return NXS_InvalidProgram;
-  NS::Error *pError = nullptr;
-  MTL::Function *func = (*lib)->newFunction(
-    NS::String::string(kernel_name, NS::UTF8StringEncoding));
-  if (!func) {
-    NXSAPI_LOG(NXSAPI_STATUS_ERR, "getKernel " << pError->localizedDescription()->utf8String());
+
+  auto libObj = rt->getObject(library_id);
+  if (!libObj.has_value()) {
+    std::cout << "Library object not found\n";
     return NXS_InvalidKernel;
   }
-  return rt->addObject(func);
+
+  auto library = libObj.value()->get<CudaLibrary>();
+  if (!library) {
+    std::cout << "Cast to CudaLibrary failed or obj field is null\n";
+    return NXS_InvalidKernel;
+  }
+
+  auto kernel = library->createKernel(kernel_name);
+
+  return rt->addObject(library, kernel, false);
 }
-*/
+
 
  /************************************************************************
  * @def CreateCommandBuffer
@@ -389,140 +358,109 @@ nxsGetKernel(
  * @return Negative value is an error status.
  *         Non-negative is the bufferId.
  ***********************************************************************/
-/*
 extern "C" nxs_int nxsCreateSchedule(
   nxs_int device_id,
   nxs_uint sched_properties
 )
 {
   auto rt = getRuntime();
-  auto dev = rt->getObject<MTL::Device>(device_id);
-  if (!dev)
-    return NXS_InvalidDevice;
 
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createSchedule");
-  auto *queue = rt->getQueue(device_id);
-  MTL::CommandBuffer *cmdBuf = queue->commandBuffer();
-  return rt->addObject(cmdBuf);
+  auto deviceObject = rt->getObject(device_id);
+  auto dev = deviceObject ? (*deviceObject)->get<CudaDevice>() : nullptr;
+  if (!dev)
+   return NXS_InvalidDevice;
+
+  CudaSchedule *schedule = new CudaSchedule(dev);
+  return rt->addObject(dev, schedule, true);
 }
-*/
+
 /************************************************************************
 * @def ReleaseCommandList
 * @brief Release the buffer on the device
 * @return Error status or Succes.
 ***********************************************************************/
-/*
 extern "C" nxs_status nxsRunSchedule(
   nxs_int schedule_id,
+  nxs_int stream_id,
   nxs_bool blocking
 )
 {
   auto rt = getRuntime();
-  auto cmdbuf = rt->getObject<MTL::CommandBuffer>(schedule_id);
-  if (!cmdbuf)
-    return NXS_InvalidDevice;
 
-  (*cmdbuf)->commit();
-  if (blocking) {
-    (*cmdbuf)->waitUntilCompleted(); // Synchronous wait for simplicity
-    if ((*cmdbuf)->status() == MTL::CommandBufferStatusError) {
-      NXSAPI_LOG(NXSAPI_STATUS_ERR, "runSchedule: "
-                << (*cmdbuf)->error()->localizedDescription()->utf8String());
-      return NXS_InvalidEvent;
-    }  
-  }
+  auto scheduleObject = rt->getObject(schedule_id);
+  auto schedule = scheduleObject ? (*scheduleObject)->get<CudaSchedule>() : nullptr;
+  if (!schedule)
+    return NXS_InvalidSchedule;
+
+  auto device = (CudaDevice *)schedule->getParent();
+
+  CHECK_CUDA(cudaSetDevice(device->deviceID));
+
+  device->runSchedule(schedule);
+
   return NXS_Success;
 }
-*/
 
-/*
- * Allocate a buffer on the device.
- */ 
-/*
-extern "C" nxs_status NXS_API_CALL
-nxsReleaseSchedule(
-  nxs_int schedule_id
-)
-{
-  auto rt = getRuntime();
-  auto cmdbuf = rt->dropObject<MTL::CommandBuffer>(schedule_id);
-  if (!cmdbuf)
-    return NXS_InvalidBuildOptions; // fix
-
-  (*cmdbuf)->release();
-  return NXS_Success;
-}
-*/
 /************************************************************************
  * @def CreateCommand
  * @brief Create command buffer on the device
  * @return Negative value is an error status.
  *         Non-negative is the bufferId.
  ***********************************************************************/
-/*
 extern "C" nxs_int NXS_API_CALL
-nxsCreateCommand(
-  nxs_int schedule_id,
-  nxs_int kernel_id
-)
-{
+nxsCreateCommand(nxs_int schedule_id, nxs_int kernel_id) {
   auto rt = getRuntime();
-  auto cmdbuf = rt->getObject<MTL::CommandBuffer>(schedule_id);
-  if (!cmdbuf)
-    return NXS_InvalidBuildOptions; // fix
 
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createCommand");
-  MTL::ComputeCommandEncoder *command = (*cmdbuf)->computeCommandEncoder();
-  auto res = rt->addObject(command);
+  auto scheduleObject = rt->getObject(schedule_id);
+  auto schedule = scheduleObject ? (*scheduleObject)->get<CudaSchedule>() : nullptr;
+  if (!schedule)
+      return NXS_InvalidSchedule;
 
-  // Add the kernel
-  if (kernel_id >= 0) {
-    NS::Error *pError = nullptr;
-    MTL::ComputePipelineState *pipeState = nullptr;
-    if (auto kern = rt->getObject<MTL::Function>(kernel_id)) {
-      pipeState = (*cmdbuf)->device()->newComputePipelineState(*kern, &pError);
-      command->setComputePipelineState(pipeState);
-    } else {
-      // test before creating Command
-      return NXS_InvalidKernel;
-    }
+  auto kernelObject = rt->getObject(kernel_id);
+  auto kernel = kernelObject ? (*kernelObject)->get<CudaKernel>() : nullptr;
+  if (!kernel) {
+    std::cout << "Failed to get kernel object with ID: " << kernel_id << std::endl;
+    return NXS_InvalidKernel;
   }
-  return res;
+
+  CudaCommand *command = new CudaCommand(kernel);
+  auto ret = rt->addObject(schedule, command, true);
+  if (ret)
+    schedule->insertCommand(command);
+
+  return ret;
 }
-*/
+
 /************************************************************************
- * @def CreateCommand
- * @brief Create command buffer on the device
+ * @def SetCommandArgument
+ * @brief Set command argument on the device
  * @return Negative value is an error status.
  *         Non-negative is the bufferId.
  ***********************************************************************/
-/*
-extern "C" nxs_status NXS_API_CALL
-nxsSetCommandArgument(
-  nxs_int command_id,
-  nxs_int argument_index,
-  nxs_int buffer_id
-)
-{
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "setCommandArg " << command_id << " - " << argument_index << " - " << buffer_id);
+extern "C" nxs_status NXS_API_CALL nxsSetCommandArgument(nxs_int command_id,
+                                                         nxs_int argument_index,
+                                                         nxs_int buffer_id) {
   auto rt = getRuntime();
-  auto cmd = rt->getObject<MTL::ComputeCommandEncoder>(command_id);
-  if (!cmd)
-    return NXS_InvalidCommandQueue; // fix
-  auto buf = rt->getObject<MTL::Buffer>(buffer_id);
-    if (!buf)
-      return NXS_InvalidBufferSize; // fix
-  (*cmd)->setBuffer(*buf, 0, argument_index);
-  return NXS_Success;
+
+  auto commandObject = rt->getObject(command_id);
+  auto command = commandObject ? (*commandObject)->get<CudaCommand>() : nullptr;
+  if (!command)
+    return NXS_InvalidCommand;
+
+  auto bufferObject = rt->getObject(buffer_id);
+  auto buffer = bufferObject ? (*bufferObject)->get<CudaBuffer>() : nullptr;
+  if (!buffer)
+    return NXS_InvalidArgIndex;
+
+  return command->setArgument(argument_index, buffer);
 }
-*/
 /************************************************************************
  * @def CreateCommand
  * @brief Create command buffer on the device
  * @return Negative value is an error status.
  *         Non-negative is the bufferId.
  ***********************************************************************/
-/*
+
 extern "C" nxs_status NXS_API_CALL
 nxsFinalizeCommand(
   nxs_int command_id,
@@ -531,21 +469,11 @@ nxsFinalizeCommand(
 )
 {
   auto rt = getRuntime();
-  auto cmd = rt->getObject<MTL::ComputeCommandEncoder>(command_id);
-  if (!cmd)
-    return NXS_InvalidCommandQueue; // fix
 
-  MTL::Size gridSize = MTL::Size(grid_size, 1, 1);
-  #if 0
-  NS::UInteger threadGroupSize = pAddPSO->maxTotalThreadsPerThreadgroup();
-  if (threadGroupSize > ARRAY_LENGTH) {
-    threadGroupSize = ARRAY_LENGTH;
-  }
-  #endif
-  MTL::Size threadgroupSize = MTL::Size(group_size, 1, 1);
+  auto commandObject = rt->getObject(command_id);
+  auto command = commandObject ? (*commandObject)->get<CudaCommand>() : nullptr;
+  if (!command)
+    return NXS_InvalidCommand;
 
-  (*cmd)->dispatchThreads(gridSize, threadgroupSize);
-  (*cmd)->endEncoding();
-
-  return NXS_Success;
-}*/
+  return command->finalize(grid_size, group_size);
+}

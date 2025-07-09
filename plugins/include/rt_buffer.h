@@ -8,14 +8,15 @@
 namespace nxs {
 namespace rt {
 
-class Buffer {
+class Buffer : public Object {
+
   char *buf;
   size_t sz;
   bool is_owned;
 
  public:
-  Buffer(size_t size, void *host_ptr = nullptr, bool is_owned = false)
-      : buf((char *)host_ptr), sz(size), is_owned(is_owned) {
+  Buffer(Object *parent, size_t size, void *host_ptr = nullptr, bool is_owned = false)
+      : Object(parent), buf((char *)host_ptr), sz(size), is_owned(is_owned) {
     if (is_owned) {
       buf = (char *)malloc(size);
       if (host_ptr)
@@ -35,6 +36,8 @@ class Buffer {
     delete static_cast<Buffer *>(obj);
   }
 };
+
+typedef std::vector<Buffer> Buffers;
 
 }  // namespace rt
 }  // namespace nxs

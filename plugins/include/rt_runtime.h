@@ -9,10 +9,12 @@
 namespace nxs {
 namespace rt {
 
-class Runtime {
+class Runtime : public Object {
+
+public:
+
   std::vector<rt::Object> objects;
 
- public:
   Runtime() { objects.reserve(1024); }
   ~Runtime() {}
 
@@ -36,6 +38,10 @@ class Runtime {
     if (id < 0 || id >= objects.size()) return false;
     objects[id].release(fn);
     return true;
+  }
+
+  nxs_int getNumObjects() {
+    return objects.size();
   }
 };
 
