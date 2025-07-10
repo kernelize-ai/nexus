@@ -23,5 +23,6 @@ llvm-dis kernel.ir -o kernel.ll
 
 To generate SO library binary:
 ```script
-xcrun -sdk macosx metal -c kernel.metal -o kernel.so
+xcrun -sdk macosx metal -c kernel.metal -o kernel.ir
+xcrun -sdk macosx metallib -o kernel.so kernel.ir
 ```
