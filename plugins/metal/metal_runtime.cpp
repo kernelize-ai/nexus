@@ -788,7 +788,12 @@ extern "C" nxs_status nxsRunSchedule(nxs_int schedule_id, nxs_int stream_id, nxs
   auto sched = (*parent)->get<MetalSchedule>(); 
   if (!sched) return NXS_InvalidSchedule;
   auto stream = rt->get<MTL::CommandQueue>(stream_id);
-  if (!stream) return NXS_InvalidStream;
+  if (!stream) {
+    // Invalid stream provided, try the default stream
+    // TODO: should we handle separate device or assume the default stream 
+    // on the first device? should we check for > 0 devices?
+    stream = rt->getQueue(0);
+  }
 
   auto *cmdbuf = sched->getCommandBuffer(rt, *parent, *stream);
   if (!cmdbuf) return NXS_InvalidSchedule;

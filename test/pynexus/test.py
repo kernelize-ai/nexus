@@ -21,9 +21,9 @@ kern = lib.get_kernel('add_vectors')
 sched = dev.create_schedule()
 
 cmd = sched.create_command(kern)
-cmd.set_buffer(0, nb0)
-cmd.set_buffer(1, nb1)
-cmd.set_buffer(2, nb2)
+cmd.set_arg(0, nb0)
+cmd.set_arg(1, nb1)
+cmd.set_arg(2, nb2)
 cmd.finalize(32, 1024)
 
 sched.run()
