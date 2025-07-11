@@ -99,9 +99,9 @@ cmake --build . --config Release --parallel  # Windows
 
 For detailed build instructions, dependencies, and troubleshooting, see the [Build and CI Documentation](docs/Build_and_CI.md).
 
-### Python Environment (Alternative)
+### Building the python packages
 
-You can also use a Python virtual environment:
+For building the development package in a virtual environment:
 
 ```shell
 python3 -m venv .venv --prompt nexus
@@ -109,6 +109,22 @@ source .venv/bin/activate  # Linux/macOS
 # or
 .venv\Scripts\activate  # Windows
 pip install -r requirements.txt
+
+pip install -e .
+```
+
+For building and installing the release package in a virtual environment:
+
+```shell
+python -m build
+
+python3 -m venv .venv --prompt nexus
+source .venv/bin/activate  # Linux/macOS
+# or
+.venv\Scripts\activate  # Windows
+pip install -r requirements.txt
+
+pip install dist/nexus-*.whl
 ```
 
 ## Testing
