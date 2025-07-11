@@ -140,6 +140,13 @@ if(NEXUS_BUILD_PYTHON_MODULE)
   ## Link nexus with its dependencies
   target_link_libraries(nexus PRIVATE ${NEXUS_LIBRARIES})
   target_link_libraries(nexus PRIVATE pybind11::module)
+
+  set_target_properties(nexus PROPERTIES
+    BUILD_RPATH_USE_ORIGIN TRUE
+    INSTALL_RPATH "$ORIGIN"
+    BUILD_RPATH "$ORIGIN"
+  )
+
   set_target_properties(nexus PROPERTIES PREFIX "lib" SUFFIX ".so")
   #install(TARGETS nexus DESTINATION nexus)
 

@@ -35,8 +35,8 @@ except ImportError:
     class editable_wheel:
         pass
 
-
-sys.path.insert(0, os.path.dirname(__file__))
+project_root = Path(__file__).parent
+sys.path.insert(0, str(project_root))
 
 from python.build_helpers import get_base_dir, get_cmake_dir
 
@@ -71,7 +71,7 @@ class CMakeClean(clean):
 # If you need multiple extensions, see scikit-build.
 class CMakeExtension(Extension):
 
-    def __init__(self, name, path, sourcedir=""):
+    def __init__(self, name, sourcedir=".", path=""):
         Extension.__init__(self, name, sources=[])
         self.sourcedir = os.path.abspath(sourcedir)
         self.path = path
@@ -121,7 +121,9 @@ class CMakeBuild(build_ext):
         ninja_dir = shutil.which('ninja')
         # lit is used by the test suite
         thirdparty_cmake_args = self.get_pybind11_cmake_args()
-        extdir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.path)))
+        extdir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
+        extdir = os.path.join(extdir, "nexus")
+        c_dir = os.path.join(extdir, "_C")
         # create build directories
         if not os.path.exists(self.build_temp):
             os.makedirs(self.build_temp)
@@ -132,7 +134,7 @@ class CMakeBuild(build_ext):
             "-DCMAKE_MAKE_PROGRAM=" +
             ninja_dir,  # Pass explicit path to ninja otherwise cmake may cache a temporary path
             "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
-            "-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=" + extdir, "-DNEXUS_BUILD_PYTHON_MODULE=ON",
+            "-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=" + c_dir, "-DNEXUS_BUILD_PYTHON_MODULE=ON",
             "-DPython3_EXECUTABLE:FILEPATH=" + sys.executable, "-DPython3_INCLUDE_DIR=" + python_include_dir
         ]
 
@@ -174,7 +176,7 @@ class CMakeBuild(build_ext):
 
         env = os.environ.copy()
         cmake_dir = get_cmake_dir()
-        subprocess.check_call(["cmake", self.base_dir] + cmake_args, cwd=cmake_dir, env=env)
+        subprocess.check_call(["cmake", ext.sourcedir] + cmake_args, cwd=cmake_dir, env=env)
         subprocess.check_call(["cmake", "--build", "."] + build_args, cwd=cmake_dir)
 
 
@@ -227,7 +229,7 @@ setup(
     package_dir=dict(get_package_dirs()),
     entry_points=get_entry_points(),
     include_package_data=True,
-    ext_modules=[CMakeExtension("nexus", "nexus/_C/")],
+    ext_modules=[CMakeExtension("nexus", ".")],
     cmdclass={
         "build_ext": CMakeBuild,
         "build_py": CMakeBuildPy,

@@ -1,6 +1,9 @@
 # Build
 build/
 
+# dist
+dist/
+
 # VS-code
 .vscode
 
@@ -46,4 +49,4 @@ __pycache__/
 *.egg-info
 
 .venv
-
+.test_wheel_venv
