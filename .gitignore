@@ -45,6 +45,7 @@ dist/
 __pycache__/
 *.py[cod]
 .pytest_cache
+python/nexus/device_lib
 
 *.egg-info
 

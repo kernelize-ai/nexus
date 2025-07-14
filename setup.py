@@ -79,8 +79,22 @@ class CMakeExtension(Extension):
 class CMakeBuildPy(build_py):
 
     def run(self) -> None:
+        self._copy_device_lib_to_package()
         self.run_command('build_ext')
         return super().run()
+
+    def _copy_device_lib_to_package(self):
+        source_device_lib = 'device_lib'
+
+        nexus_package_dir = 'python/nexus'
+        target_device_lib = os.path.join(nexus_package_dir, 'device_lib')
+
+        if os.path.exists(source_device_lib):
+            if os.path.exists(target_device_lib):
+                shutil.rmtree(target_device_lib)
+            shutil.copytree(source_device_lib, target_device_lib)
+        else:
+           raise RuntimeError(f"Warning: {source_device_lib} not found in repo root")
 
 class CMakeBuild(build_ext):
         
@@ -179,6 +193,14 @@ class CMakeBuild(build_ext):
         subprocess.check_call(["cmake", ext.sourcedir] + cmake_args, cwd=cmake_dir, env=env)
         subprocess.check_call(["cmake", "--build", "."] + build_args, cwd=cmake_dir)
 
+        runtime_libs_build = os.path.join(cmake_dir, "runtime_libs")
+        runtime_libs_target = os.path.join("python", "nexus", "runtime_libs")
+
+        if os.path.exists(runtime_libs_build):
+            if os.path.exists(runtime_libs_target):
+                shutil.rmtree(runtime_libs_target)
+
+            shutil.copytree(runtime_libs_build, runtime_libs_target)
 
 def get_package_dirs():
     yield ("", "python")
@@ -229,6 +251,10 @@ setup(
     package_dir=dict(get_package_dirs()),
     entry_points=get_entry_points(),
     include_package_data=True,
+    package_data={'nexus': [
+        'device_lib/**/*',
+        'runtime_libs/**/*'
+    ]},
     ext_modules=[CMakeExtension("nexus", ".")],
     cmdclass={
         "build_ext": CMakeBuild,

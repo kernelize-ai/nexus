@@ -22,7 +22,7 @@ std::vector<std::string> splitPaths(const std::string &paths, char delimiter) {
 }
 
 static bool initDeviceInfoDB(DeviceInfoMap &devs) {
-  iterateEnvPaths("NEXUS_DEVICE_PATH", "../device_lib",
+  iterateEnvPaths("NEXUS_DEVICE_PATH", "./device_lib",
                   [&](const std::string &path, const std::string &name) {
                     NEXUS_LOG(NEXUS_STATUS_NOTE, "  File: " << name);
                     std::string::size_type const p(name.find_last_of('.'));

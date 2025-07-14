@@ -1,3 +1,4 @@
+graft device_lib
 include CMakeLists.txt
 include *.md *.txt *.cfg *.ini
 recursive-include cmake *.cmake *.in

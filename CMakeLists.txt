@@ -99,6 +99,10 @@ if(NEXUS_ENABLE_LOGGING)
   add_compile_definitions(NEXUS_LOGGING)
 endif()
 
+file(COPY ${CMAKE_SOURCE_DIR}/device_lib/
+     DESTINATION ${CMAKE_BINARY_DIR}/device_lib
+     FILES_MATCHING PATTERN "*")
+
 include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${PROJECT_SOURCE_DIR}/third_party/magic_enum/include)
 
