@@ -1,3 +1,4 @@
+#define NXSAPI_LOGGING
 
 #include <assert.h>
 #include <string.h>
@@ -10,27 +11,6 @@
 #include <cuda_runtime.h>
 #include <cuda.h>
 
-#define CHECK_CU(call) \
-  do { \
-    CUresult err = call; \
-    if (err != CUDA_SUCCESS) { \
-      const char* errorStr; \
-      cuGetErrorString(err, &errorStr); \
-      std::cerr << "CUDA Error: " << errorStr << std::endl; \
-      exit(1); \
-    } \
-  } while(0)
-
-#define CHECK_CUDA(call) \
-  do { \
-    cudaError_t err = call; \
-    if (err != cudaSuccess) { \
-      std::cerr << "CUDA Runtime Error: " << cudaGetErrorString(err) << std::endl; \
-      exit(1); \
-    } \
-  } while(0)
-
-//#define NXSAPI_LOGGING - Breaks curesult??
 #include <nexus-api.h>
 
 #include <rt_utilities.h>
@@ -43,7 +23,7 @@
 
 #include <cuda_device.h>
 
-#define NXSAPI_LOG_MODULE "cuda"
+#define NXSAPI_LOG_MODULE "cuda_runtime"
 
 using namespace nxs;
 

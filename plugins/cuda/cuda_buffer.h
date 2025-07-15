@@ -13,8 +13,8 @@
     if (err != CUDA_SUCCESS) { \
       const char* errorStr; \
       cuGetErrorString(err, &errorStr); \
-      std::cerr << "CUDA Error: " << errorStr << std::endl; \
-      exit(1); \
+      NXSAPI_LOG(NXSAPI_STATUS_ERR, "CUDA Error: " << errorStr); \
+      return NXS_InvalidDevice; \
     } \
   } while(0)
 
@@ -22,8 +22,8 @@
   do { \
     cudaError_t err = call; \
     if (err != cudaSuccess) { \
-      std::cerr << "CUDA Runtime Error: " << cudaGetErrorString(err) << std::endl; \
-      exit(1); \
+      NXSAPI_LOG(NXSAPI_STATUS_ERR, "CUDA Error: " << cudaGetErrorString(err)); \
+      return NXS_InvalidDevice; \
     } \
   } while(0)
 
