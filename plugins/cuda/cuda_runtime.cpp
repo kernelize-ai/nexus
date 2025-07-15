@@ -34,7 +34,9 @@ public:
   nxs_int numDevices;
 
   CudaRuntime() : rt::Runtime() {
-    CHECK_CU(cuInit(0));
+
+    CUresult cuResult = cuInit(0);
+    CHECK_CU(cuResult);
 
     setupCudaDevices();
 

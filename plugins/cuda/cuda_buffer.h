@@ -7,26 +7,6 @@
 
 #include <rt_buffer.h>
 
-#define CHECK_CU(call) \
-  do { \
-    CUresult err = call; \
-    if (err != CUDA_SUCCESS) { \
-      const char* errorStr; \
-      cuGetErrorString(err, &errorStr); \
-      NXSAPI_LOG(NXSAPI_STATUS_ERR, "CUDA Error: " << errorStr); \
-      return NXS_InvalidDevice; \
-    } \
-  } while(0)
-
-#define CHECK_CUDA(call) \
-  do { \
-    cudaError_t err = call; \
-    if (err != cudaSuccess) { \
-      NXSAPI_LOG(NXSAPI_STATUS_ERR, "CUDA Error: " << cudaGetErrorString(err)); \
-      return NXS_InvalidDevice; \
-    } \
-  } while(0)
-
 using namespace nxs;
 
 class CudaBuffer : public rt::Buffer {
