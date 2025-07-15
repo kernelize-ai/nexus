@@ -320,15 +320,12 @@ class HipCommand {
     this->grid_size = grid_size;
   }
   void release() {
-    // TODO: release the command buffer
   }
 };
 
 ////////////////////////////////////////////////////////////////////////////
-// Metal Schedule
-// - Metal does not support running a command_buffer on multiple command queues
-// - We need to create a command buffer for each command queue
-// - so command buffer creation is deferred until the schedule is run
+// HIP Schedule
+// - HIP supports immediate execution of commands
 ////////////////////////////////////////////////////////////////////////////
 class HipSchedule {
   std::vector<HipCommand *> commands;
@@ -563,10 +560,6 @@ nxsCreateLibraryFromFile(nxs_int device_id, const char *library_path) {
 extern "C" nxs_status NXS_API_CALL
 nxsGetLibraryProperty(nxs_int library_id, nxs_uint library_property_id,
                       void *property_value, size_t *property_value_size) {
-  // NS::String*      label() const;
-  // NS::Array*       functionNames() const;
-  // MTL::LibraryType type() const;
-  // NS::String*      installName() const;
   return NXS_Success;
 }
 
@@ -608,15 +601,6 @@ extern "C" nxs_int NXS_API_CALL nxsGetKernel(nxs_int library_id,
 extern "C" nxs_status NXS_API_CALL
 nxsGetKernelProperty(nxs_int kernel_id, nxs_uint kernel_property_id,
                      void *property_value, size_t *property_value_size) {
-  // NS::String*            label() const;
-  // MTL::FunctionType      functionType() const;
-  // MTL::PatchType         patchType() const;
-  // NS::Integer            patchControlPointCount() const;
-  // NS::Array*             vertexAttributes() const;
-  // NS::Array*             stageInputAttributes() const;
-  // NS::String*            name() const;
-  // NS::Dictionary*        functionConstantsDictionary() const;
-  // MTL::FunctionOptions   options() const;
 
   return NXS_Success;
 }
