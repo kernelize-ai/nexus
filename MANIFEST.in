@@ -9,4 +9,7 @@ recursive-include python/src *.cpp *.cc *.h *.hpp
 recursive-include include *.h *.hpp
 recursive-include third_party *.h *.hpp *.cpp *.cc *.json CMakeLists.txt *.cmake *.in
 recursive-include plugins *.cpp *.cc *.h *.hpp CMakeLists.txt
-recursive-include test *.cpp *.cc *.h *.hpp CMakeLists.txt
+recursive-include third_party/cpuinfo/include *.h
+recursive-include third_party/cpuinfo/src *.c
+recursive-include third_party/cpuinfo/deps *.c *.h
+include third_party/cpuinfo/CMakeLists.txt

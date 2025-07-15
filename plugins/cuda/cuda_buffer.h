@@ -35,7 +35,7 @@ public:
 
   float *cudaPtr = nullptr;
 
-  CudaBuffer(Object *parent, int deviceID, size_t size,
+  CudaBuffer(rt::Object *parent, int deviceID, size_t size,
              void *host_ptr = nullptr, bool is_owned = false)
       : Buffer(size, host_ptr, is_owned) {
     CHECK_CUDA(cudaSetDevice(deviceID));
