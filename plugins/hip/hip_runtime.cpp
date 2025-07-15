@@ -213,7 +213,7 @@ class HipRuntime : public rt::Runtime {
       if (hipDeviceGet(&dev, i) == hipSuccess) {
         hipStream_t stream;
         if (hipStreamCreate(&stream) != hipSuccess) continue;
-        addObject(dev);
+        addObject(nullptr);
         streams.push_back(stream);
       }
     }
@@ -484,7 +484,7 @@ extern "C" nxs_int NXS_API_CALL nxsCreateBuffer(nxs_int device_id, size_t size,
 
   rt::Buffer *buffer = new rt::Buffer(size, buf);
 
-  return rt->addObject(buffer, true);
+  return rt->addObject(nullptr, buffer, true);
 }
 
 /************************************************************************
@@ -532,7 +532,7 @@ extern "C" nxs_int NXS_API_CALL nxsCreateLibrary(nxs_int device_id,
   hipModule_t module;
   HIP_CHECK(NXS_InvalidLibrary, hipModuleLoadData, &module, library_data);
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createLibrary" << print_value(module));
-  return rt->addObject(module, false);
+  return rt->addObject(nullptr, module, false);
 }
 
 /************************************************************************
@@ -550,7 +550,7 @@ nxsCreateLibraryFromFile(nxs_int device_id, const char *library_path) {
   hipModule_t module;
   HIP_CHECK(NXS_InvalidLibrary, hipModuleLoad, &module, library_path);
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createLibrary" << print_value(module));
-  return rt->addObject(module, false);
+  return rt->addObject(nullptr, module, false);
 }
 
 /************************************************************************
@@ -591,7 +591,7 @@ extern "C" nxs_int NXS_API_CALL nxsGetKernel(nxs_int library_id,
   hipFunction_t func;
   HIP_CHECK(NXS_InvalidKernel, hipModuleGetFunction, &func, lib, kernel_name);
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "getKernel" << print_value(func));
-  return rt->addObject(func, false);
+  return rt->addObject(nullptr, func, false);
 }
 
 /************************************************************************
@@ -639,7 +639,7 @@ extern "C" nxs_int NXS_API_CALL nxsCreateEvent(nxs_int device_id,
     //event = dev->newFence();
     return NXS_InvalidEvent;
   }
-  return rt->addObject(event, true);
+  return rt->addObject(nullptr, event, true);
 #endif
   return NXS_InvalidEvent;
 }
@@ -709,7 +709,7 @@ extern "C" nxs_int NXS_API_CALL nxsCreateStream(nxs_int device_id,
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createStream");
   hipStream_t stream;
   HIP_CHECK(NXS_InvalidStream, hipStreamCreate, &stream);
-  return rt->addObject(stream, false);
+  return rt->addObject(nullptr, stream, false);
 }
 /************************************************************************
  * @def GetStreamProperty
@@ -745,7 +745,7 @@ extern "C" nxs_int NXS_API_CALL nxsCreateSchedule(nxs_int device_id,
   if (dev < 0) return NXS_InvalidDevice;
 
   auto *sched = new HipSchedule();
-  return rt->addObject(sched, true);
+  return rt->addObject(nullptr, sched, true);
 }
 
 /************************************************************************
@@ -804,7 +804,7 @@ extern "C" nxs_int NXS_API_CALL nxsCreateCommand(nxs_int schedule_id,
 
   auto *cmd = new HipCommand(kernel, NXS_CommandType_Dispatch);
   (*sched)->addCommand(cmd);
-  return rt->addObject(cmd, false);
+  return rt->addObject(nullptr, cmd, false);
 }
 
 /************************************************************************
@@ -829,7 +829,7 @@ extern "C" nxs_int NXS_API_CALL nxsCreateSignalCommand(nxs_int schedule_id,
 
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createSignalCommand");
   auto *cmd = new HipCommand(nullptr, NXS_CommandType_Signal, signal_value);
-  auto res = rt->addObject(cmd, true);
+  auto res = rt->addObject(nullptr, cmd, true);
   (*parent)->addChild(res);
   return res;
 }
@@ -855,7 +855,7 @@ extern "C" nxs_int NXS_API_CALL nxsCreateWaitCommand(nxs_int schedule_id,
 
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createWaitCommand");
   auto *cmd = new HipCommand(nullptr, NXS_CommandType_Wait, wait_value);
-  auto res = rt->addObject(cmd, true);
+  auto res = rt->addObject(nullptr, cmd, true);
   (*parent)->addChild(res);
   return res;
 }

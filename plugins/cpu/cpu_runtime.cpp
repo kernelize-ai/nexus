@@ -76,9 +76,9 @@ nxsGetRuntimeProperty(nxs_uint runtime_property_id, void *property_value,
                                 cpuinfo_has_arm_sme2() ? 1 : 0);
     }
     case NP_Architecture: {
-      auto name = magic_enum::enum_name(arch->uarch);
-      return rt::getPropertyStr(property_value, property_value_size,
-                                name.data());
+      //auto name = magic_enum::enum_name(arch->uarch);
+      //return rt::getPropertyStr(property_value, property_value_size,
+      //                          name.data());
     }
     default:
       return NXS_InvalidProperty;
@@ -107,6 +107,8 @@ nxsGetDeviceProperty(nxs_int device_id, nxs_uint device_property_id,
       return rt::getPropertyStr(property_value, property_value_size, "cpu");
     case NP_Architecture: {
       auto archName = magic_enum::enum_name(device->core->uarch);
+      if (archName.empty())
+        archName = "unknown";
       return rt::getPropertyStr(property_value, property_value_size,
                                 archName.data());
     }
