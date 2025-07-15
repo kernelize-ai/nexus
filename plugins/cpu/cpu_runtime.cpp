@@ -130,7 +130,7 @@ extern "C" nxs_int NXS_API_CALL nxsCreateBuffer(nxs_int device_id, size_t size,
   if (!dev) return NXS_InvalidDevice;
 
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createBuffer " << size);
-  rt::Buffer *buf = new rt::Buffer(size, host_ptr, true);
+  rt::Buffer *buf = new rt::Buffer(*dev, size, host_ptr, true);
   return rt->addObject(*dev, buf, true);
 }
 
@@ -374,8 +374,7 @@ extern "C" nxs_status NXS_API_CALL nxsRunSchedule(nxs_int schedule_id,
       return NXS_InvalidCommand;
     }
     std::vector<char> exData(1024 * 1024);  // 1MB extra buffer for args
-    rt::Buffer exBuf(exData.size(), exData.data(),
-                     false);                     // extra buffer for args
+    rt::Buffer exBuf(*cmd, exData.size(), exData.data(), false);  // extra buffer for args
     std::vector<rt::Buffer *> bufs(32, &exBuf);  // max 32 args
     for (size_t i = 0; i < args.size(); i++) {
       auto buf = rt->getObject(args[i]);
@@ -383,7 +382,7 @@ extern "C" nxs_status NXS_API_CALL nxsRunSchedule(nxs_int schedule_id,
       bufs[i] = (*buf)->get<rt::Buffer>();
     }
     std::vector<int64_t> coords{0, 0, 0};
-    rt::Buffer coordsBuf(sizeof(coords), coords.data());
+    rt::Buffer coordsBuf(*sched, sizeof(coords), coords.data());
     bufs[args.size()] = &coordsBuf;
 
     // call func with bufs + dims (int64[3], int64[3], int64[3])
@@ -486,9 +485,9 @@ extern "C" nxs_status NXS_API_CALL nxsFinalizeCommand(nxs_int command_id,
   if (!cmd) return NXS_InvalidCommand;
 
   int64_t global_size[3] = {grid_size, 1, 1};
-  auto global_buf = new rt::Buffer(sizeof(global_size), global_size, true);
+  auto global_buf = new rt::Buffer(*cmd, sizeof(global_size), global_size, true);
   int64_t local_size[3] = {group_size, 1, 1};
-  auto local_buf = new rt::Buffer(sizeof(local_size), local_size, true);
+  auto local_buf = new rt::Buffer(*cmd, sizeof(local_size), local_size, true);
   (*cmd)->addChild(rt->addObject(*cmd, global_buf, true));
   (*cmd)->addChild(rt->addObject(*cmd, local_buf, true));
   return NXS_Success;

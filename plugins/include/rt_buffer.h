@@ -1,9 +1,10 @@
 #ifndef RT_BUFFER_H
 #define RT_BUFFER_H
 
-#include <nexus-api.h>
-
 #include <cstring>
+
+#include <nexus-api.h>
+#include <rt_object.h>
 
 namespace nxs {
 namespace rt {

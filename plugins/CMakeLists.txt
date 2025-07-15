@@ -1,7 +1,7 @@
 
 include_directories(include)
 
-#add_subdirectory(cpu)
+add_subdirectory(cpu)
 
 if(LINUX)
 
