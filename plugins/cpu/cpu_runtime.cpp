@@ -507,9 +507,9 @@ extern "C" nxs_status NXS_API_CALL nxsReleaseCommand(nxs_int command_id) {
   if (children.size() < 2) return NXS_InvalidCommand;
   auto global_size_id = children[children.size() - 2];
   auto local_size_id = children[children.size() - 1];
-  if (!rt->dropObject(global_size_id, rt::Buffer::delete_fn))
+  if (!rt->dropObject(global_size_id, rt::delete_fn<rt::Buffer>))
     return NXS_InvalidBuffer;
-  if (!rt->dropObject(local_size_id, rt::Buffer::delete_fn))
+  if (!rt->dropObject(local_size_id, rt::delete_fn<rt::Buffer>))
     return NXS_InvalidBuffer;
   if (!rt->dropObject(command_id)) return NXS_InvalidCommand;
   return NXS_Success;

@@ -3,6 +3,7 @@
 
 #include <nexus-api.h>
 
+#include <cstring>
 #include <string>
 
 namespace nxs {
@@ -16,7 +17,7 @@ static nxs_status getPropertyStr(void *property_value,
       return NXS_InvalidArgSize;
     else if (*property_value_size < len)
       return NXS_InvalidArgValue;
-    strncpy((char *)property_value, name, len + 1);
+    std::strncpy((char *)property_value, name, len + 1);
   } else if (property_value_size != NULL) {
     *property_value_size = len + 1;
   }
@@ -37,7 +38,7 @@ static nxs_status getPropertyInt(void *property_value,
       return NXS_InvalidArgSize;
     else if (*property_value_size < sizeof(value))
       return NXS_InvalidArgValue;
-    memcpy(property_value, &value, sizeof(value));
+    std::memcpy(property_value, &value, sizeof(value));
   } else if (property_value_size != NULL) {
     *property_value_size = sizeof(value);
   }

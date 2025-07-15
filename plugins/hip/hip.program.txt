@@ -1,0 +1,436 @@
+// ========================================
+// File: matmul_kernels.hip
+// ========================================
+#include <hip/hip_runtime.h>
+
+extern "C" {
+
+// Matrix multiplication kernel
+__global__ void matmul_kernel(float* A, float* B, float* C, int M, int N, int K) {
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    if (row < M && col < N) {
+        float sum = 0.0f;
+        for (int k = 0; k < K; k++) {
+            sum += A[row * K + k] * B[k * N + col];
+        }
+        C[row * N + col] = sum;
+    }
+}
+
+// Optimized matrix multiplication kernel using shared memory
+__global__ void matmul_shared_kernel(float* A, float* B, float* C, int M, int N, int K) {
+    const int TILE_SIZE = 16;
+    __shared__ float As[TILE_SIZE][TILE_SIZE];
+    __shared__ float Bs[TILE_SIZE][TILE_SIZE];
+    
+    int bx = blockIdx.x, by = blockIdx.y;
+    int tx = threadIdx.x, ty = threadIdx.y;
+    int row = by * TILE_SIZE + ty;
+    int col = bx * TILE_SIZE + tx;
+    
+    float sum = 0.0f;
+    
+    for (int tile = 0; tile < (K + TILE_SIZE - 1) / TILE_SIZE; tile++) {
+        // Load tiles into shared memory
+        if (row < M && tile * TILE_SIZE + tx < K) {
+            As[ty][tx] = A[row * K + tile * TILE_SIZE + tx];
+        } else {
+            As[ty][tx] = 0.0f;
+        }
+        
+        if (col < N && tile * TILE_SIZE + ty < K) {
+            Bs[ty][tx] = B[(tile * TILE_SIZE + ty) * N + col];
+        } else {
+            Bs[ty][tx] = 0.0f;
+        }
+        
+        __syncthreads();
+        
+        // Compute partial sum
+        for (int k = 0; k < TILE_SIZE; k++) {
+            sum += As[ty][k] * Bs[k][tx];
+        }
+        
+        __syncthreads();
+    }
+    
+    if (row < M && col < N) {
+        C[row * N + col] = sum;
+    }
+}
+
+// Block-wise matrix multiplication with larger tiles
+__global__ void matmul_block_kernel(float* A, float* B, float* C, int M, int N, int K) {
+    const int TILE_SIZE = 32;
+    __shared__ float As[TILE_SIZE][TILE_SIZE];
+    __shared__ float Bs[TILE_SIZE][TILE_SIZE];
+    
+    int bx = blockIdx.x, by = blockIdx.y;
+    int tx = threadIdx.x, ty = threadIdx.y;
+    int row = by * TILE_SIZE + ty;
+    int col = bx * TILE_SIZE + tx;
+    
+    float sum = 0.0f;
+    
+    for (int tile = 0; tile < (K + TILE_SIZE - 1) / TILE_SIZE; tile++) {
+        // Load tiles into shared memory with bounds checking
+        if (row < M && tile * TILE_SIZE + tx < K) {
+            As[ty][tx] = A[row * K + tile * TILE_SIZE + tx];
+        } else {
+            As[ty][tx] = 0.0f;
+        }
+        
+        if (col < N && tile * TILE_SIZE + ty < K) {
+            Bs[ty][tx] = B[(tile * TILE_SIZE + ty) * N + col];
+        } else {
+            Bs[ty][tx] = 0.0f;
+        }
+        
+        __syncthreads();
+        
+        // Compute partial sum with unrolling
+        #pragma unroll
+        for (int k = 0; k < TILE_SIZE; k++) {
+            sum += As[ty][k] * Bs[k][tx];
+        }
+        
+        __syncthreads();
+    }
+    
+    if (row < M && col < N) {
+        C[row * N + col] = sum;
+    }
+}
+
+} // extern "C"
+
+// ========================================
+// File: kernel_loader.h
+// ========================================
+#pragma once
+#include <hip/hip_runtime.h>
+#include <string>
+#include <memory>
+
+class KernelLoader {
+private:
+    hipModule_t module;
+    bool loaded;
+    
+public:
+    KernelLoader();
+    ~KernelLoader();
+    
+    bool loadModule(const std::string& filename);
+    hipFunction_t getFunction(const std::string& name);
+    void unloadModule();
+};
+
+// ========================================
+// File: kernel_loader.cpp
+// ========================================
+#include "kernel_loader.h"
+#include <iostream>
+#include <fstream>
+#include <vector>
+
+KernelLoader::KernelLoader() : module(nullptr), loaded(false) {}
+
+KernelLoader::~KernelLoader() {
+    unloadModule();
+}
+
+bool KernelLoader::loadModule(const std::string& filename) {
+    if (loaded) {
+        unloadModule();
+    }
+    
+    // Read the module file
+    std::ifstream file(filename, std::ios::binary);
+    if (!file.is_open()) {
+        std::cerr << "Failed to open kernel module file: " << filename << std::endl;
+        return false;
+    }
+    
+    file.seekg(0, std::ios::end);
+    size_t size = file.tellg();
+    file.seekg(0, std::ios::beg);
+    
+    std::vector<char> buffer(size);
+    file.read(buffer.data(), size);
+    file.close();
+    
+    // Load the module
+    hipError_t err = hipModuleLoadData(&module, buffer.data());
+    if (err != hipSuccess) {
+        std::cerr << "Failed to load kernel module: " << hipGetErrorString(err) << std::endl;
+        return false;
+    }
+    
+    loaded = true;
+    std::cout << "Successfully loaded kernel module: " << filename << std::endl;
+    return true;
+}
+
+hipFunction_t KernelLoader::getFunction(const std::string& name) {
+    if (!loaded) {
+        std::cerr << "No module loaded" << std::endl;
+        return nullptr;
+    }
+    
+    hipFunction_t function;
+    hipError_t err = hipModuleGetFunction(&function, module, name.c_str());
+    if (err != hipSuccess) {
+        std::cerr << "Failed to get function '" << name << "': " << hipGetErrorString(err) << std::endl;
+        return nullptr;
+    }
+    
+    return function;
+}
+
+void KernelLoader::unloadModule() {
+    if (loaded && module) {
+        hipModuleUnload(module);
+        module = nullptr;
+        loaded = false;
+    }
+}
+
+// ========================================
+// File: main.cpp
+// ========================================
+#include <hip/hip_runtime.h>
+#include "kernel_loader.h"
+#include <iostream>
+#include <vector>
+#include <random>
+#include <chrono>
+#include <memory>
+
+// Error checking macro
+#define HIP_CHECK(call) \
+    do { \
+        hipError_t err = call; \
+        if (err != hipSuccess) { \
+            std::cerr << "HIP error at " << __FILE__ << ":" << __LINE__ << " - " << hipGetErrorString(err) << std::endl; \
+            exit(1); \
+        } \
+    } while(0)
+
+// Initialize matrix with random values
+void init_matrix(std::vector<float>& mat, int size) {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<float> dis(0.0f, 1.0f);
+    
+    for (int i = 0; i < size; i++) {
+        mat[i] = dis(gen);
+    }
+}
+
+// Verify results
+bool verify_result(const std::vector<float>& A, const std::vector<float>& B, 
+                  const std::vector<float>& C, int M, int N, int K) {
+    const float tolerance = 1e-3f;
+    
+    for (int i = 0; i < std::min(M, 64); i++) {
+        for (int j = 0; j < std::min(N, 64); j++) {
+            float expected = 0.0f;
+            for (int k = 0; k < K; k++) {
+                expected += A[i * K + k] * B[k * N + j];
+            }
+            
+            float actual = C[i * N + j];
+            if (abs(actual - expected) > tolerance) {
+                std::cout << "Mismatch at (" << i << "," << j << "): expected " 
+                         << expected << ", got " << actual << std::endl;
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+// Launch kernel using hipModuleLaunchKernel
+void launch_kernel(hipFunction_t kernel, dim3 gridSize, dim3 blockSize, 
+                  float* d_A, float* d_B, float* d_C, int M, int N, int K) {
+    void* args[] = {&d_A, &d_B, &d_C, &M, &N, &K};
+    
+    HIP_CHECK(hipModuleLaunchKernel(kernel, 
+                                   gridSize.x, gridSize.y, gridSize.z,
+                                   blockSize.x, blockSize.y, blockSize.z,
+                                   0, 0, args, nullptr));
+}
+
+int main() {
+    // Matrix dimensions
+    const int M = 1024;
+    const int N = 1024;
+    const int K = 1024;
+    
+    std::cout << "Loading kernel module..." << std::endl;
+    
+    // Load kernel module
+    KernelLoader loader;
+    if (!loader.loadModule("matmul_kernels.hsaco")) {
+        std::cerr << "Failed to load kernel module. Make sure to compile kernels first." << std::endl;
+        return 1;
+    }
+    
+    // Get kernel functions
+    hipFunction_t basic_kernel = loader.getFunction("matmul_kernel");
+    hipFunction_t shared_kernel = loader.getFunction("matmul_shared_kernel");
+    hipFunction_t block_kernel = loader.getFunction("matmul_block_kernel");
+    
+    if (!basic_kernel || !shared_kernel || !block_kernel) {
+        std::cerr << "Failed to load one or more kernel functions" << std::endl;
+        return 1;
+    }
+    
+    // Host memory allocation
+    std::vector<float> h_A(M * K);
+    std::vector<float> h_B(K * N);
+    std::vector<float> h_C(M * N);
+    
+    // Initialize matrices
+    init_matrix(h_A, M * K);
+    init_matrix(h_B, K * N);
+    
+    // Device memory allocation
+    float *d_A, *d_B, *d_C;
+    HIP_CHECK(hipMalloc(&d_A, M * K * sizeof(float)));
+    HIP_CHECK(hipMalloc(&d_B, K * N * sizeof(float)));
+    HIP_CHECK(hipMalloc(&d_C, M * N * sizeof(float)));
+    
+    // Copy data to device
+    HIP_CHECK(hipMemcpy(d_A, h_A.data(), M * K * sizeof(float), hipMemcpyHostToDevice));
+    HIP_CHECK(hipMemcpy(d_B, h_B.data(), K * N * sizeof(float), hipMemcpyHostToDevice));
+    
+    std::cout << "Matrix dimensions: " << M << "x" << K << " * " << K << "x" << N << " = " << M << "x" << N << std::endl;
+    
+    // Test basic kernel
+    {
+        const int BLOCK_SIZE = 16;
+        dim3 blockSize(BLOCK_SIZE, BLOCK_SIZE);
+        dim3 gridSize((N + BLOCK_SIZE - 1) / BLOCK_SIZE, (M + BLOCK_SIZE - 1) / BLOCK_SIZE);
+        
+        std::cout << "\nTesting basic kernel..." << std::endl;
+        auto start = std::chrono::high_resolution_clock::now();
+        launch_kernel(basic_kernel, gridSize, blockSize, d_A, d_B, d_C, M, N, K);
+        HIP_CHECK(hipDeviceSynchronize());
+        auto end = std::chrono::high_resolution_clock::now();
+        
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+        double gflops = (2.0 * M * N * K) / (duration.count() * 1e-3);
+        
+        std::cout << "Time: " << duration.count() / 1000.0 << " ms" << std::endl;
+        std::cout << "Performance: " << gflops << " GFLOPS" << std::endl;
+        
+        // Verify
+        HIP_CHECK(hipMemcpy(h_C.data(), d_C, M * N * sizeof(float), hipMemcpyDeviceToHost));
+        if (verify_result(h_A, h_B, h_C, M, N, K)) {
+            std::cout << "Basic kernel: Verification passed!" << std::endl;
+        }
+    }
+    
+    // Test shared memory kernel
+    {
+        const int BLOCK_SIZE = 16;
+        dim3 blockSize(BLOCK_SIZE, BLOCK_SIZE);
+        dim3 gridSize((N + BLOCK_SIZE - 1) / BLOCK_SIZE, (M + BLOCK_SIZE - 1) / BLOCK_SIZE);
+        
+        std::cout << "\nTesting shared memory kernel..." << std::endl;
+        auto start = std::chrono::high_resolution_clock::now();
+        launch_kernel(shared_kernel, gridSize, blockSize, d_A, d_B, d_C, M, N, K);
+        HIP_CHECK(hipDeviceSynchronize());
+        auto end = std::chrono::high_resolution_clock::now();
+        
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+        double gflops = (2.0 * M * N * K) / (duration.count() * 1e-3);
+        
+        std::cout << "Time: " << duration.count() / 1000.0 << " ms" << std::endl;
+        std::cout << "Performance: " << gflops << " GFLOPS" << std::endl;
+        
+        // Verify
+        HIP_CHECK(hipMemcpy(h_C.data(), d_C, M * N * sizeof(float), hipMemcpyDeviceToHost));
+        if (verify_result(h_A, h_B, h_C, M, N, K)) {
+            std::cout << "Shared kernel: Verification passed!" << std::endl;
+        }
+    }
+    
+    // Test block kernel
+    {
+        const int BLOCK_SIZE = 32;
+        dim3 blockSize(BLOCK_SIZE, BLOCK_SIZE);
+        dim3 gridSize((N + BLOCK_SIZE - 1) / BLOCK_SIZE, (M + BLOCK_SIZE - 1) / BLOCK_SIZE);
+        
+        std::cout << "\nTesting block kernel..." << std::endl;
+        auto start = std::chrono::high_resolution_clock::now();
+        launch_kernel(block_kernel, gridSize, blockSize, d_A, d_B, d_C, M, N, K);
+        HIP_CHECK(hipDeviceSynchronize());
+        auto end = std::chrono::high_resolution_clock::now();
+        
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+        double gflops = (2.0 * M * N * K) / (duration.count() * 1e-3);
+        
+        std::cout << "Time: " << duration.count() / 1000.0 << " ms" << std::endl;
+        std::cout << "Performance: " << gflops << " GFLOPS" << std::endl;
+        
+        // Verify
+        HIP_CHECK(hipMemcpy(h_C.data(), d_C, M * N * sizeof(float), hipMemcpyDeviceToHost));
+        if (verify_result(h_A, h_B, h_C, M, N, K)) {
+            std::cout << "Block kernel: Verification passed!" << std::endl;
+        }
+    }
+    
+    // Cleanup
+    HIP_CHECK(hipFree(d_A));
+    HIP_CHECK(hipFree(d_B));
+    HIP_CHECK(hipFree(d_C));
+    
+    std::cout << "\nAll tests completed successfully!" << std::endl;
+    
+    return 0;
+}
+
+// ========================================
+// File: Makefile
+// ========================================
+# Makefile for HIP Matrix Multiplication with Separate Kernels
+
+# Compiler and flags
+HIPCC = hipcc
+CXXFLAGS = -O3 -std=c++11
+HIP_ARCH = gfx906  # Change this to match your GPU architecture
+
+# Source files
+KERNEL_SRC = matmul_kernels.hip
+MAIN_SRC = main.cpp kernel_loader.cpp
+KERNEL_OBJ = matmul_kernels.hsaco
+
+# Targets
+all: matmul_app
+
+# Compile kernels to HSACO (HIP Shader Assembly Code Object)
+$(KERNEL_OBJ): $(KERNEL_SRC)
+	$(HIPCC) --genco --offload-arch=$(HIP_ARCH) $(KERNEL_SRC) -o $(KERNEL_OBJ)
+
+# Compile main application
+matmul_app: $(MAIN_SRC) $(KERNEL_OBJ)
+	$(HIPCC) $(CXXFLAGS) $(MAIN_SRC) -o matmul_app
+
+# Clean build artifacts
+clean:
+	rm -f matmul_app $(KERNEL_OBJ)
+
+# Run the application
+run: matmul_app
+	./matmul_app
+
+# Check GPU architecture
+check-arch:
+	rocminfo | grep "Name:" | head -1
+
+.PHONY: all clean run check-arch

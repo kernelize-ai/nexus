@@ -35,9 +35,9 @@ public:
 
   float *cudaPtr = nullptr;
 
-  CudaBuffer(Object *parent, int deviceID,  size_t size, void *host_ptr = nullptr, bool is_owned = false)
-    : Buffer(parent, size, host_ptr, is_owned) {
-
+  CudaBuffer(Object *parent, int deviceID, size_t size,
+             void *host_ptr = nullptr, bool is_owned = false)
+      : Buffer(size, host_ptr, is_owned) {
     CHECK_CUDA(cudaSetDevice(deviceID));
     CHECK_CUDA(cudaMalloc(&cudaPtr, size));
     if (host_ptr != nullptr)
