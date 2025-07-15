@@ -9,7 +9,6 @@
 
 #include <optional>
 #include <functional>
-#include <magic_enum/magic_enum.hpp>
 #include <optional>
 #include <vector>
 
@@ -65,9 +64,10 @@ nxsGetRuntimeProperty(nxs_uint runtime_property_id, void *property_value,
     case NP_Size:
       return rt::getPropertyInt(property_value, property_value_size, 1);
     case NP_Vendor: {
-      auto name = magic_enum::enum_name(proc->core->vendor);
+      auto name = cpuinfo_vendor_to_string(proc->core->vendor);
+      assert(name);
       return rt::getPropertyStr(property_value, property_value_size,
-                                name.data());
+                                name);
     }
     case NP_Type:
       return rt::getPropertyStr(property_value, property_value_size, "cpu");
@@ -76,9 +76,10 @@ nxsGetRuntimeProperty(nxs_uint runtime_property_id, void *property_value,
                                 cpuinfo_has_arm_sme2() ? 1 : 0);
     }
     case NP_Architecture: {
-      auto name = magic_enum::enum_name(arch->uarch);
+      auto name = cpuinfo_uarch_to_string(arch->uarch);
+      assert(name);
       return rt::getPropertyStr(property_value, property_value_size,
-                                name.data());
+                                name);
     }
     default:
       return NXS_InvalidProperty;
@@ -106,9 +107,10 @@ nxsGetDeviceProperty(nxs_int device_id, nxs_uint device_property_id,
     case NP_Type:
       return rt::getPropertyStr(property_value, property_value_size, "cpu");
     case NP_Architecture: {
-      auto archName = magic_enum::enum_name(device->core->uarch);
+      auto archName = cpuinfo_uarch_to_string(device->core->uarch);
+      assert(archName);
       return rt::getPropertyStr(property_value, property_value_size,
-                                archName.data());
+                                archName);
     }
 
     default:
