@@ -7,7 +7,13 @@
 
 std::vector<std::string_view> nexusArgs;
 
-int main() {
+int main(int argc, char **argv) {
+  if (argc < 3) {
+    std::cout << "Usage: " << argv[0] << " <runtimelib> <kernel_name>" << std::endl;
+    return 1;
+  }
+  std::string runtime_lib = argv[1];
+  std::string kernel_name = argv[2];
   auto sys = nexus::getSystem();
   auto runtimes = sys.getRuntimes();
 
@@ -42,19 +48,16 @@ int main() {
     std::cout << "  Device: " << dev.getProp<std::string>(NP_Name) << " - "
               << dev.getProp<std::string>(NP_Architecture) << std::endl;
   }
-  std::vector<char> data(1024, 1);
-  std::vector<float> vecA(1024, 1.0);
-  std::vector<float> vecB(1024, 2.0);
-  std::vector<float> vecResult_GPU(1024, 0.0);  // For GPU result
+  size_t vsize = 1024 * 1024;
+  std::vector<float> vecA(vsize, 1.0);
+  std::vector<float> vecB(vsize, 2.0);
+  std::vector<float> vecResult_GPU(vsize, 0.0);  // For GPU result
 
   size_t size = 1024 * sizeof(float);
 
-  const char *metallib = std::getenv("NEXUS_TEST_LIB");
-  if (metallib == nullptr) metallib = "kernel.metallib";
+  auto nlib = dev0.createLibrary(runtime_lib);
 
-  auto nlib = dev0.createLibrary(metallib);
-
-  auto kern = nlib.getKernel("add_vectors");
+  auto kern = nlib.getKernel(kernel_name);
   if (!kern) return -1;
 
   auto buf0 = dev0.createBuffer(size, vecA.data());
@@ -68,7 +71,7 @@ int main() {
   cmd.setArgument(1, buf1);
   cmd.setArgument(2, buf2);
 
-  cmd.finalize(32, 1024);
+  cmd.finalize(32, 32);
 
   sched.run();
 

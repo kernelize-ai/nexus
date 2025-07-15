@@ -1,11 +1,10 @@
 project(nexus-test)
 
+set(DEPS)
+
 if(MACOS)
 
-    add_executable(nexus-test main.cpp
-      ${CMAKE_CURRENT_BINARY_DIR}/kernel.air ${CMAKE_CURRENT_BINARY_DIR}/kernel.metallib)
-    #set_target_properties(nexus-test PROPERTIES OUTPUT_NAME bare_metal_tri)
-    target_link_libraries(nexus-test PRIVATE nexus-api)
+    list(APPEND DEPS ${CMAKE_CURRENT_BINARY_DIR}/kernel.air ${CMAKE_CURRENT_BINARY_DIR}/kernel.metallib)
 
     add_custom_command(OUTPUT kernel.air
       MAIN_DEPENDENCY kernel.metal
@@ -15,7 +14,7 @@ if(MACOS)
       MAIN_DEPENDENCY kernel.air
       COMMAND xcrun -sdk macosx metallib ${CMAKE_CURRENT_BINARY_DIR}/kernel.air -o ${CMAKE_CURRENT_BINARY_DIR}/kernel.metallib)
 
-    add_executable(test_multi_stream_sync test_multi_stream_sync.cpp)
+    add_executable(test_multi_stream_sync test_multi_stream_sync.cpp ${DEPS})
     target_link_libraries(test_multi_stream_sync PRIVATE nexus-api)
 
 endif()
@@ -27,3 +26,8 @@ if(LINUX)
     target_link_libraries(nexus-test-linux PRIVATE nexus-api)
 
 endif()
+
+
+add_executable(nexus-test main.cpp ${DEPS})
+target_link_libraries(nexus-test PRIVATE nexus-api)
+
