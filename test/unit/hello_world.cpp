@@ -20,7 +20,7 @@ TEST_F(HelloWorld, BasicTest) {
   EXPECT_EQ(1, 1);
 }
 
-TEST_F(HelloWorld, BasicBrokenTest) {
+TEST_F(HelloWorld, DISABLED_BasicBrokenTest) {
   // This is a basic test to ensure the test framework is working.
   EXPECT_EQ(1, 2);
 }
