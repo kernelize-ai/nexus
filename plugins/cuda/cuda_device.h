@@ -29,18 +29,9 @@ public:
   }
   ~CudaDevice() = default;
 
-  nxs_int createLibrary(void *library_data, nxs_uint data_size) {
+  CudaLibrary *createLibrary(void *library_data, nxs_uint data_size) {
     libraries.emplace_back(library_data, data_size);
-    CudaLibrary &l = libraries[libraries.size()-1];
-
-    auto rt = this->getParent();
-    if (rt) {
-      auto runtime = dynamic_cast<rt::Runtime*>(rt);
-      if (runtime) {
-        return runtime->addObject(this, &l, true);
-      }
-    }
-    return -1;
+    return &libraries.back();
   }
 
   nxs_status copyBuffer(void *host_ptr, CudaBuffer *buffer_ptr) {

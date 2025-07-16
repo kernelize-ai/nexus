@@ -39,7 +39,8 @@ public:
 
   bool dropObject(nxs_int id, release_fn_t fn = nullptr) {
     if (id < 0 || id >= objects.capacity()) return false;
-    if (fn) fn(objects.get(id));
+    auto obj = objects.get(id);
+    if (fn) fn(obj->get());
     objects.release(id);
     return true;
   }

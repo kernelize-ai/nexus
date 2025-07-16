@@ -136,6 +136,8 @@
  * ====================================================================
  */
 
+ #define NXSAPI_LOGGING
+
 #include <assert.h>
 #include <rt_runtime.h>
 #include <rt_utilities.h>
@@ -145,7 +147,6 @@
 #include <optional>
 #include <vector>
 
-#define NXSAPI_LOGGING
 #include <nexus-api.h>
 
 #define NS_PRIVATE_IMPLEMENTATION
@@ -175,7 +176,7 @@ class MetalRuntime : public rt::Runtime {
     for (int i = 0; i < mDevices->count(); ++i) {
       auto *dev = mDevices->object<MTL::Device>(i);
       queues.push_back(dev->newCommandQueue());
-      addObject(nullptr, dev, true);
+      addObject(dev);
     }
   }
   ~MetalRuntime() {
@@ -214,12 +215,12 @@ class MetalCommand {
         auto kernel = rt->get<MTL::ComputePipelineState>(id);
         if (!kernel) return NXS_InvalidKernel;
         auto *command = cmdbuf->computeCommandEncoder();
-        command->setComputePipelineState(*kernel);
+        command->setComputePipelineState(kernel);
         int idx = 0;
         for (auto arg : cobj->getChildren()) {
           auto buf = rt->get<MTL::Buffer>(arg);
           if (!buf) return NXS_InvalidBuffer;
-          command->setBuffer(*buf, 0, idx++);
+          command->setBuffer(buf, 0, idx++);
         }
         command->dispatchThreads(MTL::Size(grid_size * group_size, 1, 1),
                                  MTL::Size(group_size, 1, 1));
@@ -229,13 +230,13 @@ class MetalCommand {
       case NXS_CommandType_Signal: {
         auto event = rt->get<MTL::Event>(id);
         if (!event) return NXS_InvalidEvent;
-        cmdbuf->encodeSignalEvent(*event, event_value);
+        cmdbuf->encodeSignalEvent(event, event_value);
         return NXS_Success;
       }
       case NXS_CommandType_Wait: {
         auto event = rt->get<MTL::Event>(id);
         if (!event) return NXS_InvalidEvent;
-        cmdbuf->encodeWait(*event, event_value);
+        cmdbuf->encodeWait(event, event_value);
         return NXS_Success;
       }
       default:
@@ -266,6 +267,7 @@ class MetalSchedule {
     for (auto cmdbuf : cmdbufs) {
       cmdbuf.second->release();
     }
+    cmdbufs.clear();
   }
 
   MTL::CommandBuffer *getCommandBuffer(MetalRuntime *rt, rt::Object *sched, MTL::CommandQueue *queue) {
@@ -342,9 +344,8 @@ nxsGetRuntimeProperty(nxs_uint runtime_property_id, void *property_value,
 extern "C" nxs_status NXS_API_CALL
 nxsGetDeviceProperty(nxs_int device_id, nxs_uint device_property_id,
                      void *property_value, size_t *property_value_size) {
-  auto dev = getRuntime()->get<MTL::Device>(device_id);
-  if (!dev) return NXS_InvalidDevice;
-  auto device = *dev;
+  auto device = getRuntime()->get<MTL::Device>(device_id);
+  if (!device) return NXS_InvalidDevice;
 
   //    uint64_t                        registryID() const;
   //     MTL::Size                       maxThreadsPerThreadgroup() const;
@@ -447,7 +448,7 @@ extern "C" nxs_int NXS_API_CALL nxsCreateBuffer(nxs_int device_id, size_t size,
   else
     buf = dev->newBuffer(size, bopts);
 
-  return rt->addObject(*parent, buf, true);
+  return rt->addObject(buf, true);
 }
 
 /************************************************************************
@@ -460,7 +461,7 @@ extern "C" nxs_status NXS_API_CALL nxsCopyBuffer(nxs_int buffer_id,
   auto rt = getRuntime();
   auto buf = rt->get<MTL::Buffer>(buffer_id);
   if (!buf) return NXS_InvalidBuffer;
-  std::memcpy(host_ptr, (*buf)->contents(), (*buf)->length());
+  std::memcpy(host_ptr, buf->contents(), buf->length());
   return NXS_Success;
 }
 
@@ -507,7 +508,7 @@ extern "C" nxs_int NXS_API_CALL nxsCreateLibrary(nxs_int device_id,
         "createLibrary " << pError->localizedDescription()->utf8String());
     return NXS_InvalidLibrary;
   }
-  return rt->addObject(*parent, pLibrary, true);
+  return rt->addObject(pLibrary, true);
 }
 
 /************************************************************************
@@ -533,7 +534,7 @@ nxsCreateLibraryFromFile(nxs_int device_id, const char *library_path) {
         "createLibrary " << pError->localizedDescription()->utf8String());
     return NXS_InvalidLibrary;
   }
-  return rt->addObject(*parent, pLibrary, true);
+  return rt->addObject(pLibrary, true);
 }
 
 /************************************************************************
@@ -587,7 +588,7 @@ extern "C" nxs_int NXS_API_CALL nxsGetKernel(nxs_int library_id,
                "getKernel " << pError->localizedDescription()->utf8String());
     return NXS_InvalidKernel;
   }
-  rt->addObject(*parent, func, true);
+  rt->addObject(func, true);
   MTL::ComputePipelineState *pipeState = lib->device()->newComputePipelineState(func, &pError);
   if (!pipeState) {
     NXSAPI_LOG(NXSAPI_STATUS_ERR,
@@ -595,7 +596,7 @@ extern "C" nxs_int NXS_API_CALL nxsGetKernel(nxs_int library_id,
     return NXS_InvalidKernel;
   }
 
-  return rt->addObject(*parent, pipeState, true);
+  return rt->addObject(pipeState, true);
 }
 
 /************************************************************************
@@ -657,7 +658,7 @@ extern "C" nxs_int nxsCreateEvent(nxs_int device_id, nxs_event_type event_type) 
     //event = dev->newFence();
     return NXS_InvalidEvent;
   }
-  return rt->addObject(*parent, event, true);
+  return rt->addObject(event, true);
 }
 /************************************************************************
  * @def GetEventProperty
@@ -732,7 +733,7 @@ extern "C" nxs_int nxsCreateStream(nxs_int device_id,
   // TODO: Get the default command queue for the first Stream
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createStream");
   MTL::CommandQueue *queue = dev->newCommandQueue();
-  return rt->addObject(*parent, queue, true);
+  return rt->addObject(queue, true);
 }
 /************************************************************************
  * @def GetStreamProperty
@@ -774,7 +775,7 @@ extern "C" nxs_int nxsCreateSchedule(nxs_int device_id,
 
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createSchedule");
   auto *sched = new MetalSchedule();
-  return rt->addObject(*parent, sched, true);
+  return rt->addObject(sched, true);
 }
 
 /************************************************************************
@@ -791,7 +792,7 @@ extern "C" nxs_status nxsRunSchedule(nxs_int schedule_id, nxs_int stream_id, nxs
   auto stream = rt->get<MTL::CommandQueue>(stream_id);
   if (!stream) return NXS_InvalidStream;
 
-  auto *cmdbuf = sched->getCommandBuffer(rt, *parent, *stream);
+  auto *cmdbuf = sched->getCommandBuffer(rt, *parent, stream);
   if (!cmdbuf) return NXS_InvalidSchedule;
 
   cmdbuf->enqueue();
@@ -841,7 +842,7 @@ extern "C" nxs_int NXS_API_CALL nxsCreateCommand(nxs_int schedule_id,
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createCommand");
 
   auto *cmd = new MetalCommand(kernel_id, NXS_CommandType_Dispatch);
-  auto res = rt->addObject(*parent, cmd, true);
+  auto res = rt->addObject(cmd, true);
   (*parent)->addChild(res);
   return res;
 }
@@ -865,7 +866,7 @@ extern "C" nxs_int NXS_API_CALL nxsCreateSignalCommand(nxs_int schedule_id,
 
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createSignalCommand");
   auto *cmd = new MetalCommand(event_id, NXS_CommandType_Signal, signal_value);
-  auto res = rt->addObject(*parent, cmd, true);
+  auto res = rt->addObject(cmd, true);
   (*parent)->addChild(res);
   return res;
 }
@@ -888,7 +889,7 @@ extern "C" nxs_int NXS_API_CALL nxsCreateWaitCommand(nxs_int schedule_id,
 
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createWaitCommand");
   auto *cmd = new MetalCommand(event_id, NXS_CommandType_Wait, wait_value);
-  auto res = rt->addObject(*parent, cmd, true);
+  auto res = rt->addObject(cmd, true);
   (*parent)->addChild(res);
   return res;
 }
@@ -930,7 +931,7 @@ extern "C" nxs_status NXS_API_CALL nxsFinalizeCommand(nxs_int command_id,
   auto cmd = rt->get<MetalCommand>(command_id);
   if (!cmd) return NXS_InvalidCommand;
 
-  (*cmd)->setDimensions(group_size, grid_size);
+  cmd->setDimensions(group_size, grid_size);
 
   return NXS_Success;
 }

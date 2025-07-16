@@ -24,11 +24,6 @@ class Device : public Object {
   static void delete_fn(void *obj) {
     delete static_cast<Device *>(obj);
   }
-
-  Object *getParent() {
-    return Object::getParent();
-  }
-
 };
 
 }  // namespace rt
