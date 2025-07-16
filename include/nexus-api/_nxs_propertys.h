@@ -120,6 +120,7 @@ NEXUS_API_PROP(CoreSubsystem,   _prop_obj_vec,    "Core Subsystem Hierarchy")
 NEXUS_API_PROP(MemorySubsystem, _prop_obj_vec,    "Memory Subsystem Hierarchy")
 
 NEXUS_API_PROP(Limits,          _prop_obj_vec,    "System limits")
+NEXUS_API_PROP(Features,        _prop_str,        "System features")
 
 NEXUS_API_PROP(MaxThreadsPerThreadgroup, _prop_int,    "Max threads per threadgroup")
 NEXUS_API_PROP(MaxThreadgroupsPerCore,   _prop_int,    "Max threadgroups per Core")

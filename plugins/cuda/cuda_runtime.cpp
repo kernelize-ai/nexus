@@ -1,3 +1,4 @@
+#define NXSAPI_LOGGING
 
 #include <assert.h>
 #include <string.h>
@@ -10,7 +11,6 @@
 #include <cuda_runtime.h>
 #include <cuda.h>
 
-//#define NXSAPI_LOGGING - Breaks curesult??
 #include <nexus-api.h>
 
 #include <rt_utilities.h>
@@ -23,7 +23,7 @@
 
 #include <cuda_device.h>
 
-#define NXSAPI_LOG_MODULE "cuda"
+#define NXSAPI_LOG_MODULE "cuda_runtime"
 
 using namespace nxs;
 
@@ -34,7 +34,9 @@ public:
   nxs_int numDevices;
 
   CudaRuntime() : rt::Runtime() {
-    CHECK_CU(cuInit(0));
+
+    CUresult cuResult = cuInit(0);
+    CHECK_CU(cuResult);
 
     setupCudaDevices();
 
@@ -223,13 +225,11 @@ nxsCopyBuffer(
   auto buffer = bufferObject ? (*bufferObject)->get<CudaBuffer>() : nullptr;
   if (!buffer)
     return NXS_InvalidBuffer;
+  if (!host_ptr)
+    return NXS_InvalidHostPtr;
 
-  auto device = buffer->getParent()->get<CudaDevice>();
-  if (!device) return NXS_InvalidDevice;
-
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "copyBuffer " << buffer->size());
-
-  return device->copyBuffer(host_ptr, buffer);
+  CHECK_CUDA(cudaMemcpy(host_ptr, buffer->cudaPtr, buffer->size(), cudaMemcpyDeviceToHost));
+  return NXS_Success;
 }
 
 

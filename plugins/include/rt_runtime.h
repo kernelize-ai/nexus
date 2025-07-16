@@ -28,7 +28,7 @@ public:
     return &objects[id];
   }
 
-  template <typename T>
+  template <typename T = void>
   std::optional<T *> get(nxs_int id) {
     if (auto obj = getObject(id)) return (*obj)->get<T>();
     return std::nullopt;

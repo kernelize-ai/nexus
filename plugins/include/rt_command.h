@@ -11,7 +11,7 @@ class Command : public rt::Object {
 
 public:
 
-    Buffers buffers;
+    std::vector<Buffer> buffers;
 
     int gridSize = -1;
     int blockSize = -1;

@@ -40,7 +40,6 @@ dist/
 *.out
 *.app
 
-
 # Python caches
 __pycache__/
 *.py[cod]
@@ -51,3 +50,7 @@ python/nexus/device_lib
 
 .venv
 .test_wheel_venv
+
+# Cmake files
+cmake/*
+!cmake/FindCPUINFO.cmake

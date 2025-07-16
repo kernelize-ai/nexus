@@ -6,7 +6,7 @@
 
 int main() {
   auto sys = nexus::getSystem();
-  auto rt = sys.getRuntime(0);
+  auto rt = sys.getRuntime(1);
 
   auto devCount = rt.getProperty(NP_Size);
 
