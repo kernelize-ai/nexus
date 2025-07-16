@@ -162,7 +162,7 @@
 using namespace nxs;
 
 ////////////////////////////////////////////////////////////////////////////
-// Print value
+// HIP CHECK and Print value
 ////////////////////////////////////////////////////////////////////////////
 template <typename T>
 std::string print_value(T value) {
@@ -180,9 +180,6 @@ std::string print_value(T value, Args... args) {
   return ss.str() + print_value(args...);
 }
 
-////////////////////////////////////////////////////////////////////////////
-// HIP CHECK
-////////////////////////////////////////////////////////////////////////////
 #define HIP_CHECK(err_code, hip_cmd, ...)                                     \
   do {                                                                        \
     NXSAPI_LOG(NXSAPI_STATUS_NOTE,                                            \
@@ -194,70 +191,14 @@ std::string print_value(T value, Args... args) {
     }                                                                         \
   } while (0)
 
-////////////////////////////////////////////////////////////////////////////
-// Hip Runtime
-////////////////////////////////////////////////////////////////////////////
-class HipRuntime : public rt::Runtime {
-  nxs_int count;
-  nxs_int current_device;
-  std::vector<hipStream_t> streams;
-
- public:
-  HipRuntime() : rt::Runtime() {
-    if (hipGetDeviceCount(&count) != hipSuccess) {
-      NXSAPI_LOG(NXSAPI_STATUS_ERR, "hipGetDeviceCount failed");
-      count = 0;
-    }
-    for (int i = 0; i < count; ++i) {
-      hipDevice_t dev;
-      if (hipDeviceGet(&dev, i) == hipSuccess) {
-        hipStream_t stream;
-        if (hipStreamCreate(&stream) != hipSuccess) continue;
-        addObject(nullptr);
-        streams.push_back(stream);
-      }
-    }
-    if (count > 0) {
-      current_device = 0;
-      if (hipSetDevice(current_device) != hipSuccess)
-        NXSAPI_LOG(NXSAPI_STATUS_ERR, "hipSetDevice failed");
-    }
-  }
-  ~HipRuntime() {
-    for (auto stream : streams)
-      if (hipStreamDestroy(stream) != hipSuccess)
-        NXSAPI_LOG(NXSAPI_STATUS_ERR, "hipStreamDestroy failed");
-  }
-
-  template <typename T>
-  T getPtr(nxs_int id) {
-    if (auto obj = get(id)) return static_cast<T>(*obj);
-    return nullptr;
-  }
-
-  nxs_int getDeviceCount() const { return count; }
-
-  hipStream_t getStream(nxs_int id) const { return streams[id]; }
-  hipDevice_t getDevice(nxs_int id) {
-    if (id < 0 || id >= count) return -1;
-    if (id != current_device) {
-      HIP_CHECK(-1, hipSetDevice, id);
-      current_device = id;
-    }
-    return id;
-  }
-};
-
-HipRuntime *getRuntime() {
-  static HipRuntime s_runtime;
-  return &s_runtime;
-}
+class HipRuntime;
 
 ////////////////////////////////////////////////////////////////////////////
 // Hip Command
 ////////////////////////////////////////////////////////////////////////////
 class HipCommand {
   hipFunction_t kernel;
+  hipEvent_t event;
   nxs_command_type type;
   nxs_int event_value;
   std::vector<void *> args;
@@ -278,9 +219,15 @@ class HipCommand {
     for (int i = 0; i < args.size(); i++) args_ref[i] = &args[i];
   }
 
-  void addArgument(int idx, void *arg) { args[idx] = arg; }
+  HipCommand(hipEvent_t event, nxs_command_type type, nxs_int event_value = 1)
+      : event(event), type(type), event_value(event_value) {}
 
-  nxs_status runCommand(HipRuntime *rt, hipStream_t stream) {
+  template <typename T = void *>
+  void setArgument(int idx, T arg) {
+    args[idx] = arg;
+  }
+
+  nxs_status runCommand(hipStream_t stream) {
     NXSAPI_LOG(NXSAPI_STATUS_NOTE, "runCommand " << kernel << " - " << type);
 
     switch (type) {
@@ -294,21 +241,11 @@ class HipCommand {
         return NXS_Success;
       }
       case NXS_CommandType_Signal: {
-#if 0
-        auto event = rt->getPtr<hipEvent_t>(id);
-        if (!event) return NXS_InvalidEvent;
-        //hipEventRecord(*event, stream);
-        return NXS_Success;
-#endif
+        HIP_CHECK(NXS_InvalidCommand, hipEventRecord, event, stream);
         return NXS_Success;
       }
       case NXS_CommandType_Wait: {
-#if 0
-        auto event = rt->getPtr<hipEvent_t>(id);
-        if (!event) return NXS_InvalidEvent;
-        //hipEventSynchronize(*event);
-        return NXS_Success;
-#endif
+        HIP_CHECK(NXS_InvalidCommand, hipStreamWaitEvent, stream, event, 0);
         return NXS_Success;
       }
       default:
@@ -332,36 +269,109 @@ class HipSchedule {
 
  public:
   HipSchedule() { commands.reserve(32); }
-  ~HipSchedule() {
-    for (auto cmd : commands) delete cmd;
-  }
+  ~HipSchedule() {}
+
+  void release(HipRuntime *rt);
 
   void addCommand(HipCommand *cmd) { commands.push_back(cmd); }
 
-  nxs_status run(HipRuntime *rt, hipStream_t stream) {
+  nxs_status run(hipStream_t stream) {
     for (auto cmd : commands) {
-      auto status = cmd->runCommand(rt, stream);
+      auto status = cmd->runCommand(stream);
       if (!nxs_success(status)) return status;
     }
     return NXS_Success;
   }
-  hipEvent_t getEvent(HipRuntime *rt, hipStream_t stream) {
-#if 0
-    auto *event = hipEventCreate();
-    events[stream] = event;
-    // Add all the commands to the command buffer
-    for (auto cmd_id : sched->getChildren()) {
-      auto cobj = rt->getObject(cmd_id);
-      if (!cobj) continue;
-      auto *cmd = (*cobj)->get<HipCommand>();
-      if (!cmd) continue;
-      cmd->createCommand(rt, *cobj, stream);
+};
+
+////////////////////////////////////////////////////////////////////////////
+// Hip Runtime
+////////////////////////////////////////////////////////////////////////////
+class HipRuntime : public rt::Runtime {
+  nxs_int count;
+  nxs_int current_device;
+  rt::Pool<rt::Buffer> buffer_pool;
+  rt::Pool<HipCommand> command_pool;
+  rt::Pool<HipSchedule> schedule_pool;
+
+ public:
+  HipRuntime() : rt::Runtime() {
+    if (hipGetDeviceCount(&count) != hipSuccess) {
+      NXSAPI_LOG(NXSAPI_STATUS_ERR, "hipGetDeviceCount failed");
+      count = 0;
     }
-    return event;
-#endif
-    return nullptr;
+    for (int i = 0; i < count; ++i) {
+      hipDevice_t dev;
+      if (hipDeviceGet(&dev, i) == hipSuccess) {
+        addObject(dev);
+      }
+    }
+    if (count > 0) {
+      current_device = 0;
+      if (hipSetDevice(current_device) != hipSuccess)
+        NXSAPI_LOG(NXSAPI_STATUS_ERR, "hipSetDevice failed");
+    }
+  }
+  ~HipRuntime() {}
+
+  template <typename T>
+  T getPtr(nxs_int id) {
+    return static_cast<T>(get(id));
+  }
+
+  nxs_int getDeviceCount() const { return count; }
+
+  hipDevice_t getDevice(nxs_int id) {
+    if (id < 0 || id >= count) return -1;
+    if (id != current_device) {
+      HIP_CHECK(-1, hipSetDevice, id);
+      current_device = id;
+    }
+    return id;
+  }
+
+  rt::Buffer *getBuffer(size_t size, void *hip_buffer = nullptr) {
+    return buffer_pool.get_new(size, hip_buffer, false);
+  }
+  void release(rt::Buffer *buffer) { buffer_pool.release(buffer); }
+
+  HipCommand *getCommand(hipFunction_t kernel, nxs_command_type type,
+                         nxs_int event_value = 0) {
+    return command_pool.get_new(kernel, type, event_value);
+  }
+
+  HipCommand *getCommand(hipEvent_t event, nxs_command_type type,
+                         nxs_int event_value = 0) {
+    return command_pool.get_new(event, type, event_value);
+  }
+
+  void release(HipCommand *cmd) { command_pool.release(cmd); }
+
+  HipSchedule *getSchedule() { return schedule_pool.get_new(); }
+
+  void release(HipSchedule *sched) {
+    sched->release(this);
+    schedule_pool.release(sched);
   }
 };
+
+////////////////////////////////////////////////////////////////////////////
+// Get Runtime - Singleton
+////////////////////////////////////////////////////////////////////////////
+HipRuntime *getRuntime() {
+  static HipRuntime s_runtime;
+  return &s_runtime;
+}
+
+////////////////////////////////////////////////////////////////////////////
+// Release Schedule
+////////////////////////////////////////////////////////////////////////////
+void HipSchedule::release(HipRuntime *rt) {
+  for (auto cmd : commands) {
+    rt->release(cmd);
+  }
+  commands.clear();
+}
 
 /************************************************************************
  * @def GetRuntimeProperty
@@ -482,9 +492,8 @@ extern "C" nxs_int NXS_API_CALL nxsCreateBuffer(nxs_int device_id, size_t size,
 
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createBuffer " << print_value(buf));
 
-  rt::Buffer *buffer = new rt::Buffer(size, buf);
-
-  return rt->addObject(nullptr, buffer, true);
+  auto buffer = rt->getBuffer(size, buf);
+  return rt->addObject(buffer);
 }
 
 /************************************************************************
@@ -497,8 +506,8 @@ extern "C" nxs_status NXS_API_CALL nxsCopyBuffer(nxs_int buffer_id,
   auto rt = getRuntime();
   auto buffer = rt->get<rt::Buffer>(buffer_id);
   if (!buffer) return NXS_InvalidBuffer;
-  HIP_CHECK(NXS_InvalidBuffer, hipMemcpy, host_ptr, (*buffer)->data(),
-            (*buffer)->size(), hipMemcpyDeviceToHost);
+  HIP_CHECK(NXS_InvalidBuffer, hipMemcpy, host_ptr, buffer->data(),
+            buffer->size(), hipMemcpyDeviceToHost);
   return NXS_Success;
 }
 
@@ -511,7 +520,8 @@ extern "C" nxs_status NXS_API_CALL nxsReleaseBuffer(nxs_int buffer_id) {
   auto rt = getRuntime();
   auto buffer = rt->get<rt::Buffer>(buffer_id);
   if (buffer) {
-    HIP_CHECK(NXS_InvalidBuffer, hipFree, (*buffer)->data());
+    HIP_CHECK(NXS_InvalidBuffer, hipFree, buffer->data());
+    rt->release(buffer);
   }
   if (!rt->dropObject(buffer_id)) return NXS_InvalidBuffer;
   return NXS_Success;
@@ -532,7 +542,7 @@ extern "C" nxs_int NXS_API_CALL nxsCreateLibrary(nxs_int device_id,
   hipModule_t module;
   HIP_CHECK(NXS_InvalidLibrary, hipModuleLoadData, &module, library_data);
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createLibrary" << print_value(module));
-  return rt->addObject(nullptr, module, false);
+  return rt->addObject(module, false);
 }
 
 /************************************************************************
@@ -550,7 +560,7 @@ nxsCreateLibraryFromFile(nxs_int device_id, const char *library_path) {
   hipModule_t module;
   HIP_CHECK(NXS_InvalidLibrary, hipModuleLoad, &module, library_path);
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createLibrary" << print_value(module));
-  return rt->addObject(nullptr, module, false);
+  return rt->addObject(module, false);
 }
 
 /************************************************************************
@@ -591,7 +601,7 @@ extern "C" nxs_int NXS_API_CALL nxsGetKernel(nxs_int library_id,
   hipFunction_t func;
   HIP_CHECK(NXS_InvalidKernel, hipModuleGetFunction, &func, lib, kernel_name);
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "getKernel" << print_value(func));
-  return rt->addObject(nullptr, func, false);
+  return rt->addObject(func, false);
 }
 
 /************************************************************************
@@ -627,21 +637,20 @@ extern "C" nxs_int NXS_API_CALL nxsCreateEvent(nxs_int device_id,
   auto rt = getRuntime();
   auto parent = rt->getObject(device_id);
   if (!parent) return NXS_InvalidDevice;
-  auto dev = (*parent)->get<hipDevice_t>();
-  if (!dev) return NXS_InvalidDevice;
-#if 0
+
   hipEvent_t event = nullptr;
   if (event_type == NXS_EventType_Shared) {
-    event = hipEventCreate();
+    HIP_CHECK(NXS_InvalidEvent, hipEventCreate, &event);
   } else if (event_type == NXS_EventType_Signal) {
-    event = hipEventCreate();
+    HIP_CHECK(NXS_InvalidEvent, hipEventCreate, &event);
   } else if (event_type == NXS_EventType_Fence) {
     //event = dev->newFence();
     return NXS_InvalidEvent;
   }
-  return rt->addObject(nullptr, event, true);
-#endif
-  return NXS_InvalidEvent;
+  //// HIP Events are triggered by default!!!!  Cannot handle out-of-order
+  ///execution
+
+  return rt->addObject(event);
 }
 /************************************************************************
  * @def GetEventProperty
@@ -659,12 +668,9 @@ nxsGetEventProperty(nxs_int event_id, nxs_uint event_property_id,
 extern "C" nxs_status NXS_API_CALL nxsSignalEvent(nxs_int event_id,
                                                   nxs_int signal_value) {
   auto rt = getRuntime();
-  auto obj = rt->getObject(event_id);
-  if (!obj) return NXS_InvalidEvent;
-  auto event = (*obj)->get<hipEvent_t>();
+  auto event = rt->getPtr<hipEvent_t>(event_id);
   if (!event) return NXS_InvalidEvent;
-  // if (hipEventRecord(*event, stream) != hipSuccess)
-  //   return NXS_InvalidEvent;
+  HIP_CHECK(NXS_InvalidEvent, hipEventRecord, event);
   return NXS_Success;
 }
 /************************************************************************
@@ -674,12 +680,9 @@ extern "C" nxs_status NXS_API_CALL nxsSignalEvent(nxs_int event_id,
 extern "C" nxs_status NXS_API_CALL nxsWaitEvent(nxs_int event_id,
                                                 nxs_int wait_value) {
   auto rt = getRuntime();
-  auto obj = rt->getObject(event_id);
-  if (!obj) return NXS_InvalidEvent;
-  auto event = (*obj)->get<hipEvent_t>();
+  auto event = rt->getPtr<hipEvent_t>(event_id);
   if (!event) return NXS_InvalidEvent;
-  // if (hipEventSynchronize(*event) != hipSuccess)
-  //   return NXS_InvalidEvent;
+  HIP_CHECK(NXS_InvalidEvent, hipEventSynchronize, event);
   return NXS_Success;
 }
 /************************************************************************
@@ -703,13 +706,13 @@ extern "C" nxs_int NXS_API_CALL nxsCreateStream(nxs_int device_id,
                                                 nxs_uint stream_properties) {
   auto rt = getRuntime();
   auto dev = rt->getDevice(device_id);
-  if (!dev) return NXS_InvalidDevice;
+  if (dev < 0) return NXS_InvalidDevice;
 
   // TODO: Get the default command queue for the first Stream
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createStream");
   hipStream_t stream;
   HIP_CHECK(NXS_InvalidStream, hipStreamCreate, &stream);
-  return rt->addObject(nullptr, stream, false);
+  return rt->addObject(stream, false);
 }
 /************************************************************************
  * @def GetStreamProperty
@@ -744,8 +747,8 @@ extern "C" nxs_int NXS_API_CALL nxsCreateSchedule(nxs_int device_id,
   auto dev = rt->getDevice(device_id);
   if (dev < 0) return NXS_InvalidDevice;
 
-  auto *sched = new HipSchedule();
-  return rt->addObject(nullptr, sched, true);
+  auto sched = rt->getSchedule();
+  return rt->addObject(sched);
 }
 
 /************************************************************************
@@ -763,13 +766,17 @@ extern "C" nxs_status NXS_API_CALL nxsRunSchedule(nxs_int schedule_id,
   auto sched = rt->get<HipSchedule>(schedule_id);
   if (!sched) return NXS_InvalidSchedule;
   auto stream = rt->getPtr<hipStream_t>(stream_id);
-  if (!stream)         // get default stream
-    stream = nullptr;  // default stream
 
-  auto status = (*sched)->run(rt, stream);
+  auto status = sched->run(stream);
   if (!nxs_success(status)) return status;
 
-  if (blocking) HIP_CHECK(NXS_InvalidCommand, hipStreamSynchronize, stream);
+  if (blocking) {
+    if (stream) {
+      HIP_CHECK(NXS_InvalidCommand, hipStreamSynchronize, stream);
+    } else {
+      HIP_CHECK(NXS_InvalidCommand, hipDeviceSynchronize);
+    }
+  }
   return NXS_Success;
 }
 
@@ -781,8 +788,10 @@ extern "C" nxs_status NXS_API_CALL nxsRunSchedule(nxs_int schedule_id,
 extern "C" nxs_status NXS_API_CALL nxsReleaseSchedule(nxs_int schedule_id) {
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "releaseSchedule " << schedule_id);
   auto rt = getRuntime();
-  if (!rt->dropObject(schedule_id, rt::delete_fn<HipSchedule>))
-    return NXS_InvalidSchedule;
+  auto sched = rt->get<HipSchedule>(schedule_id);
+  if (!sched) return NXS_InvalidSchedule;
+  sched->release(rt);
+  if (!rt->dropObject(schedule_id)) return NXS_InvalidSchedule;
   return NXS_Success;
 }
 
@@ -802,9 +811,9 @@ extern "C" nxs_int NXS_API_CALL nxsCreateCommand(nxs_int schedule_id,
   auto kernel = rt->getPtr<hipFunction_t>(kernel_id);
   if (!kernel) return NXS_InvalidKernel;
 
-  auto *cmd = new HipCommand(kernel, NXS_CommandType_Dispatch);
-  (*sched)->addCommand(cmd);
-  return rt->addObject(nullptr, cmd, false);
+  auto *cmd = rt->getCommand(kernel, NXS_CommandType_Dispatch);
+  sched->addCommand(cmd);
+  return rt->addObject(cmd);
 }
 
 /************************************************************************
@@ -820,17 +829,17 @@ extern "C" nxs_int NXS_API_CALL nxsCreateSignalCommand(nxs_int schedule_id,
                                                         << event_id << " - "
                                                         << signal_value);
   auto rt = getRuntime();
-  auto parent = rt->getObject(schedule_id);
-  if (!parent) return NXS_InvalidSchedule;
-  auto sched = (*parent)->get<HipSchedule>();
+  auto sched = rt->get<HipSchedule>(schedule_id);
   if (!sched) return NXS_InvalidSchedule;
-  auto event = rt->get<hipEvent_t>(event_id);
-  if (!event) return NXS_InvalidEvent;
+  auto event = rt->getPtr<hipEvent_t>(event_id);
+  if (!event) {
+    HIP_CHECK(NXS_InvalidEvent, hipEventCreate, &event);
+    rt->addObject(event);
+  }
 
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createSignalCommand");
-  auto *cmd = new HipCommand(nullptr, NXS_CommandType_Signal, signal_value);
-  auto res = rt->addObject(nullptr, cmd, true);
-  (*parent)->addChild(res);
+  auto *cmd = rt->getCommand(event, NXS_CommandType_Signal, signal_value);
+  auto res = rt->addObject(cmd);
+  sched->addCommand(cmd);
   return res;
 }
 /************************************************************************
@@ -846,17 +855,15 @@ extern "C" nxs_int NXS_API_CALL nxsCreateWaitCommand(nxs_int schedule_id,
                                                       << event_id << " - "
                                                       << wait_value);
   auto rt = getRuntime();
-  auto parent = rt->getObject(schedule_id);
-  if (!parent) return NXS_InvalidSchedule;
-  auto sched = (*parent)->get<HipSchedule>();
+  auto sched = rt->get<HipSchedule>(schedule_id);
   if (!sched) return NXS_InvalidSchedule;
-  auto event = rt->get<hipEvent_t>(event_id);
+  auto event = rt->getPtr<hipEvent_t>(event_id);
   if (!event) return NXS_InvalidEvent;
 
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createWaitCommand");
-  auto *cmd = new HipCommand(nullptr, NXS_CommandType_Wait, wait_value);
-  auto res = rt->addObject(nullptr, cmd, true);
-  (*parent)->addChild(res);
+  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "EventQuery: " << hipEventQuery(event));
+  auto *cmd = rt->getCommand(event, NXS_CommandType_Wait, wait_value);
+  auto res = rt->addObject(cmd);
+  sched->addCommand(cmd);
   return res;
 }
 
@@ -879,7 +886,7 @@ extern "C" nxs_status NXS_API_CALL nxsSetCommandArgument(nxs_int command_id,
   if (!buffer) return NXS_InvalidBuffer;
   if (argument_index >= MAX_ARGS) return NXS_InvalidCommand;
 
-  (*cmd)->addArgument(argument_index, (*buffer)->data());
+  cmd->setArgument(argument_index, buffer->data());
   return NXS_Success;
 }
 
@@ -899,7 +906,7 @@ extern "C" nxs_status NXS_API_CALL nxsFinalizeCommand(nxs_int command_id,
   auto cmd = rt->get<HipCommand>(command_id);
   if (!cmd) return NXS_InvalidCommand;
 
-  (*cmd)->setDimensions(group_size, grid_size);
+  cmd->setDimensions(group_size, grid_size);
 
   return NXS_Success;
 }
@@ -912,7 +919,5 @@ extern "C" nxs_status NXS_API_CALL nxsFinalizeCommand(nxs_int command_id,
 extern "C" nxs_status NXS_API_CALL nxsReleaseCommand(nxs_int command_id) {
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "releaseCommand " << command_id);
   auto rt = getRuntime();
-  if (!rt->dropObject(command_id, rt::delete_fn<HipCommand>))
-    return NXS_InvalidCommand;
   return NXS_Success;
 }

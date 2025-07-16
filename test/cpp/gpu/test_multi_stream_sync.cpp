@@ -7,7 +7,14 @@
 
 std::vector<std::string_view> nexusArgs;
 
-int main() {
+int main(int argc, char **argv) {
+  if (argc < 3) {
+    std::cout << "Usage: " << argv[0] << " <kernel_lib> <kernel_name>"
+              << std::endl;
+    return 1;
+  }
+  std::string kernel_lib = argv[1];
+  std::string kernel_name = argv[2];
   auto sys = nexus::getSystem();
   auto runtimes = sys.getRuntimes();
 
@@ -48,13 +55,18 @@ int main() {
 
   size_t size = 1024 * sizeof(float);
 
-  const char *metallib = std::getenv("NEXUS_TEST_LIB");
-  if (metallib == nullptr) metallib = "kernel.metallib";
+  auto nlib = dev0.createLibrary(kernel_lib);
 
-  auto nlib = dev0.createLibrary(metallib);
+  if (!nlib) {
+    std::cout << "Failed to load library: " << kernel_lib << std::endl;
+    return 1;
+  }
 
-  auto kern = nlib.getKernel("add_vectors");
-  if (!kern) return -1;
+  auto kern = nlib.getKernel(kernel_name);
+  if (!kern) {
+    std::cout << "Failed to get kernel: " << kernel_name << std::endl;
+    return 1;
+  }
 
   auto buf0 = dev0.createBuffer(size, vecA.data());
   auto buf1 = dev0.createBuffer(size, vecB.data());
@@ -65,6 +77,7 @@ int main() {
   auto stream1 = dev0.createStream();
 
   auto evFinal = dev0.createEvent();
+  auto ev0 = dev0.createEvent();
 
   // Stream 0
   auto sched0 = dev0.createSchedule();
@@ -74,25 +87,27 @@ int main() {
   cmd0.setArgument(1, buf1);
   cmd0.setArgument(2, buf2);
 
-  cmd0.finalize(32, 1024);
+  cmd0.finalize(32, 32);
 
-  auto ecmd = sched0.createSignalCommand();
+  sched0.createSignalCommand(ev0);
 
   // Stream 1
   auto sched1 = dev0.createSchedule();
-  sched1.createWaitCommand(ecmd.getEvent());
+
+  sched1.createWaitCommand(ev0);
+
   auto cmd1 = sched1.createCommand(kern);
   cmd1.setArgument(0, buf0);
   cmd1.setArgument(1, buf2);
   cmd1.setArgument(2, buf3);
 
-  cmd1.finalize(32, 1024);
+  cmd1.finalize(32, 32);
 
   sched1.createSignalCommand(evFinal);
 
-  // Run streams
-  sched1.run(stream1, false);
+  // Run streams -- order is important for HIP events :-(
   sched0.run(stream0, false);
+  sched1.run(stream1, false);
 
   evFinal.wait();
 

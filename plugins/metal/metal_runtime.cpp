@@ -221,7 +221,8 @@ class MetalCommand {
           if (!buf) return NXS_InvalidBuffer;
           command->setBuffer(*buf, 0, idx++);
         }
-        command->dispatchThreads(MTL::Size(grid_size, 1, 1), MTL::Size(group_size, 1, 1));
+        command->dispatchThreads(MTL::Size(grid_size * group_size, 1, 1),
+                                 MTL::Size(group_size, 1, 1));
         command->endEncoding();
         return NXS_Success;
       }

@@ -5,6 +5,7 @@
 
 #include <cstring>
 #include <string>
+#include <cstring>
 
 namespace nxs {
 namespace rt {

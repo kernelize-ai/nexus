@@ -48,12 +48,12 @@ int main(int argc, char **argv) {
     std::cout << "  Device: " << dev.getProp<std::string>(NP_Name) << " - "
               << dev.getProp<std::string>(NP_Architecture) << std::endl;
   }
-  size_t vsize = 1024 * 1024;
+  size_t vsize = 1024;
   std::vector<float> vecA(vsize, 1.0);
   std::vector<float> vecB(vsize, 2.0);
   std::vector<float> vecResult_GPU(vsize, 0.0);  // For GPU result
 
-  size_t size = 1024 * sizeof(float);
+  size_t size = vsize * sizeof(float);
 
   auto nlib = dev0.createLibrary(runtime_lib);
 

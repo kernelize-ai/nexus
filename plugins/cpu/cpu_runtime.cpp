@@ -1,5 +1,4 @@
 #include <assert.h>
-#include <cpuinfo.h>
 #include <dlfcn.h>
 #include <rt_buffer.h>
 #include <rt_object.h>
@@ -9,14 +8,16 @@
 
 #include <optional>
 #include <functional>
-#include <magic_enum/magic_enum.hpp>
 #include <optional>
 #include <vector>
+
+#include <magic_enum/magic_enum.hpp>
+#include <cpuinfo.h>
 
 #define NXSAPI_LOGGING
 #include <nexus-api.h>
 
-#define NXSAPI_LOG_MODULE "cpu"
+#define NXSAPI_LOG_MODULE "cpu_runtime"
 
 using namespace nxs;
 
@@ -26,7 +27,7 @@ class CpuRuntime : public rt::Runtime {
     cpuinfo_initialize();
     for (size_t i = 0; i < cpuinfo_get_processors_count(); i++) {
       auto *cpu = cpuinfo_get_processor(i);
-      addObject(nullptr, (void *)cpu);
+      addObject((void *)cpu);
     }
   }
   ~CpuRuntime() {}
@@ -133,7 +134,7 @@ extern "C" nxs_int NXS_API_CALL nxsCreateBuffer(nxs_int device_id, size_t size,
 
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createBuffer " << size);
   rt::Buffer *buf = new rt::Buffer(size, host_ptr, true);
-  return rt->addObject(*dev, buf, true);
+  return rt->addObject(buf, true);
 }
 
 /************************************************************************
@@ -216,7 +217,7 @@ nxsCreateLibraryFromFile(nxs_int device_id, const char *library_path) {
     NXSAPI_LOG(NXSAPI_STATUS_ERR, "createLibraryFromFile " << dlerror());
     return NXS_InvalidLibrary;
   }
-  return rt->addObject(*dev, lib);
+  return rt->addObject(lib);
 }
 
 /************************************************************************
@@ -264,7 +265,7 @@ extern "C" nxs_int NXS_API_CALL nxsGetKernel(nxs_int library_id,
     NXSAPI_LOG(NXSAPI_STATUS_ERR, "getKernel " << dlerror());
     return NXS_InvalidKernel;
   }
-  return rt->addObject(*lib, func);
+  return rt->addObject(func);
 }
 
 /************************************************************************
@@ -340,7 +341,7 @@ extern "C" nxs_int NXS_API_CALL nxsCreateSchedule(nxs_int device_id,
   auto dev = rt->getObject(device_id);
   if (!dev) return NXS_InvalidDevice;
 
-  return rt->addObject(*dev);
+  return rt->addObject(device_id);
 }
 
 /************************************************************************
@@ -360,7 +361,7 @@ extern "C" nxs_status NXS_API_CALL nxsRunSchedule(nxs_int schedule_id,
     if (!cmd) return NXS_InvalidCommand;
     auto kernel = rt->get<rt::Object>(cmdId);
     if (!kernel) return NXS_InvalidKernel;
-    auto func = (*kernel)->get<void>();
+    auto func = kernel->get<void>();
     if (!func) return NXS_InvalidKernel;
     auto func_ptr = (void (*)(void *, void *, void *, void *, void *, void *,
                               void *, void *, void *, void *, void *, void *,
@@ -447,7 +448,7 @@ extern "C" nxs_int NXS_API_CALL nxsCreateCommand(nxs_int schedule_id,
   auto kernel = rt->getObject(kernel_id);
   if (!kernel) return NXS_InvalidKernel;
 
-  auto cmdId = rt->addObject(*sched, *kernel, false);
+  auto cmdId = rt->addObject(*kernel, false);
   if (nxs_success(cmdId)) (*sched)->addChild(cmdId);
   return cmdId;
 }
@@ -469,6 +470,7 @@ extern "C" nxs_status NXS_API_CALL nxsSetCommandArgument(nxs_int command_id,
   if (!cmd) return NXS_InvalidCommand;
   auto buf = rt->getObject(buffer_id);
   if (!buf) return NXS_InvalidBuffer;
+  if (argument_index >= 32) return NXS_InvalidCommand;
 
   (*cmd)->addChild(buffer_id, argument_index);
   return NXS_Success;
@@ -491,8 +493,8 @@ extern "C" nxs_status NXS_API_CALL nxsFinalizeCommand(nxs_int command_id,
   auto global_buf = new rt::Buffer(sizeof(global_size), global_size, true);
   int64_t local_size[3] = {group_size, 1, 1};
   auto local_buf = new rt::Buffer(sizeof(local_size), local_size, true);
-  (*cmd)->addChild(rt->addObject(*cmd, global_buf, true));
-  (*cmd)->addChild(rt->addObject(*cmd, local_buf, true));
+  (*cmd)->addChild(rt->addObject(global_buf, true));
+  (*cmd)->addChild(rt->addObject(local_buf, true));
   return NXS_Success;
 }
 

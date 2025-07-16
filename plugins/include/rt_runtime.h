@@ -1,48 +1,50 @@
 #ifndef RT_RUNTIME_H
 #define RT_RUNTIME_H
 
-#include <optional>
-
 #include <nexus-api.h>
 #include <rt_object.h>
+#include <rt_pool.h>
+
+#include <optional>
 
 namespace nxs {
 namespace rt {
 
-class Runtime : public Object {
+class Runtime {
+  Pool<rt::Object> objects;
 
 public:
-
-  std::vector<rt::Object> objects;
-
-  Runtime() { objects.reserve(1024); }
+  Runtime() : objects(1024) {}
   ~Runtime() {}
 
-  nxs_int addObject(Object *parent, void *obj = nullptr, bool is_owned = false) {
-    objects.emplace_back(parent, obj, is_owned);
-    return objects.size() - 1;
+  nxs_int addObject(void *obj = nullptr, bool is_owned = false) {
+    return objects.acquire(obj, is_owned);
   }
+  nxs_int addObject(nxs_long value) { return objects.acquire(value); }
 
   std::optional<rt::Object *> getObject(nxs_int id) {
-    if (id < 0 || id >= objects.size()) return std::nullopt;
-    return &objects[id];
+    if (id < 0 || id >= objects.capacity()) return std::nullopt;
+    return objects.get(id);
   }
 
   template <typename T = void>
-  std::optional<T *> get(nxs_int id) {
+  T *get(nxs_int id) {
     if (auto obj = getObject(id)) return (*obj)->get<T>();
-    return std::nullopt;
+    return nullptr;
+  }
+  nxs_long getValue(nxs_int id) {
+    if (auto obj = getObject(id)) return (*obj)->getValue();
+    return 0;
   }
 
   bool dropObject(nxs_int id, release_fn_t fn = nullptr) {
-    if (id < 0 || id >= objects.size()) return false;
-    objects[id].release(fn);
+    if (id < 0 || id >= objects.capacity()) return false;
+    if (fn) fn(objects.get(id));
+    objects.release(id);
     return true;
   }
 
-  nxs_int getNumObjects() {
-    return objects.size();
-  }
+  nxs_int getNumObjects() { return objects.get_in_use_count(); }
 };
 
 }  // namespace rt

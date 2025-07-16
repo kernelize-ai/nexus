@@ -5,6 +5,11 @@
 
 #include <cassert>
 #include <functional>
+#include <memory>
+#include <mutex>
+#include <queue>
+#include <variant>
+#include <vector>
 
 namespace nxs {
 namespace rt {
@@ -17,19 +22,19 @@ void delete_fn(void *obj) {
 }
 
 class Object {
-
- public:
-
-  Object *parent;
-  void *obj;
+  std::variant<void *, nxs_long> obj;
   bool is_owned;
   typedef std::vector<nxs_int> children_t;
   children_t children;
 
-  Object(Object *parent = nullptr, void *obj = nullptr, bool is_owned = true) {
-    this->parent = parent;
-    this->obj = obj;
-    this->is_owned = obj ? is_owned : false;
+ public:
+  Object(void *_obj, bool _is_owned) {
+    obj = _obj;
+    is_owned = _obj ? _is_owned : false;
+  }
+  Object(nxs_long value) {
+    obj = value;
+    is_owned = false;
   }
   virtual ~Object() {
     // assert(is_owned == false);
@@ -37,19 +42,20 @@ class Object {
 
   template <typename T = void>
   T *get() const {
-    return static_cast<T *>(obj);
+    return static_cast<T *>(std::get<void *>(obj));
   }
+  nxs_long getValue() const { return std::get<nxs_long>(obj); }
 
   void release(release_fn_t fn) {
     children.clear();
-    if (is_owned && obj) {
+    if (is_owned && std::holds_alternative<void *>(obj)) {
       assert(fn);  // @@@
-      fn(obj);
+      fn(std::get<void *>(obj));
     }
     obj = nullptr;
     is_owned = false;
   }
-  Object *getParent() { return parent; }
+
   children_t &getChildren() { return children; }
   void addChild(nxs_int child, nxs_int index = -1) {
     if (index < 0)
