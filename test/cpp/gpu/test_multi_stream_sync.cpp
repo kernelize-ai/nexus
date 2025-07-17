@@ -8,31 +8,20 @@
 std::vector<std::string_view> nexusArgs;
 
 int main(int argc, char **argv) {
-  if (argc < 3) {
-    std::cout << "Usage: " << argv[0] << " <kernel_lib> <kernel_name>"
+  if (argc < 4) {
+    std::cout << "Usage: " << argv[0] << " <plugin_name> <kernel_lib> <kernel_name>"
               << std::endl;
     return 1;
   }
-  std::string kernel_lib = argv[1];
-  std::string kernel_name = argv[2];
+  std::string plugin_name = argv[1];
+  std::string kernel_lib = argv[2];
+  std::string kernel_name = argv[3];
   auto sys = nexus::getSystem();
   auto runtimes = sys.getRuntimes();
 
   // Find the first runtime with a valid device
-  nexus::Runtime rt;
-  nexus::Device dev0;
-
-  for (auto runtime : runtimes) {
-    auto type = runtime.getProp<std::string>(NP_Type);
-    if (type == "gpu") {
-      auto devices = runtime.getDevices();
-      if (!devices.empty()) {
-        rt = runtime;
-        dev0 = devices[0];
-        break;
-      }
-    }
-  }
+  nexus::Runtime rt = sys.getRuntime(plugin_name);
+  nexus::Device dev0 = rt.getDevice(0);
 
   if (!rt || !dev0) {
     std::cout << "No runtime with valid devices found" << std::endl;
@@ -106,6 +95,7 @@ int main(int argc, char **argv) {
   sched1.createSignalCommand(evFinal);
 
   // Run streams -- order is important for HIP events :-(
+  //IMPLEMENT COMMAND TYPES!
   sched0.run(stream0, false);
   sched1.run(stream1, false);
 
@@ -117,10 +107,11 @@ int main(int argc, char **argv) {
   for (auto v : vecResult_GPU) {
     if (v != 4.0) {
       std::cout << "Fail: result[" << i << "] = " << v << std::endl;
+      return -1;
     }
     ++i;
   }
-  std::cout << "Test PASSED" << std::endl;
+  std::cout << "\n\n Test PASSED \n\n" << std::endl;
 
   return 0;
 }

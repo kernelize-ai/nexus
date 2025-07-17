@@ -25,6 +25,7 @@ main() {
   elif [[ "$os_type" == "linux" ]]; then
     echo "Running Linux build"
     ./test/cpp/gpu/nexus-test-linux
+    ./test/cpp/gpu/test_multi_stream_sync cuda cuda_kernels/add_vectors.ptx add_vectors
   else
     echo "Unsupported OS: $os_type"
     exit 1

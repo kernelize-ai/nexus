@@ -7,6 +7,26 @@
 
 #include <rt_buffer.h>
 
+#define CHECK_CU(call) \
+  do { \
+    CUresult err = call; \
+    if (err != CUDA_SUCCESS) { \
+      const char* errorStr; \
+      cuGetErrorString(err, &errorStr); \
+      std::cerr << "CUDA Error: " << errorStr << std::endl; \
+      exit(1); \
+    } \
+  } while(0)
+
+#define CHECK_CUDA(call) \
+  do { \
+    cudaError_t err = call; \
+    if (err != cudaSuccess) { \
+      std::cerr << "CUDA Runtime Error: " << cudaGetErrorString(err) << std::endl; \
+      exit(1); \
+    } \
+  } while(0)
+
 using namespace nxs;
 
 class CudaBuffer : public rt::Buffer {
