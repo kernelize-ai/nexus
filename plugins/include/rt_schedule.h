@@ -15,7 +15,7 @@ public:
 
   Commands commands;
 
-  Schedule(Object *device = nullptr) : Object(device) {}
+  Schedule() {}
   ~Schedule() = default;
 
   void insertCommand(rt::Command *command) {

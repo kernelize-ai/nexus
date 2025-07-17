@@ -32,7 +32,7 @@ class Object {
     obj = _obj;
     is_owned = _obj ? _is_owned : false;
   }
-  Object(nxs_long value) {
+  Object(nxs_long value = 0) {
     obj = value;
     is_owned = false;
   }

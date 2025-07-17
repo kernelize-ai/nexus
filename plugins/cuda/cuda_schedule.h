@@ -14,9 +14,10 @@ class CudaSchedule : public rt::Schedule {
 
 public:
 
+  nxs_int device_id;
   Commands commands;
 
-  CudaSchedule(rt::Object *device = nullptr) : Schedule(device) {}
+  CudaSchedule(nxs_int dev_id) : device_id(dev_id) {}
   ~CudaSchedule() = default;
 
   void insertCommand(CudaCommand *command) {
