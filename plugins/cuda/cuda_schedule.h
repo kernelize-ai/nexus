@@ -5,8 +5,11 @@
 #include <vector>
 
 #include <rt_schedule.h>
-#include <cuda_command.h>
 #include <rt_object.h>
+
+#include <cuda_command.h>
+
+class CudaRuntime;
 
 using namespace nxs;
 
@@ -20,7 +23,7 @@ public:
   CudaSchedule(nxs_int dev_id) : device_id(dev_id) {}
   ~CudaSchedule() = default;
 
-  void insertCommand(CudaCommand *command) {
+  void addCommand(CudaCommand *command) {
     commands.push_back(command);
   }
 
@@ -28,6 +31,15 @@ public:
   return commands;
   }
 
+  nxs_status run(cudaStream_t stream) {
+    for (auto cmd : commands) {
+      auto status = cmd->runCommand(stream);
+      if (!nxs_success(status)) return status;
+    }
+    return NXS_Success;
+  }
+
+  void release(CudaRuntime *rt);
 };
 
 #endif // RT_CUDA_SCHEDULE_H
