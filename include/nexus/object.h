@@ -59,6 +59,9 @@ class Object {
 
   // Empty CTor - assumes Impl doesn't have an empty CTOR
   Object() = default;
+
+  Object(const Object& other) : impl(other.impl) {}
+
   virtual ~Object() {}
 
   operator bool() const { return impl && nxs_valid_id(getId()); }
@@ -107,12 +110,7 @@ class Objects {
     return Tobject();
   }
   Tobject operator[](nxs_int idx) const { return get(idx); }
-  Tobject get(std::string name) const {
-    nxs_int objects_size = objects->size();
-    for (nxs_int i = 0; i < objects_size; ++i)
-      if ((*objects)[i].name == name) return (*objects)[i];
-    return Tobject();
-  }
+
   void clear() { objects->clear(); }
 
   typename ObjectVec::iterator begin() const { return objects->begin(); }

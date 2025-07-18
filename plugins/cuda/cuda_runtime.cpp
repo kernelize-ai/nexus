@@ -78,36 +78,42 @@ CudaRuntime *getRuntime() {
  * Get the Runtime properties
  */ 
 extern "C" nxs_status NXS_API_CALL
-nxsGetRuntimeProperty(
-  nxs_uint runtime_property_id,
-  void *property_value,
-  size_t* property_value_size
-)
-{
+nxsGetRuntimeProperty(nxs_uint runtime_property_id, void *property_value,
+                      size_t *property_value_size) {
   auto rt = getRuntime();
 
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "getRuntimeProperty " << runtime_property_id);
+  int runtime_version = 0;
+  CHECK_CUDA(cudaRuntimeGetVersion(&runtime_version));
 
+  int major_version = runtime_version / 10000000;
+  int minor_version = (runtime_version % 10000000) / 100000;
+  int patch_version = runtime_version % 100000;
+
+  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "getRuntimeProperty " << runtime_property_id);
+  /* return value size */
+  /* return value */
   switch (runtime_property_id) {
-    case NP_Name: {
-      const char *name = "metal";
-      if (property_value != NULL) {
-        strncpy((char*)property_value, name, strlen(name) + 1);
-      } else if (property_value_size != NULL) {
-        *property_value_size = strlen(name);
-      }
-      break;
+    case NP_Name:
+      return rt::getPropertyStr(property_value, property_value_size, "cuda");
+    case NP_Type:
+      return rt::getPropertyStr(property_value, property_value_size, "gpu");
+    case NP_Vendor:
+      return rt::getPropertyStr(property_value, property_value_size, "nvidia");
+    case NP_Version: {
+      char version[128];
+      snprintf(version, 128, "%d.%d.%d", major_version, minor_version,
+               patch_version);
+      return rt::getPropertyStr(property_value, property_value_size, version);
     }
+    case NP_MajorVersion:
+      return rt::getPropertyInt(property_value, property_value_size,
+                                major_version);
+    case NP_MinorVersion:
+      return rt::getPropertyInt(property_value, property_value_size,
+                                minor_version);
     case NP_Size: {
       nxs_long size = getRuntime()->getDeviceCount();
-      auto sz = sizeof(size);
-      if (property_value != NULL) {
-        if (property_value_size != NULL && *property_value_size != sz)
-          return NXS_InvalidProperty; // PropertySize
-        memcpy(property_value, &size, sz);
-      } else if (property_value_size != NULL)
-        *property_value_size = sz;
-      break;
+      return rt::getPropertyInt(property_value, property_value_size, size);
     }
     default:
       return NXS_InvalidProperty;
