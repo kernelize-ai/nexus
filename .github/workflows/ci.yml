@@ -81,3 +81,19 @@ jobs:
       run: |
         cd build
         ctest --output-on-failure -C ${{ matrix.build-type }} 
+
+  ci:
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: always()
+    steps:
+      - name: Report CI Status
+        run: |
+          if [[ "${{ needs.build.result }}" == "success" ]]; then
+            echo "✅ CI Pipeline completed successfully"
+            echo "All build matrix jobs passed"
+          else
+            echo "❌ CI Pipeline failed"
+            echo "Build status: ${{ needs.build.result }}"
+            exit 1
+          fi
