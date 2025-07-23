@@ -135,6 +135,7 @@ NEXUS_API_PROP(MemoryBusWidth,  _prop_int,        "Memory bus width (bits)")
 /* Kernel Properties */
 NEXUS_API_PROP(MaxThreadsPerBlock, _prop_int,    "Max threads per block")
 
+/* Threadgroup Properties */
 NEXUS_API_PROP(MaxThreadsPerThreadgroup, _prop_int,    "Max threads per threadgroup")
 NEXUS_API_PROP(MaxThreadgroupsPerCore,   _prop_int,    "Max threadgroups per Core")
 NEXUS_API_PROP(MaxThreadgroupMemorySize, _prop_int,    "Max threadgroup memory size")
