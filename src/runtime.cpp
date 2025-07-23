@@ -34,30 +34,7 @@ Device RuntimeImpl::getDevice(nxs_int deviceId) const {
 }
 
 std::optional<Property> detail::RuntimeImpl::getProperty(nxs_int prop) const {
-  NEXUS_LOG(NEXUS_STATUS_NOTE, "Runtime.getProperty: " << nxsGetPropName(prop));
-  if (auto fn = getFunction<NF_nxsGetRuntimeProperty>()) {
-    auto npt_prop = nxs_property_type_map[prop];
-    if (npt_prop == NPT_INT) {
-      nxs_long val = 0;
-      size_t size = sizeof(val);
-      if (nxs_success((*fn)(prop, &val, &size))) return Property(val);
-    } else if (npt_prop == NPT_FLT) {
-      nxs_double val = 0.;
-      size_t size = sizeof(val);
-      if (nxs_success((*fn)(prop, &val, &size))) return Property(val);
-    } else if (npt_prop == NPT_STR) {
-      size_t size = 256;
-      char name[size];
-      name[0] = '\0';
-      if (nxs_success((*fn)(prop, &name, &size))) return std::string(name);
-    } else {
-      NEXUS_LOG(NEXUS_STATUS_ERR,
-                "Runtime.getProperty: Unknown property type for - "
-                    << nxsGetPropName(prop));
-      // assert(0);
-    }
-  }
-  return std::nullopt;
+  return getAPIProperty<NF_nxsGetRuntimeProperty>(prop);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

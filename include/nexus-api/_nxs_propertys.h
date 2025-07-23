@@ -97,7 +97,7 @@ typedef void * _prop_obj_vec;
  ***********************************************************************/
 NEXUS_API_PROP(Name,            _prop_str,        "Unit Name")
 NEXUS_API_PROP(Type,            _prop_str,        "Unit Type")
-NEXUS_API_PROP(Value,           _prop_str,        "Unit Value")
+NEXUS_API_PROP(Value,           _prop_int,        "Unit Value")
 NEXUS_API_PROP(ID,              _prop_int,        "Unit ID")
 NEXUS_API_PROP(Description,     _prop_str,        "Unit Description")
 
@@ -107,7 +107,7 @@ NEXUS_API_PROP(Size,            _prop_int,        "Number of Sub-Units")
 NEXUS_API_PROP(SubUnits,        _prop_str_vec,    "Sub-Unit Vector")
 NEXUS_API_PROP(SubUnitType,     _prop_str,        "Sub-Unit Type")
 
-NEXUS_API_PROP(Keys,            _prop_str_vec,    "Node Keys")
+NEXUS_API_PROP(Keys,            _prop_int_vec,    "Node Keys")
 
 /* Device Properties */
 NEXUS_API_PROP(Vendor,          _prop_str,        "Vendor Name")
@@ -122,13 +122,19 @@ NEXUS_API_PROP(MemorySubsystem, _prop_obj_vec,    "Memory Subsystem Hierarchy")
 NEXUS_API_PROP(Limits,          _prop_obj_vec,    "System limits")
 NEXUS_API_PROP(Features,        _prop_str,        "System features")
 
+NEXUS_API_PROP(GlobalMemorySize, _prop_int,       "Global memory size")
+NEXUS_API_PROP(CoreMemorySize,  _prop_int,        "Core Memory size")
+NEXUS_API_PROP(CoreRegisterSize, _prop_int,       "Core Register size")
+
+NEXUS_API_PROP(SIMDSize,        _prop_int,        "SIMD thread count")
+
 NEXUS_API_PROP(MaxThreadsPerThreadgroup, _prop_int,    "Max threads per threadgroup")
 NEXUS_API_PROP(MaxThreadgroupsPerCore,   _prop_int,    "Max threadgroups per Core")
 NEXUS_API_PROP(MaxThreadgroupMemorySize, _prop_int,    "Max threadgroup memory size")
 
 NEXUS_API_PROP(Location,        _prop_str,        "Location")
 NEXUS_API_PROP(MaxTransferRate, _prop_int,        "Max transfer rate (bytes/sec)")
-NEXUS_API_PROP(UnifiedMemory,   _prop_int,        "Unified Memory")
+NEXUS_API_PROP(UnifiedMemory,   _prop_int,        "Unified Memory present")
 NEXUS_API_PROP(MaxBufferSize,   _prop_int,        "Max buffer size")
 
 NEXUS_API_PROP(DataTypes,       _prop_str_vec,    "Data Types")

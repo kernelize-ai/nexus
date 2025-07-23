@@ -49,32 +49,8 @@ void detail::DeviceImpl::release() {
 }
 
 std::optional<Property> detail::DeviceImpl::getProperty(nxs_int prop) const {
-  NEXUS_LOG(NEXUS_STATUS_NOTE, "Device.getProperty: " << prop);
-  auto *runtime = getParent();
-  if (auto fn = runtime->getFunction<NF_nxsGetDeviceProperty>()) {
-    auto npt_prop = nxs_property_type_map[prop];
-    if (npt_prop == NPT_INT) {
-      nxs_long val = 0;
-      size_t size = sizeof(val);
-      if (nxs_success((*fn)(getId(), prop, &val, &size))) return Property(val);
-    } else if (npt_prop == NPT_FLT) {
-      nxs_double val = 0.;
-      size_t size = sizeof(val);
-      if (nxs_success((*fn)(getId(), prop, &val, &size))) return Property(val);
-    } else if (npt_prop == NPT_STR) {
-      size_t size = 256;
-      char name[size];
-      name[0] = '\0';
-      if (nxs_success((*fn)(getId(), prop, &name, &size)))
-        return std::string(name);
-    } else {
-      NEXUS_LOG(NEXUS_STATUS_ERR,
-                "Device.getProperty: Unknown property type for - "
-                    << nxsGetPropName(prop));
-      // assert(0);
-    }
-  }
-  return std::nullopt;
+  auto *rt = getParentOfType<RuntimeImpl>();
+  return rt->getAPIProperty<NF_nxsGetDeviceProperty>(prop, getId());
 }
 
 // Runtime functions

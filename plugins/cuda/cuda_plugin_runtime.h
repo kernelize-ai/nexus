@@ -70,10 +70,7 @@ public:
     cudaGetDeviceCount(&deviceCount);
 
     for (int i = 0; i < deviceCount; i++) {
-      cudaDeviceProp prop;
-      cudaGetDeviceProperties(&prop, i);
-
-      CudaDevice *device = new CudaDevice(prop.name, prop.uuid.bytes, prop.pciBusID, i);
+      CudaDevice *device = new CudaDevice(i);
       addObject(device);
     }
   }
@@ -82,13 +79,13 @@ public:
     return numDevices;
   }
 
-  nxs_int getDevice(nxs_int id) {
-    if (id < 0 || id >= numDevices) return -1;
-    if (id != id) {
+  CudaDevice *getDevice(nxs_int id) {
+    if (id < 0 || id >= numDevices) return nullptr;
+    if (id != current_device) {
       CHECK_CUDA(cudaSetDevice(id));
       current_device = id;
     }
-    return id;
+    return get<CudaDevice>(id);
   }
 
   rt::Buffer *getBuffer(size_t size, void *cuda_buffer = nullptr) {
@@ -109,4 +106,4 @@ public:
   }
 };
 
-#endif // RT_CUDA_RUNTIME_H
+#endif  // RT_CUDA_RUNTIME_H

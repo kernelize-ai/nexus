@@ -30,7 +30,8 @@ class KernelImpl : public Impl {
   }
 
   std::optional<Property> getProperty(nxs_int prop) const {
-    return std::nullopt;
+    auto *rt = getParentOfType<RuntimeImpl>();
+    return rt->getAPIProperty<NF_nxsGetKernelProperty>(prop, getId());
   }
 
  private:

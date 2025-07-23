@@ -18,11 +18,12 @@ public:
 
   CUcontext context;
   CUdevice cudaDeviceRef;
+  cudaDeviceProp props;
 
   Libraries libraries;
 
-  CudaDevice(char* name, char* uuid, int busID, int deviceID, Object *runtime = nullptr)
-    : nxs::rt::Device(name, uuid, busID, deviceID, runtime) {
+  CudaDevice(int deviceID) : nxs::rt::Device(deviceID, nullptr) {
+    cudaGetDeviceProperties(&props, deviceID);
     cuDeviceGet(&cudaDeviceRef, 0);
     cuCtxCreate(&context, 0, cudaDeviceRef);
     libraries.reserve(1024);
@@ -31,6 +32,11 @@ public:
 
   CudaLibrary *createLibrary(void *library_data, nxs_uint data_size) {
     libraries.emplace_back(library_data, data_size);
+    return &libraries.back();
+  }
+
+  CudaLibrary *createLibraryFromFile(const std::string &library_path) {
+    libraries.emplace_back(library_path);
     return &libraries.back();
   }
 

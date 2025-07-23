@@ -35,7 +35,8 @@ class CommandImpl : public Impl {
   }
 
   std::optional<Property> getProperty(nxs_int prop) const {
-    return std::nullopt;
+    auto *rt = getParentOfType<RuntimeImpl>();
+    return rt->getAPIProperty<NF_nxsGetCommandProperty>(prop, getId());
   }
 
   Kernel getKernel() const { return kernel; }

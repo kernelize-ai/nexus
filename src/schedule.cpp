@@ -27,7 +27,8 @@ void ScheduleImpl::release() {
 }
 
 std::optional<Property> ScheduleImpl::getProperty(nxs_int prop) const {
-  return std::nullopt;
+  auto *rt = getParentOfType<RuntimeImpl>();
+  return rt->getAPIProperty<NF_nxsGetScheduleProperty>(prop, getId());
 }
 
 Command ScheduleImpl::createCommand(Kernel kern) {

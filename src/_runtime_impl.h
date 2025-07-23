@@ -4,9 +4,11 @@
 #include <nexus-api.h>
 #include <nexus/device.h>
 
+#include <cstring>
 #include <memory>
 #include <optional>
 #include <string>
+#include <vector>
 
 #define NEXUS_LOG_MODULE "runtime"
 
@@ -45,6 +47,69 @@ class RuntimeImpl : public Impl {
       NEXUS_LOG(NEXUS_STATUS_ERR, nxsGetFuncName(Tfn) << ": API not present");
     }
     return apiResult;
+  }
+
+  template <nxs_function Tfn, typename... Args>
+  std::optional<Property> getAPIProperty(nxs_int prop, Args... args) const {
+    if (auto fn = getFunction<Tfn>()) {
+      auto npt_prop = nxs_property_type_map[prop];
+      switch (npt_prop) {
+        case NPT_INT: {
+          nxs_long val = 0;
+          size_t size = sizeof(val);
+          if (nxs_success((*fn)(args..., prop, &val, &size))) {
+            NEXUS_LOG(NEXUS_STATUS_NOTE, nxsGetFuncName(Tfn)
+                                             << ": " << nxsGetPropName(prop)
+                                             << " = " << val);
+            return Property(val);
+          }
+          break;
+        }
+        case NPT_FLT: {
+          nxs_double val = 0.;
+          size_t size = sizeof(val);
+          if (nxs_success((*fn)(args..., prop, &val, &size))) {
+            NEXUS_LOG(NEXUS_STATUS_NOTE, nxsGetFuncName(Tfn)
+                                             << ": " << nxsGetPropName(prop)
+                                             << " = " << val);
+            return Property(val);
+          }
+          break;
+        }
+        case NPT_STR: {
+          size_t size = 256;
+          char name[size];
+          name[0] = '\0';
+          if (nxs_success((*fn)(args..., prop, &name, &size))) {
+            NEXUS_LOG(NEXUS_STATUS_NOTE, nxsGetFuncName(Tfn)
+                                             << ": " << nxsGetPropName(prop)
+                                             << " = " << name);
+            return std::string(name);
+          }
+          break;
+        }
+        case NPT_INT_VEC: {
+          nxs_long vals[1024];
+          size_t size = sizeof(vals);
+          if (nxs_success((*fn)(args..., prop, vals, &size))) {
+            NEXUS_LOG(NEXUS_STATUS_NOTE, nxsGetFuncName(Tfn)
+                                             << ": " << nxsGetPropName(prop)
+                                             << " = " << vals);
+            std::vector<nxs_long> vec(size / sizeof(nxs_long));
+            std::memcpy(vec.data(), vals, size);
+            return Property(vec);
+          }
+          break;
+        }
+        default: {
+          NEXUS_LOG(NEXUS_STATUS_ERR, nxsGetFuncName(Tfn)
+                                          << ": Unknown property type for - "
+                                          << nxsGetPropName(prop));
+          break;
+        }
+      }
+    }
+    return std::nullopt;
   }
 
  private:

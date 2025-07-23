@@ -26,7 +26,10 @@ class StreamImpl : public Impl {
     nxs_int kid = rt->runAPIFunction<NF_nxsReleaseStream>(getId());
   }
 
-  std::optional<Property> getProperty(nxs_int prop) const { return std::nullopt; }
+  std::optional<Property> getProperty(nxs_int prop) const {
+    auto *rt = getParentOfType<RuntimeImpl>();
+    return rt->getAPIProperty<NF_nxsGetStreamProperty>(prop, getId());
+  }
 
  private:
 };

@@ -138,15 +138,34 @@ static py::class_<T> make_object_class(py::module &m, const std::string &name) {
            [](T &self, const std::string &name) {
              return get_prop<nxs_long>(self, nxsGetPropEnum(name.c_str()));
            })
-      .def("get_property_int", [](T &self, nxs_property prop) {
-        return get_prop<nxs_long>(self, prop);
-      })
+      .def("get_property_int",
+           [](T &self, nxs_property prop) {
+             return get_prop<nxs_long>(self, prop);
+           })
       .def("get_property_flt",
            [](T &self, const std::string &name) {
              return get_prop<nxs_double>(self, nxsGetPropEnum(name.c_str()));
            })
-      .def("get_property_flt", [](T &self, nxs_property prop) {
-        return get_prop<nxs_double>(self, prop);
+      .def("get_property_flt",
+           [](T &self, nxs_property prop) {
+             return get_prop<nxs_double>(self, prop);
+           })
+      .def("get_property_int_vec",
+           [](T &self, const std::string &name) {
+             return get_prop<std::vector<nxs_long>>(
+                 self, nxsGetPropEnum(name.c_str()));
+           })
+      .def("get_property_int_vec",
+           [](T &self, nxs_property prop) {
+             return get_prop<std::vector<nxs_long>>(self, prop);
+           })
+      .def("get_property_keys", [](T &self) {
+        auto keys = get_prop<std::vector<nxs_long>>(self, NP_Keys);
+        std::vector<nxs_property> props;
+        for (auto key : keys) {
+          props.push_back((nxs_property)key);
+        }
+        return props;
       });
 }
 
@@ -189,6 +208,7 @@ void pynexus::init_system_bindings(py::module &m) {
   // Generate python enum for nxs_property
   // - added to `property` submodule for scoping
   auto mprop = m.def_submodule("property");
+
   auto propEnum =
       py::enum_<nxs_property>(mprop, "nxs_property", py::module_local());
   for (nxs_int i = 0; i <= NXS_PROPERTY_CNT; ++i) {
@@ -197,6 +217,43 @@ void pynexus::init_system_bindings(py::module &m) {
     if (str && *str) propEnum.value(str, prop);
   }
   propEnum.export_values();
+
+  mprop.def("get_count", []() { return NXS_PROPERTY_CNT; })
+      .def("get_name", [](nxs_int prop) { return nxsGetPropName(prop); })
+      .def("get_enum",
+           [](const std::string &name) { return nxsGetPropEnum(name.c_str()); })
+      .def("get",
+           [](nxs_int prop) {
+             if (prop < 0 || prop >= NXS_PROPERTY_CNT) {
+               throw std::runtime_error("Invalid property");
+             }
+             return (nxs_property)prop;
+           })
+      .def("get_type", [](nxs_int prop) {
+        if (prop < 0 || prop >= NXS_PROPERTY_CNT) {
+          throw std::runtime_error("Invalid property");
+        }
+        switch (nxs_property_type_map[prop]) {
+          case NPT_INT:
+            return "int";
+          case NPT_FLT:
+            return "flt";
+          case NPT_STR:
+            return "str";
+          case NPT_INT_VEC:
+            return "int_vec";
+          case NPT_FLT_VEC:
+            return "flt_vec";
+          case NPT_STR_VEC:
+            return "str_vec";
+          case NPT_OBJ_VEC:
+            return "obj_vec";
+          case NPT_UNK:
+            return "unk";
+          default:
+            return "unk";
+        }
+      });
 
   //////////////////////////////////////////////////////////////////////////
   // Generate python enum for nxs_event_type
@@ -336,12 +393,20 @@ void pynexus::init_system_bindings(py::module &m) {
            [](Device &self, Buffer buf) { return self.copyBuffer(buf); })
       .def("get_buffers", [](Device &self) { return self.getBuffers(); })
       .def("load_library",
+           [](Device &self, const char *data, size_t size) {
+             return self.createLibrary((void *)data, size);
+           })
+      .def("load_library_file",
            [](Device &self, const std::string &filepath) {
              return self.createLibrary(filepath);
            })
       .def("get_libraries", [](Device &self) { return self.getLibraries(); })
-      .def("create_event", [](Device &self, nxs_event_type event_type) { return self.createEvent(event_type); },
-           py::arg("event_type") = NXS_EventType_Shared)
+      .def(
+          "create_event",
+          [](Device &self, nxs_event_type event_type) {
+            return self.createEvent(event_type);
+          },
+          py::arg("event_type") = NXS_EventType_Shared)
       .def("get_events", [](Device &self) { return self.getEvents(); })
       .def("create_stream", [](Device &self) { return self.createStream(); })
       .def("get_streams", [](Device &self) { return self.getStreams(); })

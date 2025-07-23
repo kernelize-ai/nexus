@@ -28,7 +28,8 @@ class EventImpl : public Impl {
   }
 
   std::optional<Property> getProperty(nxs_int prop) const {
-    return std::nullopt;
+    auto *rt = getParentOfType<RuntimeImpl>();
+    return rt->getAPIProperty<NF_nxsGetEventProperty>(prop, getId());
   }
 
   nxs_status signal(nxs_int value) {

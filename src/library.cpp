@@ -27,7 +27,8 @@ void LibraryImpl::release() {
 }
 
 std::optional<Property> detail::LibraryImpl::getProperty(nxs_int prop) const {
-  return std::nullopt;
+  auto *rt = getParentOfType<RuntimeImpl>();
+  return rt->getAPIProperty<NF_nxsGetLibraryProperty>(prop, getId());
 }
 
 Kernel LibraryImpl::getKernel(const std::string &kernelName) {
