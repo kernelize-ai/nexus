@@ -5,17 +5,39 @@ set(DEPS)
 set(GPU_ARCH "gfx1011")
 
 if(MACOS)
+  set(KERNEL_DIR "${PROJECT_SOURCE_DIR}/kernels/metal_kernels")
+  set(METALLIB_DIR "${CMAKE_BINARY_DIR}/metal_kernels")
+  file(MAKE_DIRECTORY ${METALLIB_DIR})
 
-    list(APPEND DEPS ${CMAKE_CURRENT_BINARY_DIR}/kernel.air ${CMAKE_CURRENT_BINARY_DIR}/kernel.metallib)
+  file(GLOB METAL_FILES "${KERNEL_DIR}/*.metal")
 
-    add_custom_command(OUTPUT kernel.air
-      MAIN_DEPENDENCY kernel.metal
-      COMMAND xcrun -sdk macosx metal -c ${CMAKE_CURRENT_SOURCE_DIR}/kernel.metal -o ${CMAKE_CURRENT_BINARY_DIR}/kernel.air)
+  foreach(METAL_FILE ${METAL_FILES})
+    get_filename_component(KERNEL_NAME ${METAL_FILE} NAME_WE)
 
-    add_custom_command(OUTPUT kernel.metallib
-      MAIN_DEPENDENCY kernel.air
-      COMMAND xcrun -sdk macosx metallib ${CMAKE_CURRENT_BINARY_DIR}/kernel.air -o ${CMAKE_CURRENT_BINARY_DIR}/kernel.metallib)
+    set(AIR_FILE "${METALLIB_DIR}/${KERNEL_NAME}.air")
+    set(METALLIB_FILE "${METALLIB_DIR}/${KERNEL_NAME}.metallib")
 
+    add_custom_command(
+      OUTPUT "${AIR_FILE}"
+      COMMAND xcrun -sdk macosx metal -c "${METAL_FILE}" -o "${AIR_FILE}"
+      DEPENDS "${METAL_FILE}"
+      COMMENT "Compiling Metal shader: ${KERNEL_NAME}.metal")
+
+    add_custom_command(
+      OUTPUT "${METALLIB_FILE}"
+      COMMAND xcrun -sdk macosx metallib "${AIR_FILE}" -o "${METALLIB_FILE}"
+      DEPENDS "${AIR_FILE}"
+      COMMENT "Creating Metal library: ${KERNEL_NAME}.metallib")
+
+    list(APPEND METAL_TARGETS "${METALLIB_FILE}")
+    list(APPEND DEPS "${METALLIB_FILE}")
+  endforeach()
+
+  if(METAL_TARGETS)
+    add_custom_target(metal_libraries ALL
+      DEPENDS ${METAL_TARGETS}
+      COMMENT "Building all Metal libraries")
+  endif()
 endif()
 
 if(LINUX)
@@ -78,4 +100,3 @@ target_link_libraries(test_basic_kernel PRIVATE nexus-api)
 
 add_executable(test_multi_stream_sync test_multi_stream_sync.cpp ${DEPS})
 target_link_libraries(test_multi_stream_sync PRIVATE nexus-api)
-

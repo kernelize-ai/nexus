@@ -22,6 +22,8 @@ main() {
 
   if [[ "$os_type" == "macos" ]]; then
     printf "Running macOS build"
+    ./test/cpp/gpu/test_basic_kernel metal metal_kernels/kernel.metallib add_vectors
+
   elif [[ "$os_type" == "linux" ]]; then
     printf "Running Linux build"
     ./test/cpp/gpu/test_basic_kernel cuda cuda_kernels/add_vectors.ptx add_vectors
