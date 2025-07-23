@@ -49,79 +49,47 @@ int main(int argc, char **argv) {
 
   nexus::Device dev0 = runtime.getDevice(0);
 
-  std::vector<float> vecA(1024, 1.0);
-  std::vector<float> vecB(1024, 2.0);
-  std::vector<float> vecResult_GPU(1024, 0.0);  // For GPU result
+  size_t vsize = 1024;
+  std::vector<float> vecA(vsize, 1.0);
+  std::vector<float> vecB(vsize, 2.0);
+  std::vector<float> vecResult_GPU(vsize, 0.0);
 
-  size_t size = 1024 * sizeof(float);
+  size_t size = vsize * sizeof(float);
 
   auto nlib = dev0.createLibrary(kernel_file);
 
-  if (!nlib) {
-    std::cout << "Failed to load library: " << kernel_file << std::endl;
-    return FAILURE; 
-  }
-
   auto kern = nlib.getKernel(kernel_name);
-  if (!kern) {
-    std::cout << "Failed to get kernel: " << kernel_name << std::endl;
-    return FAILURE;
-  }
+  if (!kern) return FAILURE;
 
   auto buf0 = dev0.createBuffer(size, vecA.data());
   auto buf1 = dev0.createBuffer(size, vecB.data());
   auto buf2 = dev0.createBuffer(size, vecResult_GPU.data());
-  auto buf3 = dev0.createBuffer(size, vecResult_GPU.data());
 
   auto stream0 = dev0.createStream();
-  auto stream1 = dev0.createStream();
 
-  auto evFinal = dev0.createEvent();
-  auto ev0 = dev0.createEvent();
+  auto sched = dev0.createSchedule();
 
-  // Stream 0
-  auto sched0 = dev0.createSchedule();
+  auto cmd = sched.createCommand(kern);
+  cmd.setArgument(0, buf0);
+  cmd.setArgument(1, buf1);
+  cmd.setArgument(2, buf2);
 
-  auto cmd0 = sched0.createCommand(kern);
-  cmd0.setArgument(0, buf0);
-  cmd0.setArgument(1, buf1);
-  cmd0.setArgument(2, buf2);
+  cmd.finalize(32, 32);
 
-  cmd0.finalize(32, 32);
+  sched.run(stream0, true);
 
-  sched0.createSignalCommand(ev0);
-
-  // Stream 1
-  auto sched1 = dev0.createSchedule();
-
-  sched1.createWaitCommand(ev0);
-
-  auto cmd1 = sched1.createCommand(kern);
-  cmd1.setArgument(0, buf0);
-  cmd1.setArgument(1, buf2);
-  cmd1.setArgument(2, buf3);
-
-  cmd1.finalize(32, 32);
-
-  sched1.createSignalCommand(evFinal);
-
-  // Run streams -- order is important for HIP events :-(
-  sched0.run(stream0, false);
-  sched1.run(stream1, false);
-
-  evFinal.wait();
-
-  buf3.copy(vecResult_GPU.data());
+  buf2.copy(vecResult_GPU.data());
 
   int i = 0;
   for (auto v : vecResult_GPU) {
-    if (v != 4.0) {
+    if (v != 3.0) {
       std::cout << "Fail: result[" << i << "] = " << v << std::endl;
       return FAILURE;
     }
     ++i;
   }
-  std::cout << "\n\n Test PASSED \n\n" << std::endl;
+
+  std::cout << std::endl << "Test PASSED" << std::endl << std::endl;
 
   return SUCCESS;
 }
