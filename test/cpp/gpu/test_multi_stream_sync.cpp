@@ -7,54 +7,65 @@
 
 std::vector<std::string_view> nexusArgs;
 
+#define SUCCESS 0
+#define FAILURE 1
+
 int main(int argc, char **argv) {
+
   if (argc < 4) {
-    std::cout << "Usage: " << argv[0] << " <plugin_name> <kernel_lib> <kernel_name>"
-              << std::endl;
-    return 1;
+    std::cout << "Usage: " << argv[0] << " <runtime_name> <kernel_file> <kernel_name>" << std::endl;
+    return FAILURE;
   }
-  std::string plugin_name = argv[1];
-  std::string kernel_lib = argv[2];
+
+  std::string runtime_name = argv[1];
+  std::string kernel_file = argv[2];
   std::string kernel_name = argv[3];
+
   auto sys = nexus::getSystem();
-  auto runtimes = sys.getRuntimes();
-
-  // Find the first runtime with a valid device
-  nexus::Runtime rt = sys.getRuntime(plugin_name);
-  nexus::Device dev0 = rt.getDevice(0);
-
-  if (!rt || !dev0) {
-    std::cout << "No runtime with valid devices found" << std::endl;
-    return 1;
+  auto runtime = sys.getRuntime(runtime_name);
+  if (!runtime) {
+    std::cout << "No runtimes found" << std::endl;
+    return FAILURE;
   }
 
-  auto count = rt.getDevices().size();
+  auto devices = runtime.getDevices();
+  if (devices.empty()) {
+    std::cout << "No devices found" << std::endl;
+    return FAILURE;
+  }
 
-  std::cout << "RUNTIME: " << rt.getProp<std::string>(NP_Name) << " - " << count
-            << std::endl;
+  auto count = runtime.getDevices().size();
+
+  std::string runtimeName = runtime.getProp<std::string>(NP_Name);
+  
+  std::cout << std::endl << "RUNTIME: " << runtimeName << " - " << count
+            << std::endl << std::endl;
 
   for (int i = 0; i < count; ++i) {
-    auto dev = rt.getDevice(i);
+    auto dev = runtime.getDevice(i);
     std::cout << "  Device: " << dev.getProp<std::string>(NP_Name) << " - "
               << dev.getProp<std::string>(NP_Architecture) << std::endl;
   }
+
+  nexus::Device dev0 = runtime.getDevice(0);
+
   std::vector<float> vecA(1024, 1.0);
   std::vector<float> vecB(1024, 2.0);
   std::vector<float> vecResult_GPU(1024, 0.0);  // For GPU result
 
   size_t size = 1024 * sizeof(float);
 
-  auto nlib = dev0.createLibrary(kernel_lib);
+  auto nlib = dev0.createLibrary(kernel_file);
 
   if (!nlib) {
-    std::cout << "Failed to load library: " << kernel_lib << std::endl;
-    return 1;
+    std::cout << "Failed to load library: " << kernel_file << std::endl;
+    return FAILURE; 
   }
 
   auto kern = nlib.getKernel(kernel_name);
   if (!kern) {
     std::cout << "Failed to get kernel: " << kernel_name << std::endl;
-    return 1;
+    return FAILURE;
   }
 
   auto buf0 = dev0.createBuffer(size, vecA.data());
@@ -95,7 +106,6 @@ int main(int argc, char **argv) {
   sched1.createSignalCommand(evFinal);
 
   // Run streams -- order is important for HIP events :-(
-  //IMPLEMENT COMMAND TYPES!
   sched0.run(stream0, false);
   sched1.run(stream1, false);
 
@@ -107,11 +117,11 @@ int main(int argc, char **argv) {
   for (auto v : vecResult_GPU) {
     if (v != 4.0) {
       std::cout << "Fail: result[" << i << "] = " << v << std::endl;
-      return -1;
+      return FAILURE;
     }
     ++i;
   }
   std::cout << "\n\n Test PASSED \n\n" << std::endl;
 
-  return 0;
+  return SUCCESS;
 }

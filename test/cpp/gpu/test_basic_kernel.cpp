@@ -7,58 +7,59 @@
 
 std::vector<std::string_view> nexusArgs;
 
+#define SUCCESS 0
+#define FAILURE 1
+
 int main(int argc, char **argv) {
-  if (argc < 3) {
-    std::cout << "Usage: " << argv[0] << " <runtimelib> <kernel_name>" << std::endl;
-    return 1;
+
+  if (argc < 4) {
+    std::cout << "Usage: " << argv[0] << " <runtime_name> <kernel_file> <kernel_name>" << std::endl;
+    return FAILURE;
   }
-  std::string runtime_lib = argv[1];
-  std::string kernel_name = argv[2];
+
+  std::string runtime_name = argv[1];
+  std::string kernel_file = argv[2];
+  std::string kernel_name = argv[3];
+
   auto sys = nexus::getSystem();
-  auto runtimes = sys.getRuntimes();
-
-  // Find the first runtime with a valid device
-  nexus::Runtime rt;
-  nexus::Device dev0;
-
-  for (auto runtime : runtimes) {
-    auto type = runtime.getProp<std::string>(NP_Type);
-    if (type == "gpu") {
-      auto devices = runtime.getDevices();
-      if (!devices.empty()) {
-        rt = runtime;
-        dev0 = devices[0];
-        break;
-      }
-    }
+  auto runtime = sys.getRuntime(runtime_name);
+  if (!runtime) {
+    std::cout << "No runtimes found" << std::endl;
+    return FAILURE;
   }
 
-  if (!rt || !dev0) {
-    std::cout << "No runtime with valid devices found" << std::endl;
-    return 1;
+  auto devices = runtime.getDevices();
+  if (devices.empty()) {
+    std::cout << "No devices found" << std::endl;
+    return FAILURE;
   }
 
-  auto count = rt.getDevices().size();
+  auto count = runtime.getDevices().size();
 
-  std::cout << "RUNTIME: " << rt.getProp<std::string>(NP_Name) << " - " << count
-            << std::endl;
+  std::string runtimeName = runtime.getProp<std::string>(NP_Name);
+  
+  std::cout << std::endl << "RUNTIME: " << runtimeName << " - " << count
+            << std::endl << std::endl;
 
   for (int i = 0; i < count; ++i) {
-    auto dev = rt.getDevice(i);
+    auto dev = runtime.getDevice(i);
     std::cout << "  Device: " << dev.getProp<std::string>(NP_Name) << " - "
               << dev.getProp<std::string>(NP_Architecture) << std::endl;
   }
+
+  nexus::Device dev0 = runtime.getDevice(0);
+
   size_t vsize = 1024;
   std::vector<float> vecA(vsize, 1.0);
   std::vector<float> vecB(vsize, 2.0);
-  std::vector<float> vecResult_GPU(vsize, 0.0);  // For GPU result
+  std::vector<float> vecResult_GPU(vsize, 0.0);
 
   size_t size = vsize * sizeof(float);
 
-  auto nlib = dev0.createLibrary(runtime_lib);
+  auto nlib = dev0.createLibrary(kernel_file);
 
   auto kern = nlib.getKernel(kernel_name);
-  if (!kern) return -1;
+  if (!kern) return FAILURE;
 
   auto buf0 = dev0.createBuffer(size, vecA.data());
   auto buf1 = dev0.createBuffer(size, vecB.data());
@@ -81,10 +82,12 @@ int main(int argc, char **argv) {
   for (auto v : vecResult_GPU) {
     if (v != 3.0) {
       std::cout << "Fail: result[" << i << "] = " << v << std::endl;
+      return FAILURE;
     }
     ++i;
   }
-  std::cout << "Test PASSED" << std::endl;
 
-  return 0;
+  std::cout << std::endl << "Test PASSED" << std::endl << std::endl;
+
+  return SUCCESS;
 }
