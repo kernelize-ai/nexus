@@ -12,14 +12,14 @@
 
 using namespace nxs;
 
-class CudaKernel : public rt::Kernel {
+class CudaKernel {
 
 public:
 
   CUfunction kernel;
 
   CudaKernel(const std::string &name, CUmodule module)
-    : Kernel(name), kernel(nullptr) {
+    : kernel(nullptr) {
     CUresult result = cuModuleGetFunction(&kernel, module, name.c_str());
     if (result != CUDA_SUCCESS) {
       const char* error_string;

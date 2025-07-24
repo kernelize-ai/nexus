@@ -4,9 +4,10 @@
 #include <rt_runtime.h>
 
 #include <cuda_runtime.h>
-#include <cuda_library.h>
-#include <cuda_kernel.h>
 #include <cuda_device.h>
+#include <cuda_kernel.h>
+#include <cuda_command.h>
+#include <cuda_schedule.h>
 
 #define CHECK_CU(call) \
   do { \
@@ -92,6 +93,10 @@ public:
     return buffer_pool.get_new(size, cuda_buffer, false);
   }
   void release(rt::Buffer *buffer) { buffer_pool.release(buffer); }
+
+  CudaCommand *getCommand(CUfunction kernel) {
+    return command_pool.get_new(kernel);
+  }
 
   CudaCommand *getCommand(cudaEvent_t event, nxs_command_type type,
                          nxs_int event_value = 0) {

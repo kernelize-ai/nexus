@@ -128,6 +128,13 @@ NEXUS_API_PROP(CoreRegisterSize, _prop_int,       "Core Register size")
 
 NEXUS_API_PROP(SIMDSize,        _prop_int,        "SIMD thread count")
 
+NEXUS_API_PROP(CoreClockRate,   _prop_int,        "Core clock rate (MHz)")
+NEXUS_API_PROP(MemoryClockRate, _prop_int,        "Memory clock rate (MHz)")
+NEXUS_API_PROP(MemoryBusWidth,  _prop_int,        "Memory bus width (bits)")
+
+/* Kernel Properties */
+NEXUS_API_PROP(MaxThreadsPerBlock, _prop_int,    "Max threads per block")
+
 NEXUS_API_PROP(MaxThreadsPerThreadgroup, _prop_int,    "Max threads per threadgroup")
 NEXUS_API_PROP(MaxThreadgroupsPerCore,   _prop_int,    "Max threadgroups per Core")
 NEXUS_API_PROP(MaxThreadgroupMemorySize, _prop_int,    "Max threadgroup memory size")

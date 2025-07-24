@@ -1,21 +1,18 @@
 #ifndef RT_CUDA_COMMAND_H
 #define RT_CUDA_COMMAND_H
 
-#include <rt_command.h>
-#include <cuda_library.h>
 #include <cuda_buffer.h>
-#include <cuda_schedule.h>
-#include <cuda_runtime.h>
 using namespace nxs;
 
 #define NXSAPI_LOG_MODULE "cuda_runtime"
 
-class CudaCommand : public rt::Command {
+#define CUDA_COMMAND_MAX_ARGS 64
+
+class CudaCommand {
 
 public:
 
-  CudaKernel *cudaKernel;
-  Buffers buffers;
+  CUfunction cudaKernel;
   cudaEvent_t event;
   nxs_command_type type;
   nxs_int event_value;
@@ -23,9 +20,13 @@ public:
   std::vector<void *> args_ref;
   nxs_long block_size;
   nxs_long grid_size;
-  nxs_int n_val = 1024;
   
-  CudaCommand(CudaKernel *cudaKernel) : cudaKernel(cudaKernel), type(NXS_CommandType_Dispatch) {}
+  CudaCommand(CUfunction cudaKernel) : cudaKernel(cudaKernel), type(NXS_CommandType_Dispatch),
+    args(CUDA_COMMAND_MAX_ARGS, nullptr), args_ref(CUDA_COMMAND_MAX_ARGS) {
+    for (int i = 0; i < CUDA_COMMAND_MAX_ARGS; i++) {
+      args_ref[i] = &args[i];
+    }
+  }
 
   CudaCommand(cudaEvent_t event, nxs_command_type type, nxs_int event_value = 1)
     : event(event), type(type), event_value(event_value) {}
@@ -33,21 +34,17 @@ public:
   ~CudaCommand() = default;
 
   nxs_status setArgument(nxs_int argument_index, CudaBuffer *buffer) {
-    if (argument_index >= buffers.size())
-      buffers.push_back(buffer);
-    else
-      buffers[argument_index] = buffer;
+    if (argument_index >= CUDA_COMMAND_MAX_ARGS)
+      return NXS_InvalidArgIndex;
+
+    args[argument_index] = buffer->cudaPtr;
     return NXS_Success;
   }
 
-  nxs_status finalize(nxs_int group_size, nxs_int grid_size) {
-    gridSize = grid_size;
-    blockSize = group_size;
+  nxs_status finalize(nxs_int grid_size, nxs_int block_size) {
+    this->grid_size = grid_size;
+    this->block_size = block_size;
 
-    for (auto& buffer : buffers)
-      args.push_back(&buffer->cudaPtr);
-
-    args.push_back(&n_val);
     return NXS_Success;
   }
 
@@ -56,9 +53,9 @@ public:
     switch (type) {
       case NXS_CommandType_Dispatch: {
         int flags = 0;
-        CUresult cu_result = cuLaunchKernel(cudaKernel->kernel,
-          gridSize, 1, 1, blockSize, 1, 1,
-          0, stream, args.data(), nullptr);
+        CUresult cu_result = cuLaunchKernel(cudaKernel,
+          grid_size, 1, 1, block_size, 1, 1,
+          0, stream, args_ref.data(), nullptr);
           CHECK_CU(cu_result);
          // hipModuleLaunchCooperativeKernel - for inter-block coordination
          // hipModuleLaunchCooperativeKernelMultiDevice
@@ -79,10 +76,6 @@ public:
     return NXS_Success;
   }
 
-  void setDimensions(nxs_int block_size, nxs_int grid_size) {
-    this->block_size = block_size;
-    this->grid_size = grid_size;
-  }
   void release() {}
 };
 

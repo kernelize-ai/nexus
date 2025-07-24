@@ -49,7 +49,7 @@ int main() {
   cmd.setArgument(1, buf1);
   cmd.setArgument(2, buf2);
 
-  cmd.finalize(32, 1024);
+  cmd.finalize(32, 32);
 
   sched.run();
 

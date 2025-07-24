@@ -7,21 +7,20 @@
 
 #include <nexus-api.h>
 
-#include <rt_library.h>
 #include <cuda_kernel.h>
 
 using namespace nxs;
 
-class CudaLibrary : public rt::Library {
+class CudaLibrary {
 
 public:
 
   CUmodule module;
 
-  CudaLibrary(void *library_data, nxs_uint data_size) : rt::Library(data_size) {
+  CudaLibrary(void *library_data, nxs_uint data_size) {
     loadModule(library_data);
   }
-  CudaLibrary(const std::string &library_path) : rt::Library(0) {
+  CudaLibrary(const std::string &library_path) {
     loadModule(library_path);
   }
 
