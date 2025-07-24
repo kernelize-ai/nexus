@@ -19,6 +19,10 @@ main() {
   if [[ "$os_type" == "macos" ]]; then
     printf "Running macOS build"
     ./test/cpp/gpu/test_basic_kernel metal metal_kernels/kernel.metallib add_vectors
+    printf "\n\nPASSED: Basic Kernel Test\n\n"
+    ./test/cpp/gpu/test_multi_stream_sync metal metal_kernels/kernel.metallib add_vectors
+    printf "\n\nPASSED: Multi Stream Sync Test\n\n"
+    printf "\n\nAll tests passed successfully!\n\n"
 
   elif [[ "$os_type" == "linux" ]]; then
     printf "Running Linux build"
