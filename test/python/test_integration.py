@@ -61,7 +61,7 @@ class TestIntegrationWorkflow(unittest.TestCase):
             
             # Try to load a library and execute kernel
             try:
-                library = self.device.load_library("test_kernel.so")
+                library = self.device.load_library_file("test_kernel.so")
                 if library is not None:
                     kernel = library.get_kernel("add_vectors")
                     if kernel is not None:
@@ -125,7 +125,7 @@ class TestIntegrationWorkflow(unittest.TestCase):
                 
                 # Try to execute on second device
                 try:
-                    library = device2.load_library("test_kernel.so")
+                    library = device2.load_library_file("test_kernel.so")
                     if library is not None:
                         kernel = library.get_kernel("test_kernel")
                         if kernel is not None:
@@ -158,7 +158,7 @@ class TestIntegrationWorkflow(unittest.TestCase):
             
             # Try to create commands with buffers
             try:
-                library = self.device.load_library("test_kernel.so")
+                library = self.device.load_library_file("test_kernel.so")
                 if library is not None:
                     kernel = library.get_kernel("test_kernel")
                     if kernel is not None:
@@ -241,7 +241,7 @@ class TestErrorHandling(unittest.TestCase):
                 schedule = self.device.create_schedule()
                 if schedule is not None:
                     try:
-                        library = self.device.load_library("test_kernel.so")
+                        library = self.device.load_library_file("test_kernel.so")
                         if library is not None:
                             kernel = library.get_kernel("test_kernel")
                             if kernel is not None:
@@ -327,7 +327,7 @@ class TestPerformance(unittest.TestCase):
                 schedule = self.device.create_schedule()
                 if schedule is not None:
                     try:
-                        library = self.device.load_library("test_kernel.so")
+                        library = self.device.load_library_file("test_kernel.so")
                         if library is not None:
                             kernel = library.get_kernel("test_kernel")
                             if kernel is not None:

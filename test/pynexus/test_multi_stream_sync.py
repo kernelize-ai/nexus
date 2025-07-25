@@ -19,7 +19,7 @@ nb1 = dev.create_buffer(buf1)
 nb2 = dev.create_buffer(res1)
 nb3 = dev.create_buffer(res2)
 
-lib = dev.load_library("kernel.so")
+lib = dev.load_library_file("kernel.so")
 kern = lib.get_kernel('add_vectors')
 
 evf = dev.create_event()

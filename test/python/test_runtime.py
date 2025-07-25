@@ -136,7 +136,7 @@ class TestDevice(unittest.TestCase):
         """Test loading library on device."""
         if self.device is not None:
             try:
-                library = self.device.load_library("test_library.so")
+                library = self.device.load_library_file("test_library.so")
                 if library is not None:
                     self.assertTrue(hasattr(library, 'get_kernel'))
             except (FileNotFoundError, RuntimeError):

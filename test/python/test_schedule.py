@@ -129,7 +129,7 @@ class TestKernelExecution(unittest.TestCase):
             schedule = self.device.create_schedule()
             self.assertIsNotNone(schedule)
             try:
-                library = self.device.load_library("test_kernel.so")
+                library = self.device.load_library_file("test_kernel.so")
                 if library is not None:
                     kernel = library.get_kernel("test_kernel")
                     if kernel is not None:
@@ -202,7 +202,7 @@ class TestLibraryAndKernel(unittest.TestCase):
         """Test library loading functionality."""
         if self.device is not None:
             try:
-                library = self.device.load_library("non_existent_library.so")
+                library = self.device.load_library_file("non_existent_library.so")
                 if library is not None:
                     self.assertTrue(hasattr(library, 'get_kernel'))
             except (FileNotFoundError, RuntimeError):
@@ -212,7 +212,7 @@ class TestLibraryAndKernel(unittest.TestCase):
         """Test kernel retrieval from library."""
         if self.device is not None:
             try:
-                library = self.device.load_library("test_library.so")
+                library = self.device.load_library_file("test_library.so")
                 if library is not None:
                     kernel = library.get_kernel("test_kernel")
                     if kernel is not None:

@@ -22,7 +22,7 @@ nb0 = dev.create_buffer(buf0)
 nb1 = dev.create_buffer(buf1)
 nb2 = dev.create_buffer(res2)
 
-lib = dev.load_library("build/cuda_kernels/add_vectors.ptx")
+lib = dev.load_library_file("build/cuda_kernels/add_vectors.ptx")
 kern = lib.get_kernel('add_vectors')
 
 sched = dev.create_schedule()
@@ -32,7 +32,7 @@ cmd.set_arg(0, nb0)
 cmd.set_arg(0, nb0)
 cmd.set_arg(1, nb1)
 cmd.set_arg(2, nb2)
-cmd.finalize(32, 1024)
+cmd.finalize(32, 32)
 
 sched.run()
 
