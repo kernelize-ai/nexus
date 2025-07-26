@@ -1,29 +1,14 @@
-#define NXSAPI_LOGGING
+#include <cuda_utils.h>
 
 #include <assert.h>
-#include <string.h>
-#include <vector>
-#include <iostream>
-#include <optional>
-#include <fstream>
-#include <filesystem>
-
-#include <cuda_runtime.h>
-#include <cuda.h>
-
-#include <nexus-api.h>
-
-#include <rt_utilities.h>
-#include <rt_object.h>
-#include <rt_buffer.h>
-#include <rt_command.h>
-
+#include <cuda_command.h>
+#include <cuda_device.h>
 #include <cuda_plugin_runtime.h>
 #include <cuda_runtime.h>
-#include <cuda_library.h>
-#include <cuda_kernel.h>
-#include <cuda_device.h>
-
+#include <rt_buffer.h>
+#include <rt_object.h>
+#include <rt_utilities.h>
+#include <string.h>
 
 using namespace nxs;
 
@@ -41,7 +26,7 @@ nxsGetRuntimeProperty(nxs_uint runtime_property_id, void *property_value,
   auto rt = getRuntime();
 
   int runtime_version = 0;
-  CHECK_CUDA(cudaRuntimeGetVersion(&runtime_version));
+  CUDA_CHECK(NXS_InvalidRuntime, cudaRuntimeGetVersion, &runtime_version);
 
   int major_version = runtime_version / 10000000;
   int minor_version = (runtime_version % 10000000) / 100000;
@@ -191,19 +176,26 @@ nxsGetDevicePropertyFromPath(
  */
 extern "C" nxs_int NXS_API_CALL nxsCreateBuffer(nxs_int device_id, size_t size,
                                                 nxs_uint mem_flags,
-                                                void *host_ptr)
-{
+                                                void *data_ptr) {
   auto rt = getRuntime();
-  auto deviceObject = rt->getObject(device_id);
-  if (!deviceObject || !*deviceObject) return NXS_InvalidDevice;
-  
+  auto deviceObject = rt->get<CudaDevice>(device_id);
+  if (!deviceObject) return NXS_InvalidDevice;
+
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createBuffer: " << size);
+  if (!(mem_flags & NXS_BufferProperty_OnDevice)) {
+    void *cuda_ptr = nullptr;
+    CUDA_CHECK(NXS_InvalidBuffer, cudaMalloc, &cuda_ptr, size);
+    if (data_ptr != nullptr)
+      CUDA_CHECK(NXS_InvalidBuffer, cudaMemcpy, cuda_ptr, data_ptr, size,
+                 cudaMemcpyHostToDevice);
+    data_ptr = cuda_ptr;
+  }
 
-  CudaBuffer *buf = new CudaBuffer(*deviceObject, device_id, size, host_ptr, true);
+  auto *buf = rt->getBuffer(size, data_ptr, false);
+  if (!buf) return NXS_InvalidBuffer;
 
-  return rt->addObject(buf, true);
+  return rt->addObject(buf);
 }
-
 
 extern "C" nxs_status NXS_API_CALL
 nxsCopyBuffer(
@@ -213,14 +205,12 @@ nxsCopyBuffer(
 {
   auto rt = getRuntime();
 
-  auto bufferObject = rt->getObject(buffer_id);
-  auto buffer = bufferObject ? (*bufferObject)->get<CudaBuffer>() : nullptr;
-  if (!buffer)
-    return NXS_InvalidBuffer;
-  if (!host_ptr)
-    return NXS_InvalidHostPtr;
+  auto buffer = rt->get<rt::Buffer>(buffer_id);
+  if (!buffer) return NXS_InvalidBuffer;
+  if (!host_ptr) return NXS_InvalidHostPtr;
 
-  CHECK_CUDA(cudaMemcpy(host_ptr, buffer->cudaPtr, buffer->size(), cudaMemcpyDeviceToHost));
+  CUDA_CHECK(NXS_InvalidBuffer, cudaMemcpy, host_ptr, buffer->get(),
+             buffer->size(), cudaMemcpyDeviceToHost);
   return NXS_Success;
 }
 
@@ -259,8 +249,10 @@ nxsCreateLibrary(
   auto device = rt->getDevice(device_id);
   if (!device) return NXS_InvalidDevice;
 
-  auto devLib = device->createLibrary(library_data, data_size);
-  return rt->addObject(devLib);
+  CUmodule module;
+  CU_CHECK(NXS_InvalidLibrary, cuModuleLoadData, &module, library_data);
+
+  return rt->addObject(module);
 }
 
 /*
@@ -277,8 +269,10 @@ nxsCreateLibraryFromFile(
   if (!device)
    return NXS_InvalidDevice;
 
-  auto result = device->createLibraryFromFile(library_path);
-  return rt->addObject(result);
+  CUmodule module;
+  CU_CHECK(NXS_InvalidLibrary, cuModuleLoad, &module, library_path);
+
+  return rt->addObject(module);
 }
 
 /************************************************************************
@@ -337,11 +331,11 @@ extern "C" nxs_int NXS_API_CALL
 nxsGetKernel(nxs_int library_id, const char *kernel_name) {
   auto rt = getRuntime();
 
-  auto library = rt->get<CudaLibrary>(library_id);
-  if (!library) return NXS_InvalidKernel;
+  auto library = rt->getPtr<CUmodule>(library_id);
+  if (!library) return NXS_InvalidLibrary;
 
   CUfunction kernel = nullptr;
-  CUresult result = cuModuleGetFunction(&kernel, library->module, kernel_name);
+  CUresult result = cuModuleGetFunction(&kernel, library, kernel_name);
   if (result != CUDA_SUCCESS) {
     const char *error_string;
     cuGetErrorString(result, &error_string);
@@ -377,25 +371,27 @@ extern "C" nxs_status NXS_API_CALL nxsGetKernelProperty(nxs_int kernel_id,
     }
     case NP_CoreRegisterSize: {
       int n_regs = 0;
-      CHECK_CU(cuFuncGetAttribute(&n_regs, CU_FUNC_ATTRIBUTE_NUM_REGS, kernel));
+      CU_CHECK(NXS_InvalidKernel, cuFuncGetAttribute, &n_regs,
+               CU_FUNC_ATTRIBUTE_NUM_REGS, kernel);
       return rt::getPropertyInt(property_value, property_value_size, n_regs);
     }
     case NP_SIMDSize: {
       int simd_size = 0;
-      CHECK_CU(cuFuncGetAttribute(
-          &simd_size, CU_FUNC_ATTRIBUTE_MAX_THREADS_PER_BLOCK, kernel));
+      CU_CHECK(NXS_InvalidKernel, cuFuncGetAttribute, &simd_size,
+               CU_FUNC_ATTRIBUTE_MAX_THREADS_PER_BLOCK, kernel);
       return rt::getPropertyInt(property_value, property_value_size, simd_size);
     }
     case NP_CoreMemorySize: {
       int shared_size = 0;
-      CHECK_CU(cuFuncGetAttribute(&shared_size,
-                                  CU_FUNC_ATTRIBUTE_SHARED_SIZE_BYTES, kernel));
+      CU_CHECK(NXS_InvalidKernel, cuFuncGetAttribute, &shared_size,
+               CU_FUNC_ATTRIBUTE_SHARED_SIZE_BYTES, kernel);
       return rt::getPropertyInt(property_value, property_value_size,
                                 shared_size);
     }
     case NP_MaxThreadsPerBlock: {
       int max_threads = 0;
-      CHECK_CU(cuFuncGetAttribute(&max_threads, CU_FUNC_ATTRIBUTE_MAX_THREADS_PER_BLOCK, kernel));
+      CU_CHECK(NXS_InvalidKernel, cuFuncGetAttribute, &max_threads,
+               CU_FUNC_ATTRIBUTE_MAX_THREADS_PER_BLOCK, kernel);
       return rt::getPropertyInt(property_value, property_value_size, max_threads);
     }
     default:
@@ -417,11 +413,11 @@ extern "C" nxs_int NXS_API_CALL nxsCreateEvent(nxs_int device_id,
 
   CUevent event;
   if (event_type == NXS_EventType_Shared) {
-    CHECK_CU(cuEventCreate(&event, CU_EVENT_DEFAULT));
+    CU_CHECK(NXS_InvalidEvent, cuEventCreate, &event, CU_EVENT_DEFAULT);
   } else if (event_type == NXS_EventType_Signal) {
-    CHECK_CU(cuEventCreate(&event, CU_EVENT_DISABLE_TIMING));
+    CU_CHECK(NXS_InvalidEvent, cuEventCreate, &event, CU_EVENT_DISABLE_TIMING);
   } else if (event_type == NXS_EventType_Fence) {
-    CHECK_CU(cuEventCreate(&event, CU_EVENT_BLOCKING_SYNC));
+    CU_CHECK(NXS_InvalidEvent, cuEventCreate, &event, CU_EVENT_BLOCKING_SYNC);
   } else {
     return NXS_InvalidEvent; // or whatever error code you use
   }
@@ -437,7 +433,8 @@ extern "C" nxs_status NXS_API_CALL nxsSignalEvent(nxs_int event_id,
   auto rt = getRuntime();
   auto event = rt->getPtr<CUevent>(event_id);
   if (!event) return NXS_InvalidEvent;
-  CHECK_CU(cuEventRecord(event, 0)); // Remove the * - use event directly
+  CU_CHECK(NXS_InvalidEvent, cuEventRecord, event,
+           0);  // Remove the * - use event directly
   return NXS_Success;
 }
 
@@ -449,7 +446,8 @@ extern "C" nxs_status NXS_API_CALL nxsWaitEvent(nxs_int event_id,
   auto rt = getRuntime();
   auto event = rt->getPtr<CUevent>(event_id);
   if (!event) return NXS_InvalidEvent;
-  CHECK_CU(cuEventSynchronize(event)); // Remove the * - use event directly
+  CU_CHECK(NXS_InvalidEvent, cuEventSynchronize,
+           event);  // Remove the * - use event directly
   return NXS_Success;
 }
 
@@ -460,7 +458,8 @@ extern "C" nxs_status NXS_API_CALL nxsReleaseEvent(nxs_int event_id) {
   auto rt = getRuntime();
   auto event = rt->getPtr<CUevent>(event_id);
   if (!event) return NXS_InvalidEvent;
-  CHECK_CU(cuEventDestroy(event)); // Remove the * - use event directly
+  CU_CHECK(NXS_InvalidEvent, cuEventDestroy,
+           event);  // Remove the * - use event directly
   if (!rt->dropObject(event_id)) return NXS_InvalidEvent;
   return NXS_Success;
 }
@@ -480,7 +479,7 @@ extern "C" nxs_int NXS_API_CALL nxsCreateStream(nxs_int device_id,
   // TODO: Get the default command queue for the first Stream
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createStream");
   cudaStream_t stream;
-  CHECK_CUDA(cudaStreamCreate(&stream));
+  CUDA_CHECK(NXS_InvalidStream, cudaStreamCreate, &stream);
   return rt->addObject(stream, false);
 }
 
@@ -536,9 +535,9 @@ extern "C" nxs_status NXS_API_CALL nxsRunSchedule(
 
   if (blocking)
     if (stream)
-      CHECK_CUDA(cudaStreamSynchronize(stream));
+      CUDA_CHECK(NXS_InvalidStream, cudaStreamSynchronize, stream);
     else
-      CHECK_CUDA(cudaDeviceSynchronize());
+      CUDA_CHECK(NXS_InvalidStream, cudaDeviceSynchronize);
 
   return NXS_Success;
 }
@@ -604,7 +603,8 @@ extern "C" nxs_int NXS_API_CALL nxsCreateSignalCommand(nxs_int schedule_id,
   if (!sched) return NXS_InvalidSchedule;
   auto event = rt->getPtr<cudaEvent_t>(event_id);
   if (!event) {
-    CHECK_CUDA(cudaEventCreateWithFlags(&event, cudaEventDefault));
+    CUDA_CHECK(NXS_InvalidEvent, cudaEventCreateWithFlags, &event,
+               cudaEventDefault);
     rt->addObject(event);
   }
 
@@ -640,8 +640,7 @@ extern "C" nxs_int NXS_API_CALL nxsCreateWaitCommand(nxs_int schedule_id,
 /************************************************************************
  * @def SetCommandArgument
  * @brief Set command argument on the device
- * @return Negative value is an error status.
- *         Non-negative is the bufferId.
+ * @return Error status or Succes.
  ***********************************************************************/
 extern "C" nxs_status NXS_API_CALL nxsSetCommandArgument(nxs_int command_id,
                                                          nxs_int argument_index,
@@ -651,16 +650,29 @@ extern "C" nxs_status NXS_API_CALL nxsSetCommandArgument(nxs_int command_id,
   auto command = rt->get<CudaCommand>(command_id);
   if (!command) return NXS_InvalidCommand;
 
-  auto buffer = rt->get<CudaBuffer>(buffer_id);
+  auto buffer = rt->get<rt::Buffer>(buffer_id);
   if (!buffer) return NXS_InvalidBuffer;
 
   return command->setArgument(argument_index, buffer);
 }
+
+/************************************************************************
+ * @def SetCommandScalar
+ * @brief Set command scalar on the device
+ * @return Error status or Succes.
+ ***********************************************************************/
+extern "C" nxs_status NXS_API_CALL nxsSetCommandScalar(nxs_int command_id,
+                                                       nxs_int argument_index,
+                                                       void *value) {
+  auto rt = getRuntime();
+  auto command = rt->get<CudaCommand>(command_id);
+  if (!command) return NXS_InvalidCommand;
+  return command->setScalar(argument_index, value);
+}
 /************************************************************************
  * @def FinalizeCommand
  * @brief Finalize command buffer on the device
- * @return Negative value is an error status.
- *         Non-negative is the bufferId.
+ * @return Error status or Succes.
  ***********************************************************************/
 
 extern "C" nxs_status NXS_API_CALL

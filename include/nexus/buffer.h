@@ -18,7 +18,7 @@ class Buffer : public Object<detail::BufferImpl> {
  public:
   Buffer(detail::Impl base, size_t _sz, const void *_hostData = nullptr);
   Buffer(detail::Impl base, nxs_int devId, size_t _sz,
-         const void *_hostData = nullptr);
+         const void *_deviceData = nullptr);
   using Object::Object;
 
   nxs_int getId() const override;

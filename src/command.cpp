@@ -11,11 +11,15 @@ using namespace nexus;
 namespace nexus {
 namespace detail {
 class CommandImpl : public Impl {
+  typedef std::variant<Buffer, nxs_int, nxs_uint, nxs_long, nxs_ulong,
+                       nxs_float, nxs_double>
+      Arg;
+
  public:
   /// @brief Construct a Platform for the current system
   CommandImpl(Impl owner, Kernel kern) : Impl(owner), kernel(kern) {
     NEXUS_LOG(NEXUS_STATUS_NOTE, "    Command: " << getId());
-    arguments.reserve(16); // TODO: get from kernel
+    arguments.reserve(32);  // TODO: get from kernel
     // TODO: gather kernel argument details
   }
 
@@ -42,9 +46,18 @@ class CommandImpl : public Impl {
   Kernel getKernel() const { return kernel; }
   Event getEvent() const { return event; }
 
+  template <typename T>
+  nxs_status setScalar(nxs_uint index, T value) {
+    if (event) return NXS_InvalidArgIndex;
+    void *val_ptr = putArgument(index, value);
+    auto *rt = getParentOfType<RuntimeImpl>();
+    return (nxs_status)rt->runAPIFunction<NF_nxsSetCommandScalar>(
+        getId(), index, val_ptr);
+  }
+
   nxs_status setArgument(nxs_uint index, Buffer buffer) {
     if (event) return NXS_InvalidArgIndex;
-    addArgument(index, buffer);
+    putArgument(index, buffer);
     auto *rt = getParentOfType<RuntimeImpl>();
     return (nxs_status)rt->runAPIFunction<NF_nxsSetCommandArgument>(
         getId(), index, buffer.getId());
@@ -61,13 +74,15 @@ class CommandImpl : public Impl {
   Kernel kernel;
   Event event;
 
-  void addArgument(nxs_uint index, Buffer buffer) {
+  template <typename T>
+  T *putArgument(nxs_uint index, T value) {
     if (index >= arguments.size())
       arguments.resize(index + 1);
-    arguments[index] = buffer;
+    arguments[index] = value;
+    return &std::get<T>(arguments[index]);
   }
 
-  std::vector<Buffer> arguments;
+  std::vector<Arg> arguments;
 };
 }  // namespace detail
 }  // namespace nexus
@@ -93,6 +108,30 @@ Event Command::getEvent() const {
 
 nxs_status Command::setArgument(nxs_uint index, Buffer buffer) {
   NEXUS_OBJ_MCALL(NXS_InvalidCommand, setArgument, index, buffer);
+}
+
+nxs_status Command::setArgument(nxs_uint index, nxs_int value) {
+  NEXUS_OBJ_MCALL(NXS_InvalidCommand, setScalar, index, value);
+}
+
+nxs_status Command::setArgument(nxs_uint index, nxs_uint value) {
+  NEXUS_OBJ_MCALL(NXS_InvalidCommand, setScalar, index, value);
+}
+
+nxs_status Command::setArgument(nxs_uint index, nxs_long value) {
+  NEXUS_OBJ_MCALL(NXS_InvalidCommand, setScalar, index, value);
+}
+
+nxs_status Command::setArgument(nxs_uint index, nxs_ulong value) {
+  NEXUS_OBJ_MCALL(NXS_InvalidCommand, setScalar, index, value);
+}
+
+nxs_status Command::setArgument(nxs_uint index, nxs_float value) {
+  NEXUS_OBJ_MCALL(NXS_InvalidCommand, setScalar, index, value);
+}
+
+nxs_status Command::setArgument(nxs_uint index, nxs_double value) {
+  NEXUS_OBJ_MCALL(NXS_InvalidCommand, setScalar, index, value);
 }
 
 nxs_status Command::finalize(nxs_int groupSize, nxs_int gridSize) {

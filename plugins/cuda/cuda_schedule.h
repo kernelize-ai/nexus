@@ -1,21 +1,19 @@
 #ifndef RT_CUDA_SCHEDULE_H
 #define RT_CUDA_SCHEDULE_H
 
+#include <cuda_command.h>
+#include <cuda_utils.h>
+
 #include <string>
 #include <vector>
-
-#include <rt_schedule.h>
-#include <rt_object.h>
-
-#include <cuda_command.h>
 
 class CudaRuntime;
 
 using namespace nxs;
 
-class CudaSchedule : public rt::Schedule {
-
-public:
+class CudaSchedule {
+ public:
+  typedef std::vector<CudaCommand *> Commands;
 
   nxs_int device_id;
   Commands commands;

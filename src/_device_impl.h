@@ -46,7 +46,8 @@ class DeviceImpl : public Impl {
   Library createLibrary(const std::string &path);
   Library createLibrary(void *libraryData, size_t size);
 
-  Buffer createBuffer(size_t size, const char *data = nullptr);
+  Buffer createBuffer(size_t size, const void *data = nullptr,
+                      bool on_device = false);
   Buffer copyBuffer(Buffer buf);
 };
 

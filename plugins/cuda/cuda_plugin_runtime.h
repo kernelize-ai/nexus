@@ -1,39 +1,12 @@
 #ifndef RT_CUDA_RUNTIME_H
 #define RT_CUDA_RUNTIME_H
 
-#include <rt_runtime.h>
-
-#include <cuda_runtime.h>
-#include <cuda_device.h>
-#include <cuda_kernel.h>
 #include <cuda_command.h>
+#include <cuda_device.h>
+#include <cuda_runtime.h>
 #include <cuda_schedule.h>
-
-#define CHECK_CU(call) \
-  do { \
-    CUresult err = call; \
-    if (err != CUDA_SUCCESS) { \
-      const char* errorStr; \
-      cuGetErrorString(err, &errorStr); \
-      std::cerr << "CUDA Error: " << errorStr << std::endl; \
-      exit(1); \
-    } \
-  } while(0)
-
-#define CHECK_CUDA(call) \
-  do { \
-    cudaError_t err = call; \
-    if (err != cudaSuccess) { \
-      std::cerr << "CUDA Runtime Error: " << cudaGetErrorString(err) << std::endl; \
-      exit(1); \
-    } \
-  } while(0)
-
-#include <nexus-api.h>
-
-#define NXSAPI_LOG_MODULE "cuda_runtime"
-
-using namespace nxs;
+#include <cuda_utils.h>
+#include <rt_runtime.h>
 
 class CudaRuntime : public rt::Runtime {
 
@@ -45,35 +18,28 @@ public:
   rt::Pool<CudaCommand> command_pool;
   rt::Pool<CudaSchedule> schedule_pool;
 
-  CudaRuntime() : rt::Runtime() {
-    CUresult cuResult = cuInit(0);
-    CHECK_CU(cuResult);
-
-    setupCudaDevices();
-
-    if (this->getNumObjects() == 0) {
-      NXSAPI_LOG(NXSAPI_STATUS_ERR, "No Cuda devices found.");
-      return;
-    }
-
-    numDevices = this->getNumObjects();
-
-    NXSAPI_LOG(NXSAPI_STATUS_NOTE, "CUDA Runtime initialized with result: " << cuResult);
-  }
+  CudaRuntime() : rt::Runtime() { setupCudaDevices(); }
   ~CudaRuntime() = default;
   template <typename T>
   T getPtr(nxs_int id) {
     return static_cast<T>(get(id));
   }
 
-  void setupCudaDevices() {
-    int deviceCount;
-    cudaGetDeviceCount(&deviceCount);
+  nxs_status setupCudaDevices() {
+    CU_CHECK(NXS_InvalidDevice, cuInit, 0);
 
-    for (int i = 0; i < deviceCount; i++) {
+    CUDA_CHECK(NXS_InvalidDevice, cudaGetDeviceCount, &numDevices);
+
+    if (numDevices == 0) {
+      NXSAPI_LOG(NXSAPI_STATUS_ERR, "No CUDA devices found.");
+      return NXS_InvalidDevice;
+    }
+
+    for (int i = 0; i < numDevices; i++) {
       CudaDevice *device = new CudaDevice(i);
       addObject(device);
     }
+    return NXS_Success;
   }
 
   nxs_int getDeviceCount() const {
@@ -83,14 +49,18 @@ public:
   CudaDevice *getDevice(nxs_int id) {
     if (id < 0 || id >= numDevices) return nullptr;
     if (id != current_device) {
-      CHECK_CUDA(cudaSetDevice(id));
+      if (cudaSetDevice(id) != cudaSuccess) {
+        NXSAPI_LOG(NXSAPI_STATUS_ERR, "Failed to set CUDA device " << id);
+        return nullptr;
+      }
       current_device = id;
     }
     return get<CudaDevice>(id);
   }
 
-  rt::Buffer *getBuffer(size_t size, void *cuda_buffer = nullptr) {
-    return buffer_pool.get_new(size, cuda_buffer, false);
+  rt::Buffer *getBuffer(size_t size, void *data_ptr = nullptr,
+                        bool copy_data = false) {
+    return buffer_pool.get_new(size, data_ptr, copy_data);
   }
   void release(rt::Buffer *buffer) { buffer_pool.release(buffer); }
 

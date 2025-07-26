@@ -193,6 +193,12 @@ enum _nxs_command_queue_properties {
 };
 typedef enum _nxs_command_queue_properties nxs_command_queue_properties;
 
+enum _nxs_buffer_properties {
+    NXS_BufferProperty_OnHost = 0,
+    NXS_BufferProperty_OnDevice = 1,
+    NXS_BufferProperty_Maintained = 2,
+};
+typedef enum _nxs_buffer_properties nxs_buffer_properties;
 
 /* nxs_bool */
 #define NXS_FALSE                                    0

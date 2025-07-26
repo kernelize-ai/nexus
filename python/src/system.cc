@@ -14,10 +14,12 @@ using namespace nexus;
 struct DevPtr {
   char *ptr;
   size_t size;
+  std::string runtime_name;
+  nxs_int device_id;
 };
 
 static DevPtr getPointer(PyObject *obj) {
-  DevPtr result = {nullptr, 0};
+  DevPtr result{nullptr, 0, "", -1};
   if (obj == Py_None) {
     return result;
   }
@@ -36,6 +38,20 @@ static DevPtr getPointer(PyObject *obj) {
           PyExc_TypeError,
           "data_ptr method of Pointer object must return 64-bit int");
       return result;
+    }
+    PyObject *device_m = PyObject_GetAttrString(obj, "device");
+    if (device_m) {
+      PyObject *runtime_name_m = PyObject_GetAttrString(device_m, "type");
+      if (runtime_name_m) {
+        result.runtime_name = PyUnicode_AsUTF8(runtime_name_m);
+        Py_DECREF(runtime_name_m);
+      }
+      PyObject *device_id_m = PyObject_GetAttrString(device_m, "index");
+      if (device_id_m && PyLong_Check(device_id_m)) {
+        result.device_id = PyLong_AsLong(device_id_m);
+        Py_DECREF(device_id_m);
+      }
+      Py_DECREF(device_m);
     }
     result.ptr = (char *)PyLong_AsUnsignedLongLong(data_ret);
     result.size = PyLong_AsUnsignedLongLong(nbytes_ret);
@@ -315,11 +331,15 @@ void pynexus::init_system_bindings(py::module &m) {
 
   make_object_class<Buffer>(m, "_buffer")
       .def("copy", [](Buffer &self, py::object tensor) {
+        auto data_ptr = getPointer(tensor.ptr());
+        if (!data_ptr.runtime_name.empty() && data_ptr.device_id != -1) {
+          // return self.copy(data_ptr.device_id, data_ptr.size, data_ptr.ptr);
+          assert(0);
+        }
         auto local = self.getLocal();
-        auto devp = getPointer(tensor.ptr());
-        if (devp.ptr != nullptr && local.getData() != nullptr &&
-            devp.size == self.getSize()) {
-          return local.copy(devp.ptr);
+        if (data_ptr.ptr != nullptr && local.getData() != nullptr &&
+            data_ptr.size == self.getSize()) {
+          return local.copy(data_ptr.ptr);
         }
         return NXS_InvalidDevice;
       });
@@ -339,9 +359,31 @@ void pynexus::init_system_bindings(py::module &m) {
   make_object_class<Command>(m, "_command")
       .def("get_event", [](Command &self) { return self.getEvent(); })
       .def("get_kernel", [](Command &self) { return self.getKernel(); })
+      .def("set_arg", [](Command &self, int index,
+                         Buffer buf) { return self.setArgument(index, buf); })
       .def("set_arg",
-           [](Command &self, int index, Buffer buf) {
-             return self.setArgument(index, buf);
+           [](Command &self, int index, nxs_int value) {
+             return self.setArgument(index, value);
+           })
+      .def("set_arg",
+           [](Command &self, int index, nxs_uint value) {
+             return self.setArgument(index, value);
+           })
+      .def("set_arg",
+           [](Command &self, int index, nxs_long value) {
+             return self.setArgument(index, value);
+           })
+      .def("set_arg",
+           [](Command &self, int index, nxs_ulong value) {
+             return self.setArgument(index, value);
+           })
+      .def("set_arg",
+           [](Command &self, int index, nxs_float value) {
+             return self.setArgument(index, value);
+           })
+      .def("set_arg",
+           [](Command &self, int index, nxs_double value) {
+             return self.setArgument(index, value);
            })
       .def("finalize", [](Command &self, int groupSize, int gridSize) {
         return self.finalize(groupSize, gridSize);
@@ -385,7 +427,16 @@ void pynexus::init_system_bindings(py::module &m) {
       .def("create_buffer",
            [](Device &self, py::object tensor) {
              auto devp = getPointer(tensor.ptr());
-             return self.createBuffer(devp.size, devp.ptr);
+             bool on_device = false;
+             if (devp.runtime_name.empty() || devp.device_id == -1) {
+               // if it is this device, then on_device is true
+               if (self.getId() == devp.device_id) {
+                 on_device = true;
+               } else {
+                 // make copy
+               }
+             }
+             return self.createBuffer(devp.size, devp.ptr, on_device);
            })
       .def("create_buffer",
            [](Device &self, size_t size) { return self.createBuffer(size); })
@@ -433,8 +484,19 @@ void pynexus::init_system_bindings(py::module &m) {
   m.def("create_buffer",
         [](size_t size) { return nexus::getSystem().createBuffer(size); });
   m.def("create_buffer", [](py::object tens) {
-    auto devp = getPointer(tens.ptr());
-    return nexus::getSystem().createBuffer(devp.size, devp.ptr);
+    auto data_ptr = getPointer(tens.ptr());
+    if (!data_ptr.runtime_name.empty() && data_ptr.device_id != -1) {
+      auto runtime = nexus::getSystem().getRuntime(data_ptr.runtime_name);
+      if (runtime) {
+        auto device = runtime.getDevice(data_ptr.device_id);
+        if (device) {
+          return device.createBuffer(data_ptr.size, data_ptr.ptr);
+        }
+      } else {
+        throw std::runtime_error("Runtime not found: " +
+                                 std::string(data_ptr.runtime_name));
+      }
+    }
+    return nexus::getSystem().createBuffer(data_ptr.size, data_ptr.ptr);
   });
-
 }

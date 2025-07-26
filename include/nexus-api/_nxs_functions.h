@@ -347,19 +347,30 @@ NEXUS_API_FUNC(nxs_status, ReleaseCommand,
 )
 
 /************************************************************************
- * @def CreateCommand
- * @brief Create command buffer on the device
+ * @def SetCommandArgument
+ * @brief Set command argument
  * @return Negative value is an error status.
  *         Non-negative is the bufferId.
  ***********************************************************************/
-NEXUS_API_FUNC(nxs_status, SetCommandArgument,
+ NEXUS_API_FUNC(nxs_status, SetCommandArgument,
     nxs_int command_id,
     nxs_int argument_index,
     nxs_int buffer_id
 )
 /************************************************************************
- * @def CreateCommand
- * @brief Create command buffer on the device
+ * @def SetCommandArgument
+ * @brief Set command argument
+ * @return Negative value is an error status.
+ *         Non-negative is the bufferId.
+ ***********************************************************************/
+ NEXUS_API_FUNC(nxs_status, SetCommandScalar,
+    nxs_int command_id,
+    nxs_int argument_index,
+    void *value
+)
+/************************************************************************
+ * @def FinalizeCommand
+ * @brief Finalize command buffer on the device
  * @return Negative value is an error status.
  *         Non-negative is the bufferId.
  ***********************************************************************/

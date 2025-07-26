@@ -94,9 +94,12 @@ Event detail::DeviceImpl::createEvent(nxs_event_type event_type) {
   return event;
 }
 
-Buffer detail::DeviceImpl::createBuffer(size_t size, const char *data) {
+Buffer detail::DeviceImpl::createBuffer(size_t size, const void *data,
+                                        bool on_device) {
   NEXUS_LOG(NEXUS_STATUS_NOTE, "  createBuffer");
-  APICALL(nxsCreateBuffer, getId(), size, 0, (void *)data);
+  nxs_uint mem_flags =
+      on_device ? NXS_BufferProperty_OnDevice : NXS_BufferProperty_OnHost;
+  APICALL(nxsCreateBuffer, getId(), size, mem_flags, (void *)data);
   Buffer nbuf(Impl(this, apiResult), getId(), size);
   buffers.add(nbuf);
   return nbuf;
@@ -141,8 +144,8 @@ Stream Device::createStream() { NEXUS_OBJ_MCALL(Stream(), createStream); }
 
 Schedule Device::createSchedule() { NEXUS_OBJ_MCALL(Schedule(), createSchedule); }
 
-Buffer Device::createBuffer(size_t size, const void *data) {
-  NEXUS_OBJ_MCALL(Buffer(), createBuffer, size, (const char *)data);
+Buffer Device::createBuffer(size_t size, const void *data, bool on_device) {
+  NEXUS_OBJ_MCALL(Buffer(), createBuffer, size, data, on_device);
 }
 
 Buffer Device::copyBuffer(Buffer buf) { NEXUS_OBJ_MCALL(Buffer(), copyBuffer, buf); }

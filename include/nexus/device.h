@@ -44,7 +44,8 @@ class Device : public Object<detail::DeviceImpl> {
   Library createLibrary(void *libraryData, size_t librarySize);
   Library createLibrary(const std::string &libraryPath);
 
-  Buffer createBuffer(size_t _sz, const void *_hostData = nullptr);
+  Buffer createBuffer(size_t size, const void *data = nullptr,
+                      bool on_device = false);
   Buffer copyBuffer(Buffer buf);
   Buffers getBuffers() const;
 };
