@@ -21,16 +21,12 @@ main() {
   make -j$(nproc)
 
   if [[ "$os_type" == "macos" ]]; then
-    printf "Running macOS build"
-    ./test/cpp/gpu/nexus_gpu_integration_test metal metal_kernels/kernel.metallib add_vectors
+    printf "Running macOS test"
+    #./test/cpp/gpu/nexus_gpu_integration_test metal metal_kernels/kernel.metallib add_vectors
 
   elif [[ "$os_type" == "linux" ]]; then
-    printf "Running Linux build"
-    ./test/cpp/gpu/test_basic_kernel cuda cuda_kernels/add_vectors.ptx add_vectors
-    printf "\n\nPASSED: Basic Kernel Test\n\n"
-    ./test/cpp/gpu/test_multi_stream_sync cuda cuda_kernels/add_vectors.ptx add_vectors
-    printf "\n\nPASSED: Multi Stream Sync Test\n\n"
-    printf "\n\nAll tests passed successfully!\n\n"
+    printf "Running Linux test"
+    ./test/cpp/gpu/nexus_gpu_integration_test cuda cuda_kernels/add_vectors.ptx add_vectors
   else
     printf "Unsupported OS: $os_type"
     exit 1

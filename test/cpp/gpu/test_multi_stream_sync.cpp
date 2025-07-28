@@ -5,12 +5,10 @@
 #include <iostream>
 #include <numeric>
 
-std::vector<std::string_view> nexusArgs;
-
 #define SUCCESS 0
 #define FAILURE 1
 
-int main(int argc, char **argv) {
+int test_multi_stream_sync(int argc, char **argv) {
 
   if (argc < 4) {
     std::cout << "Usage: " << argv[0] << " <runtime_name> <kernel_file> <kernel_name>" << std::endl;

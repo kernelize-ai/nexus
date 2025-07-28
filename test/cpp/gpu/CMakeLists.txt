@@ -92,8 +92,15 @@ if(LINUX)
 endif()
 
 
-add_executable(test_basic_kernel test_basic_kernel.cpp ${DEPS})
-target_link_libraries(test_basic_kernel PRIVATE nexus-api)
 
-add_executable(test_multi_stream_sync test_multi_stream_sync.cpp ${DEPS})
-target_link_libraries(test_multi_stream_sync PRIVATE nexus-api)
+#add_executable(test_basic_kernel test_basic_kernel.cpp ${DEPS})
+#target_link_libraries(test_basic_kernel PRIVATE nexus-api)
+
+#add_executable(test_multi_stream_sync test_multi_stream_sync.cpp ${DEPS})
+#target_link_libraries(test_multi_stream_sync PRIVATE nexus-api)
+
+file(GLOB TEST_SOURCES "*.cpp")
+
+add_nexus_it(NAME nexus_gpu_integration_test
+  SRCS ${TEST_SOURCES}
+  LIBS nexus-api)

@@ -179,10 +179,10 @@ add_subdirectory(third_party/googletest)
 
 enable_testing()
 include(GoogleTest)
-add_custom_target(NexusUnitTests)
-set_target_properties(NexusUnitTests PROPERTIES FOLDER "Tests")
+add_custom_target(NexusIntegrationTest)
+set_target_properties(NexusIntegrationTest PROPERTIES FOLDER "Tests")
 
-function(add_nexus_ut)
+function(add_nexus_it)
   set(options)
   set(oneValueArgs NAME)
   set(multiValueArgs SRCS LIBS DEFS)
@@ -215,14 +215,7 @@ function(add_nexus_ut)
   gtest_discover_tests(${__NAME} DISCOVERY_TIMEOUT 60)
 
   # Add the unit test to the top-level unit test target.
-  add_dependencies(NexusUnitTests ${__NAME})
+  add_dependencies(NexusIntegrationTest ${__NAME})
 endfunction()
 
 add_subdirectory(test)
-
-# This target runs all the unit tests.
-add_custom_target(check-NEXUS-unit-tests
-  COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
-  DEPENDS NexusUnitTests
-  USES_TERMINAL
-)
