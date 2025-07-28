@@ -101,10 +101,6 @@ nxsGetDeviceProperty(nxs_int device_id, nxs_uint property_id,
       std::string name = "sm_" + std::to_string(props.major * 10);
       return rt::getPropertyStr(property_value, property_value_size, name);
     }
-<<<<<<< HEAD
-
-=======
->>>>>>> 67126b6 ([Cuda] Added more properties and fixed execution)
     case NP_MajorVersion:
       return rt::getPropertyInt(property_value, property_value_size,
                                 props.major);
@@ -135,10 +131,6 @@ nxsGetDeviceProperty(nxs_int device_id, nxs_uint property_id,
     case NP_MemoryBusWidth:
       return rt::getPropertyInt(property_value, property_value_size,
                                 props.memoryBusWidth);
-<<<<<<< HEAD
-=======
-
->>>>>>> 67126b6 ([Cuda] Added more properties and fixed execution)
     default:
       return NXS_InvalidProperty;
   }
