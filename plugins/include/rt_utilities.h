@@ -72,7 +72,7 @@ static nxs_status getPropertyVec(void *property_value,
 template <typename T>
 static std::string print_value(T value) {
   std::stringstream ss;
-  ss << " - 0x" << std::hex << reinterpret_cast<uintptr_t>((nxs_ulong)value);
+  ss << " - 0x" << std::hex << (nxs_ulong)value;
   return ss.str();
 }
 

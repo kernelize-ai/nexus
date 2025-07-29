@@ -164,26 +164,11 @@ using namespace nxs;
 ////////////////////////////////////////////////////////////////////////////
 // HIP CHECK and Print value
 ////////////////////////////////////////////////////////////////////////////
-template <typename T>
-std::string print_value(T value) {
-  std::stringstream ss;
-  ss << " - 0x" << std::hex << (int64_t)value;
-  return ss.str();
-}
-
-std::string print_value() { return ""; }
-
-template <typename T, typename... Args>
-std::string print_value(T value, Args... args) {
-  std::stringstream ss;
-  ss << " - 0x" << std::hex << (int64_t)value;
-  return ss.str() + print_value(args...);
-}
 
 #define HIP_CHECK(err_code, hip_cmd, ...)                                     \
   do {                                                                        \
     NXSAPI_LOG(NXSAPI_STATUS_NOTE,                                            \
-               "HIP_CHECK " << #hip_cmd << print_value(__VA_ARGS__));         \
+               "HIP_CHECK " << #hip_cmd << nxs::rt::print_value(__VA_ARGS__));         \
     hipError_t err = hip_cmd(__VA_ARGS__);                                    \
     if (err != hipSuccess) {                                                  \
       NXSAPI_LOG(NXSAPI_STATUS_ERR, "HIP error: " << hipGetErrorString(err)); \
