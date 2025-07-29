@@ -32,11 +32,7 @@ class CommandImpl : public Impl {
     release();
   }
 
-  void release() {
-    auto *rt = getParentOfType<RuntimeImpl>();
-    nxs_int kid = rt->runAPIFunction<NF_nxsReleaseCommand>(getId());
-    arguments.clear();
-  }
+  void release() { arguments.clear(); }
 
   std::optional<Property> getProperty(nxs_int prop) const {
     auto *rt = getParentOfType<RuntimeImpl>();
@@ -63,11 +59,11 @@ class CommandImpl : public Impl {
         getId(), index, buffer.getId());
   }
 
-  nxs_status finalize(nxs_int groupSize, nxs_int gridSize) {
+  nxs_status finalize(nxs_int gridSize, nxs_int groupSize) {
     if (event) return NXS_InvalidArgIndex;
     auto *rt = getParentOfType<RuntimeImpl>();
     return (nxs_status)rt->runAPIFunction<NF_nxsFinalizeCommand>(
-        getId(), groupSize, gridSize);
+        getId(), gridSize, groupSize);
   }
 
  private:
@@ -134,6 +130,6 @@ nxs_status Command::setArgument(nxs_uint index, nxs_double value) {
   NEXUS_OBJ_MCALL(NXS_InvalidCommand, setScalar, index, value);
 }
 
-nxs_status Command::finalize(nxs_int groupSize, nxs_int gridSize) {
-  NEXUS_OBJ_MCALL(NXS_InvalidCommand, finalize, groupSize, gridSize);
+nxs_status Command::finalize(nxs_int gridSize, nxs_int groupSize) {
+  NEXUS_OBJ_MCALL(NXS_InvalidCommand, finalize, gridSize, groupSize);
 }

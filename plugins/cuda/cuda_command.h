@@ -18,9 +18,12 @@ public:
   std::vector<void *> args_ref;
   nxs_long block_size;
   nxs_long grid_size;
-  
-  CudaCommand(CUfunction cudaKernel) : cudaKernel(cudaKernel), type(NXS_CommandType_Dispatch),
-    args(CUDA_COMMAND_MAX_ARGS, nullptr), args_ref(CUDA_COMMAND_MAX_ARGS) {
+
+  CudaCommand(CUfunction cudaKernel = nullptr)
+      : cudaKernel(cudaKernel),
+        type(NXS_CommandType_Dispatch),
+        args(CUDA_COMMAND_MAX_ARGS, nullptr),
+        args_ref(CUDA_COMMAND_MAX_ARGS) {
     for (int i = 0; i < CUDA_COMMAND_MAX_ARGS; i++) {
       args_ref[i] = &args[i];
     }

@@ -18,22 +18,30 @@ namespace rt {
  * Provides efficient allocation and deallocation of objects by reusing them
  * Pool owns all objects and manages them in vector-based storage
  */
-template <typename T>
+template <typename T, size_t chunk_size = 1024>
 class Pool {
  private:
-  std::vector<T> object_storage_;           // Owns all objects
+  typedef std::array<T, chunk_size> Chunk;
+  std::vector<Chunk> object_storage_;       // Owns all objects
   std::vector<nxs_int> available_indices_;  // Indices of available objects
   std::mutex pool_mutex_;
+  nxs_int tail_index_;
+
+  std::pair<nxs_int, nxs_int> getIndexPair(nxs_int index) {
+    if (index < 0) return {-1, -1};
+    return {index / chunk_size, index % chunk_size};
+  }
+
+  Chunk& getChunk(nxs_int index) { return object_storage_[index]; }
 
  public:
   /**
    * Constructor
    * @param initial_capacity Initial capacity for the pool
    */
-  explicit Pool(size_t initial_capacity = 1024) {
-    // Pre-allocate storage
-    object_storage_.reserve(initial_capacity);
-  }
+  explicit Pool() : tail_index_(0) { object_storage_.push_back(Chunk()); }
+
+  ~Pool() { clear(); }
 
   /**
    * Get an object from the pool
@@ -47,22 +55,25 @@ class Pool {
     if (!available_indices_.empty()) {
       nxs_int index = available_indices_.back();
       available_indices_.pop_back();
+      auto [chunk_index, chunk_offset] = getIndexPair(index);
+      auto& chunk = getChunk(chunk_index);
+      new (&chunk[chunk_offset]) T(std::forward<Args>(args)...);
       return index;
     }
 
-    if (object_storage_.size() >= object_storage_.capacity()) {
-      object_storage_.reserve(object_storage_.capacity() + 1024);
+    auto [chunk_index, chunk_offset] = getIndexPair(tail_index_);
+    if (chunk_index >= object_storage_.size()) {
+      object_storage_.push_back(Chunk());
     }
-    // Create new object (no size limit)
-    nxs_int index = object_storage_.size();
-    object_storage_.emplace_back(std::forward<Args>(args)...);
-    return index;
+    auto& chunk = getChunk(chunk_index);
+    new (&chunk[chunk_offset]) T(std::forward<Args>(args)...);
+    return tail_index_++;
   }
 
   template <typename... Args>
   T* get_new(Args&&... args) {
     nxs_int index = acquire(std::forward<Args>(args)...);
-    return &object_storage_[index];
+    return get(index);
   }
 
   /**
@@ -75,9 +86,15 @@ class Pool {
     std::lock_guard<std::mutex> lock(pool_mutex_);
 
     // Find the index of the object
-    nxs_int index = obj - &object_storage_[0];
-    if (index < object_storage_.size()) {
-      available_indices_.push_back(index);
+    nxs_int chunk_index = 0;
+    for (auto& chunk : object_storage_) {
+      auto chunk_offset = obj - &chunk[0];
+      if (chunk_offset >= 0 && chunk_offset < chunk_size) {
+        // obj->~T();
+        available_indices_.push_back(chunk_index * chunk_size + chunk_offset);
+        return;
+      }
+      chunk_index++;
     }
   }
 
@@ -86,14 +103,18 @@ class Pool {
    * @param index Index of object to release
    */
   void release(nxs_int index) {
-    if (index < 0 || index >= object_storage_.size()) return;
+    if (index < 0 || index >= tail_index_) return;
     std::lock_guard<std::mutex> lock(pool_mutex_);
+    auto* obj = get(index);
+    // if (obj) obj->~T();
     available_indices_.push_back(index);
   }
 
   T* get(nxs_int index) {
-    if (index < 0 || index >= object_storage_.size()) return nullptr;
-    return &object_storage_[index];
+    if (index < 0 || index >= tail_index_) return nullptr;
+    auto [chunk_index, chunk_offset] = getIndexPair(index);
+    auto& chunk = getChunk(chunk_index);
+    return &chunk[chunk_offset];
   }
 
   /**
@@ -127,7 +148,7 @@ class Pool {
    * Get current capacity of the pool
    * @return Current capacity
    */
-  size_t capacity() const { return object_storage_.capacity(); }
+  size_t capacity() const { return tail_index_; }
 
   /**
    * Get total number of objects currently in use

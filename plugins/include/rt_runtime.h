@@ -14,11 +14,11 @@ class Runtime {
   Pool<rt::Object> objects;
 
 public:
-  Runtime() : objects(1024) {}
-  ~Runtime() {}
+ Runtime() {}
+ ~Runtime() {}
 
-  nxs_int addObject(void *obj = nullptr, bool is_owned = false) {
-    return objects.acquire(obj, is_owned);
+ nxs_int addObject(void *obj = nullptr, bool is_owned = false) {
+   return objects.acquire(obj, is_owned);
   }
   nxs_int addObject(nxs_long value) { return objects.acquire(value); }
 

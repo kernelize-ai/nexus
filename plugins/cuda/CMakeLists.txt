@@ -2,7 +2,7 @@
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/runtime_libs")
 #set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}")
 
-add_library(cuda_plugin SHARED cuda_runtime.cpp)
+add_library(cuda_plugin SHARED cuda_runtime.cpp cuda_schedule.cpp)
 
 if(UNIX AND (NOT APPLE))
   find_package(CUDAToolkit REQUIRED)

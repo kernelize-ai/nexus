@@ -61,26 +61,24 @@ static DevPtr getPointer(PyObject *obj) {
   return result;
 }
 
-#if 0
-static DevPtr getPointer(py::object obj) {
-    DevPtr result = { nullptr, 0 };
-    if (obj.is_none()) {
-        return result;
+static Buffer make_buffer(py::object tensor) {
+  // TODO: track ownership of the py::object tensor (release on destruction of
+  // Buffer)
+  auto data_ptr = getPointer(tensor.ptr());
+  if (!data_ptr.runtime_name.empty() && data_ptr.device_id != -1) {
+    auto runtime = nexus::getSystem().getRuntime(data_ptr.runtime_name);
+    if (runtime) {
+      auto device = runtime.getDevice(data_ptr.device_id);
+      if (device) {
+        return device.createBuffer(data_ptr.size, data_ptr.ptr, true);
+      }
+    } else {
+      throw std::runtime_error("Runtime not found: " +
+                               std::string(data_ptr.runtime_name));
     }
-    py::object data_ptr_m = obj.attr("data_ptr");
-    py::object nbytes_ret = obj.attr("nbytes");
-    if (!data_ptr_m.is_none() && !nbytes_res.is_none()) {
-        py::object data_ret = data_ptr_m();
-        if (!PyLong_Check(data_ret)) {
-            PyErr_SetString(PyExc_TypeError, "data_ptr method of Pointer object must return 64-bit int");
-            return result;
-        }
-        result.ptr = (void *)data_ret.cast<int64_t>();
-        result.size = PyLong_AsUnsignedLongLong(nbytes_ret);
-    }
-    return result;
+  }
+  return nexus::getSystem().createBuffer(data_ptr.size, data_ptr.ptr);
 }
-#endif
 
 //////////////////////////////////////////////////////////////////////////
 // Property key string conversion
@@ -385,8 +383,12 @@ void pynexus::init_system_bindings(py::module &m) {
            [](Command &self, int index, nxs_double value) {
              return self.setArgument(index, value);
            })
-      .def("finalize", [](Command &self, int groupSize, int gridSize) {
-        return self.finalize(groupSize, gridSize);
+      .def("set_arg",
+           [](Command &self, int index, py::object value) {
+             return self.setArgument(index, make_buffer(value));
+           })
+      .def("finalize", [](Command &self, int gridSize, int groupSize) {
+        return self.finalize(gridSize, groupSize);
       });
 
   make_object_class<Schedule>(m, "_schedule")
@@ -483,20 +485,5 @@ void pynexus::init_system_bindings(py::module &m) {
   // create System Buffers
   m.def("create_buffer",
         [](size_t size) { return nexus::getSystem().createBuffer(size); });
-  m.def("create_buffer", [](py::object tens) {
-    auto data_ptr = getPointer(tens.ptr());
-    if (!data_ptr.runtime_name.empty() && data_ptr.device_id != -1) {
-      auto runtime = nexus::getSystem().getRuntime(data_ptr.runtime_name);
-      if (runtime) {
-        auto device = runtime.getDevice(data_ptr.device_id);
-        if (device) {
-          return device.createBuffer(data_ptr.size, data_ptr.ptr);
-        }
-      } else {
-        throw std::runtime_error("Runtime not found: " +
-                                 std::string(data_ptr.runtime_name));
-      }
-    }
-    return nexus::getSystem().createBuffer(data_ptr.size, data_ptr.ptr);
-  });
+  m.def("create_buffer", [](py::object tensor) { return make_buffer(tensor); });
 }

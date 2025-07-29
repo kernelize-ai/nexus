@@ -475,65 +475,6 @@ extern "C" nxs_int NXS_API_CALL nxsCreateStream(nxs_int device_id,
   return rt->addObject(stream, false);
 }
 
- /************************************************************************
- * @def CreateCommandBuffer
- * @brief Create command buffer on the device
- * @return Negative value is an error status.
- *         Non-negative is the bufferId.
- ***********************************************************************/
-extern "C" nxs_int NXS_API_CALL nxsCreateSchedule(
-  nxs_int device_id,
-  nxs_uint sched_properties
-)
-{
-  auto rt = getRuntime();
-
-  auto deviceObject = rt->getObject(device_id);
-  auto dev = deviceObject ? (*deviceObject)->get<CudaDevice>() : nullptr;
-  if (!dev)
-   return NXS_InvalidDevice;
-
-  CudaSchedule *schedule = new CudaSchedule(device_id);
-  return rt->addObject(schedule, true);
-}
-
-
-/************************************************************************
-* @def ReleaseCommandList
-* @brief Release the buffer on the device
-* @return Error status or Succes.
-***********************************************************************/
-extern "C" nxs_status NXS_API_CALL nxsRunSchedule(
-  nxs_int schedule_id,
-  nxs_int stream_id,
-  nxs_bool blocking
-)
-{
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "runSchedule " << schedule_id << " - "
-                                                << stream_id << " - "
-                                                << blocking);
-
-  auto rt = getRuntime();
-
-  auto scheduleObject = rt->getObject(schedule_id);
-  auto schedule = scheduleObject ? (*scheduleObject)->get<CudaSchedule>() : nullptr;
-  if (!schedule) return NXS_InvalidSchedule;
-  auto device = rt->getDevice(schedule->device_id);
-  if (!device) return NXS_InvalidDevice;
-
-  auto stream = rt->getPtr<cudaStream_t>(stream_id);
-  auto status = schedule->run(stream);
-  if (!nxs_success(status)) return status;
-
-  if (blocking)
-    if (stream)
-      CUDA_CHECK(NXS_InvalidStream, cudaStreamSynchronize, stream);
-    else
-      CUDA_CHECK(NXS_InvalidStream, cudaDeviceSynchronize);
-
-  return NXS_Success;
-}
-
 /************************************************************************
  * @def GetStreamProperty
  * @brief Return Stream properties
@@ -554,6 +495,74 @@ extern "C" nxs_status NXS_API_CALL nxsReleaseStream(nxs_int stream_id) {
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "releaseStream " << stream_id);
   auto rt = getRuntime();
   if (!rt->dropObject(stream_id)) return NXS_InvalidStream;
+  return NXS_Success;
+}
+
+/************************************************************************
+ * @def CreateSchedule
+ * @brief Create schedule on the device
+ * @return Negative value is an error status.
+ *         Non-negative is the bufferId.
+ ***********************************************************************/
+extern "C" nxs_int NXS_API_CALL nxsCreateSchedule(
+  nxs_int device_id,
+  nxs_uint sched_properties
+)
+{
+  auto rt = getRuntime();
+
+  auto dev = rt->getDevice(device_id);
+  if (!dev) return NXS_InvalidDevice;
+
+  auto schedule = rt->getSchedule(device_id);
+  if (!schedule) return NXS_InvalidSchedule;
+  return rt->addObject(schedule);
+}
+/************************************************************************
+ * @def ReleaseSchedule
+ * @brief Release the schedule on the device
+ * @return Error status or Succes.
+ ***********************************************************************/
+extern "C" nxs_status NXS_API_CALL nxsReleaseSchedule(nxs_int schedule_id) {
+  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "releaseSchedule " << schedule_id);
+  auto rt = getRuntime();
+  auto sched = rt->get<CudaSchedule>(schedule_id);
+  if (!sched) return NXS_InvalidSchedule;
+  sched->release(rt);
+  if (!rt->dropObject(schedule_id)) return NXS_InvalidSchedule;
+  return NXS_Success;
+}
+
+/************************************************************************
+ * @def RunSchedule
+ * @brief Run the schedule on the device
+ * @return Error status or Succes.
+ ***********************************************************************/
+extern "C" nxs_status NXS_API_CALL nxsRunSchedule(
+  nxs_int schedule_id,
+  nxs_int stream_id,
+  nxs_bool blocking
+)
+{
+  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "runSchedule " << schedule_id << " - "
+                                                << stream_id << " - "
+                                                << blocking);
+
+  auto rt = getRuntime();
+
+  auto schedule = rt->get<CudaSchedule>(schedule_id);
+  if (!schedule) return NXS_InvalidSchedule;
+
+  auto stream = rt->getPtr<cudaStream_t>(stream_id);
+  auto status = schedule->run(stream);
+  if (!nxs_success(status)) return status;
+
+  if (blocking)
+    if (stream)
+      CUDA_CHECK(NXS_InvalidStream, cudaStreamSynchronize, stream);
+    else
+      CUDA_CHECK(NXS_InvalidStream, cudaDeviceSynchronize);
+
   return NXS_Success;
 }
 
@@ -667,13 +676,12 @@ extern "C" nxs_status NXS_API_CALL nxsSetCommandScalar(nxs_int command_id,
  * @return Error status or Succes.
  ***********************************************************************/
 
-extern "C" nxs_status NXS_API_CALL
-nxsFinalizeCommand(
-  nxs_int command_id,
-  nxs_int group_size,
-  nxs_int grid_size
-)
-{
+extern "C" nxs_status NXS_API_CALL nxsFinalizeCommand(nxs_int command_id,
+                                                      nxs_int grid_size,
+                                                      nxs_int group_size) {
+  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "finalizeCommand " << command_id << " - "
+                                                    << grid_size << " - "
+                                                    << group_size);
   auto rt = getRuntime();
 
   auto command = rt->get<CudaCommand>(command_id);

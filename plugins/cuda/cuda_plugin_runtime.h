@@ -16,10 +16,11 @@ public:
   nxs_int current_device = -1;
   rt::Pool<rt::Buffer> buffer_pool;
   rt::Pool<CudaCommand> command_pool;
-  rt::Pool<CudaSchedule> schedule_pool;
+  rt::Pool<CudaSchedule, 256> schedule_pool;
 
   CudaRuntime() : rt::Runtime() { setupCudaDevices(); }
   ~CudaRuntime() = default;
+
   template <typename T>
   T getPtr(nxs_int id) {
     return static_cast<T>(get(id));
@@ -63,6 +64,10 @@ public:
     return buffer_pool.get_new(size, data_ptr, copy_data);
   }
   void release(rt::Buffer *buffer) { buffer_pool.release(buffer); }
+
+  CudaSchedule *getSchedule(nxs_int device_id) {
+    return schedule_pool.get_new(device_id);
+  }
 
   CudaCommand *getCommand(CUfunction kernel) {
     return command_pool.get_new(kernel);

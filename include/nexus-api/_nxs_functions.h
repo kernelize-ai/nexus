@@ -338,15 +338,6 @@ NEXUS_API_FUNC(nxs_status, GetCommandProperty,
     size_t* property_value_size
 )
 /************************************************************************
- * @def ReleaseCommandList
- * @brief Release the buffer on the device
-  * @return Error status or Succes.
-***********************************************************************/
-NEXUS_API_FUNC(nxs_status, ReleaseCommand,
-    nxs_int command_id
-)
-
-/************************************************************************
  * @def SetCommandArgument
  * @brief Set command argument
  * @return Negative value is an error status.
@@ -376,8 +367,8 @@ NEXUS_API_FUNC(nxs_status, ReleaseCommand,
  ***********************************************************************/
 NEXUS_API_FUNC(nxs_status, FinalizeCommand,
     nxs_int command_id,
-    nxs_int group_size,
-    nxs_int grid_size
+    nxs_int grid_size,
+    nxs_int group_size
 )
 
 

@@ -4,8 +4,9 @@
 #include <nexus-api.h>
 
 #include <cstring>
+#include <iomanip>
+#include <sstream>
 #include <string>
-#include <cstring>
 
 namespace nxs {
 namespace rt {
@@ -64,6 +65,22 @@ static nxs_status getPropertyVec(void *property_value,
     *property_value_size = size;
   }
   return NXS_Success;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//  Dump debug
+template <typename T>
+static std::string print_value(T value) {
+  std::stringstream ss;
+  ss << " - 0x" << std::hex << reinterpret_cast<uintptr_t>((nxs_ulong)value);
+  return ss.str();
+}
+
+static std::string print_value() { return ""; }
+
+template <typename T, typename... Args>
+static std::string print_value(T value, Args... args) {
+  return print_value(value) + print_value(args...);
 }
 
 }  // namespace rt

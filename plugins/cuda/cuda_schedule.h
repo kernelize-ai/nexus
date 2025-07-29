@@ -12,14 +12,16 @@ class CudaRuntime;
 using namespace nxs;
 
 class CudaSchedule {
- public:
   typedef std::vector<CudaCommand *> Commands;
 
   nxs_int device_id;
   Commands commands;
 
-  CudaSchedule(nxs_int dev_id) : device_id(dev_id) {}
-  ~CudaSchedule() = default;
+ public:
+  nxs_int getDeviceId() const { return device_id; }
+
+  CudaSchedule(nxs_int dev_id = -1) : device_id(dev_id) { commands.reserve(8); }
+  ~CudaSchedule() { commands.clear(); }
 
   void addCommand(CudaCommand *command) {
     commands.push_back(command);

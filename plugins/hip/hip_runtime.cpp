@@ -252,9 +252,9 @@ class HipCommand {
         return NXS_InvalidCommand;
     }
   }
-  void setDimensions(nxs_int block_size, nxs_int grid_size) {
-    this->block_size = block_size;
+  void setDimensions(nxs_int grid_size, nxs_int block_size) {
     this->grid_size = grid_size;
+    this->block_size = block_size;
   }
   void release() {
   }
@@ -752,8 +752,8 @@ extern "C" nxs_int NXS_API_CALL nxsCreateSchedule(nxs_int device_id,
 }
 
 /************************************************************************
- * @def ReleaseCommandList
- * @brief Release the buffer on the device
+ * @def RunSchedule
+ * @brief Run the schedule on the device
  * @return Error status or Succes.
  ***********************************************************************/
 extern "C" nxs_status NXS_API_CALL nxsRunSchedule(nxs_int schedule_id,
@@ -897,27 +897,16 @@ extern "C" nxs_status NXS_API_CALL nxsSetCommandArgument(nxs_int command_id,
  *         Non-negative is the bufferId.
  ***********************************************************************/
 extern "C" nxs_status NXS_API_CALL nxsFinalizeCommand(nxs_int command_id,
-                                                      nxs_int group_size,
-                                                      nxs_int grid_size) {
+                                                      nxs_int grid_size,
+                                                      nxs_int group_size) {
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "finalizeCommand " << command_id << " - "
-                                                    << group_size << " - "
-                                                    << grid_size);
+                                                    << grid_size << " - "
+                                                    << group_size);
   auto rt = getRuntime();
   auto cmd = rt->get<HipCommand>(command_id);
   if (!cmd) return NXS_InvalidCommand;
 
-  cmd->setDimensions(group_size, grid_size);
+  cmd->setDimensions(grid_size, group_size);
 
-  return NXS_Success;
-}
-
-/************************************************************************
- * @def ReleaseCommand
- * @brief Release the command on the device
- * @return Error status or Succes.
- ***********************************************************************/
-extern "C" nxs_status NXS_API_CALL nxsReleaseCommand(nxs_int command_id) {
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "releaseCommand " << command_id);
-  auto rt = getRuntime();
   return NXS_Success;
 }

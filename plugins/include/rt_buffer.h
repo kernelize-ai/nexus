@@ -14,7 +14,7 @@ class Buffer {
   bool copy_data;
 
  public:
-  Buffer(size_t size, void *data_ptr = nullptr, bool copy_data = false)
+  Buffer(size_t size = 0, void *data_ptr = nullptr, bool copy_data = false)
       : buf((char *)data_ptr), sz(size), copy_data(copy_data) {
     if (copy_data) {
       buf = (char *)malloc(size);

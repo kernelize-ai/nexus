@@ -243,9 +243,9 @@ class MetalCommand {
         return NXS_InvalidCommand;
     }
   }
-  void setDimensions(nxs_int group_size, nxs_int grid_size) {
-    this->group_size = group_size;
+  void setDimensions(nxs_int grid_size, nxs_int group_size) {
     this->grid_size = grid_size;
+    this->group_size = group_size;
   }
   void release() {
     // TODO: release the command buffer
@@ -779,8 +779,8 @@ extern "C" nxs_int nxsCreateSchedule(nxs_int device_id,
 }
 
 /************************************************************************
- * @def ReleaseCommandList
- * @brief Release the buffer on the device
+ * @def RunSchedule
+ * @brief Run the schedule on the device
  * @return Error status or Succes.
  ***********************************************************************/
 extern "C" nxs_status nxsRunSchedule(nxs_int schedule_id, nxs_int stream_id, nxs_bool blocking) {
@@ -925,26 +925,13 @@ extern "C" nxs_status NXS_API_CALL nxsSetCommandArgument(nxs_int command_id,
  *         Non-negative is the bufferId.
  ***********************************************************************/
 extern "C" nxs_status NXS_API_CALL nxsFinalizeCommand(nxs_int command_id,
-                                                      nxs_int group_size,
-                                                      nxs_int grid_size) {
+                                                      nxs_int grid_size,
+                                                      nxs_int group_size) {
   auto rt = getRuntime();
   auto cmd = rt->get<MetalCommand>(command_id);
   if (!cmd) return NXS_InvalidCommand;
 
-  cmd->setDimensions(group_size, grid_size);
+  cmd->setDimensions(grid_size, group_size);
 
   return NXS_Success;
 }
-
-/************************************************************************
- * @def ReleaseCommand
- * @brief Release the command on the device
- * @return Error status or Succes.
- ***********************************************************************/
-extern "C" nxs_status NXS_API_CALL nxsReleaseCommand(nxs_int command_id) {
-  auto rt = getRuntime();
-  if (!rt->dropObject(command_id, release_fn<MetalCommand>))
-    return NXS_InvalidCommand;
-  return NXS_Success;
-}
-

@@ -346,8 +346,8 @@ extern "C" nxs_int NXS_API_CALL nxsCreateSchedule(nxs_int device_id,
 }
 
 /************************************************************************
- * @def ReleaseCommandList
- * @brief Release the buffer on the device
+ * @def RunSchedule
+ * @brief Run the schedule on the device
  * @return Error status or Succes.
  ***********************************************************************/
 extern "C" nxs_status NXS_API_CALL nxsRunSchedule(nxs_int schedule_id,
@@ -484,8 +484,8 @@ extern "C" nxs_status NXS_API_CALL nxsSetCommandArgument(nxs_int command_id,
  *         Non-negative is the bufferId.
  ***********************************************************************/
 extern "C" nxs_status NXS_API_CALL nxsFinalizeCommand(nxs_int command_id,
-                                                      nxs_int group_size,
-                                                      nxs_int grid_size) {
+                                                      nxs_int grid_size,
+                                                      nxs_int group_size) {
   auto rt = getRuntime();
   auto cmd = rt->getObject(command_id);
   if (!cmd) return NXS_InvalidCommand;
@@ -496,26 +496,5 @@ extern "C" nxs_status NXS_API_CALL nxsFinalizeCommand(nxs_int command_id,
   auto local_buf = new rt::Buffer(sizeof(local_size), local_size, true);
   (*cmd)->addChild(rt->addObject(global_buf, true));
   (*cmd)->addChild(rt->addObject(local_buf, true));
-  return NXS_Success;
-}
-
-/************************************************************************
- * @def ReleaseCommand
- * @brief Release the command on the device
- * @return Error status or Succes.
- ***********************************************************************/
-extern "C" nxs_status NXS_API_CALL nxsReleaseCommand(nxs_int command_id) {
-  auto rt = getRuntime();
-  auto cmd = rt->getObject(command_id);
-  if (!cmd) return NXS_InvalidCommand;
-  auto children = (*cmd)->getChildren();
-  if (children.size() < 2) return NXS_InvalidCommand;
-  auto global_size_id = children[children.size() - 2];
-  auto local_size_id = children[children.size() - 1];
-  if (!rt->dropObject(global_size_id, rt::delete_fn<rt::Buffer>))
-    return NXS_InvalidBuffer;
-  if (!rt->dropObject(local_size_id, rt::delete_fn<rt::Buffer>))
-    return NXS_InvalidBuffer;
-  if (!rt->dropObject(command_id)) return NXS_InvalidCommand;
   return NXS_Success;
 }
