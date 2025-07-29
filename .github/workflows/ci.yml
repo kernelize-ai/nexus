@@ -64,21 +64,9 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install -r requirements.txt
 
-    - name: Configure CMake MacOS
+    - name: Build and test Nexus
       run: |
-        mkdir build
-        cd build
-        cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} -DNEXUS_BUILD_PYTHON_MODULE=ON -DNEXUS_BUILD_PLUGINS=ON
-
-    - name: Build MacOS
-      run: |
-        cd build
-        make -j$(sysctl -n hw.ncpu)
-
-    - name: Run tests MacOS
-      run: |
-        cd build
-        ctest --output-on-failure
+        ./test/packaging/test_build.sh
 
   # build-windows:
   #   runs-on: windows-latest
