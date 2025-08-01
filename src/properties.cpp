@@ -74,7 +74,7 @@ class PropertiesImpl {
       // get from json type
       propType = getNodeType(node);
     }
-    NEXUS_LOG(NEXUS_STATUS_NOTE, "  Properties.getValue - " << propType);
+    // NEXUS_LOG(NEXUS_STATUS_NOTE, "  Properties.getValue - " << propType);
     switch (propType) {
       case NPT_INT:
         return Property(node.get<nxs_long>());
@@ -102,8 +102,8 @@ class PropertiesImpl {
       try {
         auto tail = path.back();
         auto typeId = nxsGetPropEnum(tail.c_str());
-        NEXUS_LOG(NEXUS_STATUS_NOTE,
-                  "  Properties.getProp - " << tail << " - " << typeId);
+        // NEXUS_LOG(NEXUS_STATUS_NOTE,
+        //           "  Properties.getProp - " << tail << " - " << typeId);
         auto node = getNode(path);
         if (node.is_object()) {
           if (tail == "Keys") return getKeys(node);

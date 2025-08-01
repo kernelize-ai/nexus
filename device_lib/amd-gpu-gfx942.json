@@ -153,6 +153,867 @@
       "ratiotoFP32": 0.5
     }
   },
+  "target": {
+    "properties": {
+      "target_name": "gfx942",
+      "architecture": "amdgcn",
+      "generation": "GFX9",
+      "family": "CDNA2",
+      "llvm_target": "AMDGPU",
+      "isa_version": {
+        "major": 9,
+        "minor": 4,
+        "stepping": 2
+      },
+      "elf_machine_type": "EF_AMDGPU_MACH_AMDGCN_GFX942",
+      "elf_machine_code": "0x04c"
+    },
+    "compute_capabilities": {
+      "wavefront_size": 64,
+      "max_workgroup_size": 1024,
+      "local_memory_size": 65536,
+      "supports_generic_address_space": true,
+      "address_space_pointer_size": 64,
+      "supports_flat_instructions": true,
+      "supports_architected_flat_scratch": true,
+      "supports_architected_sgprs": true
+    },
+    "target_features": {
+      "16_bit_insts": true,
+      "atomic_buffer_global_pk_add_f16_insts": true,
+      "atomic_ds_pk_add_16_insts": true,
+      "atomic_fadd_rtn_insts": true,
+      "atomic_flat_pk_add_16_insts": true,
+      "atomic_global_pk_add_bf16_inst": true,
+      "atomic_buffer_pk_add_bf16_inst": true,
+      "ci_insts": true,
+      "dl_insts": true,
+      "dot1_insts": true,
+      "dot2_insts": true,
+      "dot3_insts": true,
+      "dot4_insts": true,
+      "dot5_insts": true,
+      "dot6_insts": true,
+      "dot7_insts": true,
+      "dot8_insts": true,
+      "dot9_insts": true,
+      "dot10_insts": true,
+      "dpp": true,
+      "fp8_insts": true,
+      "gfx8_insts": true,
+      "gfx9_insts": true,
+      "gfx90a_insts": true,
+      "gfx940_insts": true,
+      "mai_insts": true,
+      "s_memrealtime": true,
+      "s_memtime_inst": true,
+      "wavefrontsize64": true,
+      "packed_tid": true,
+      "image_insts": true,
+      "extended_image_insts": true,
+      "fp8_conversion_insts": true,
+      "vcmpx_permlane_hazard": true,
+      "salu_float_insts": true,
+      "pseudo_scalar_trans": true,
+      "has_restricted_soffset": true,
+      "scalar_dwordx3_loads": true,
+      "dpp_src1_sgpr": true,
+      "max_hard_clause_length_32": true,
+      "1_5x_vgprs": true,
+      "memory_atomic_fadd_f32_denormal_support": true,
+      "bvh_dual_and_bvh8_insts": true
+    },
+    "instruction_sets": {
+      "ds_instructions": {
+        "supported": true,
+        "atomic_operations": true,
+        "floating_point_atomics": true,
+        "packed_operations": true,
+        "examples": [
+          "ds_add_f32",
+          "ds_add_f64",
+          "ds_pk_add_bf16",
+          "ds_pk_add_f16",
+          "ds_read_b32",
+          "ds_write_b32",
+          "ds_cmpst_f32",
+          "ds_max_f32"
+        ]
+      },
+      "flat_instructions": {
+        "supported": true,
+        "global_memory": true,
+        "scratch_memory": true,
+        "atomic_operations": true,
+        "examples": [
+          "flat_load_dword",
+          "flat_store_dword",
+          "flat_atomic_add",
+          "flat_atomic_add_f32",
+          "flat_atomic_pk_add_f16",
+          "global_load_dword",
+          "scratch_load_dword"
+        ]
+      },
+      "buffer_instructions": {
+        "supported": true,
+        "typed_buffer_loads": true,
+        "format_conversion": true,
+        "atomic_operations": true,
+        "examples": [
+          "buffer_load_dword",
+          "buffer_store_dword",
+          "buffer_atomic_add",
+          "buffer_atomic_add_f32",
+          "buffer_load_format_x"
+        ]
+      },
+      "scalar_memory_instructions": {
+        "supported": true,
+        "cache_control": true,
+        "atomic_operations": true,
+        "examples": [
+          "s_load_dword",
+          "s_store_dword",
+          "s_atomic_add",
+          "s_memtime",
+          "s_memrealtime"
+        ]
+      },
+      "vector_alu_instructions": {
+        "vop1": {
+          "supported": true,
+          "floating_point": true,
+          "integer": true,
+          "conversion": true,
+          "examples": [
+            "v_mov_b32",
+            "v_cvt_f32_i32",
+            "v_sqrt_f32",
+            "v_rcp_f32",
+            "v_cvt_f32_bf8",
+            "v_cvt_f32_fp8"
+          ]
+        },
+        "vop2": {
+          "supported": true,
+          "arithmetic": true,
+          "comparison": true,
+          "packed_operations": true,
+          "examples": [
+            "v_add_f32",
+            "v_mul_f32",
+            "v_dot2c_f32_f16",
+            "v_dot4c_i32_i8",
+            "v_pk_fmac_f16"
+          ]
+        },
+        "vop3": {
+          "supported": true,
+          "three_operand": true,
+          "modifiers": true,
+          "comparison": true,
+          "examples": [
+            "v_mad_f32",
+            "v_fma_f32",
+            "v_cmp_lt_f32",
+            "v_div_fixup_f32",
+            "v_dot2_f32_f16"
+          ]
+        },
+        "vop3p": {
+          "supported": true,
+          "packed_operations": true,
+          "matrix_operations": true,
+          "mixed_precision": true,
+          "examples": [
+            "v_pk_add_f16",
+            "v_pk_mul_f16",
+            "v_mfma_f32_16x16x4_f32",
+            "v_mfma_f32_32x32x8_f16",
+            "v_dot2_f32_f16"
+          ]
+        }
+      },
+      "scalar_alu_instructions": {
+        "sop1": {
+          "supported": true,
+          "examples": [
+            "s_mov_b32",
+            "s_not_b32",
+            "s_brev_b32"
+          ]
+        },
+        "sop2": {
+          "supported": true,
+          "examples": [
+            "s_add_u32",
+            "s_and_b32",
+            "s_lshl_b32"
+          ]
+        },
+        "sopc": {
+          "supported": true,  
+          "examples": [
+            "s_cmp_eq_i32",
+            "s_cmp_gt_i32"
+          ]
+        },
+        "sopk": {
+          "supported": true,
+          "examples": [
+            "s_movk_i32",
+            "s_addk_i32"
+          ]
+        },
+        "sopp": {
+          "supported": true,
+          "examples": [
+            "s_nop",
+            "s_endpgm",
+            "s_barrier"
+          ]
+        }
+      }
+    },
+    "matrix_operations": {
+      "mfma_instructions": {
+        "supported": true,
+        "encoding": "VOP3P-MAI",
+        "wavefront_execution": true,
+        "precision_support": {
+          "f32": true,
+          "f16": true,
+          "bf16": true,
+          "i8": true,
+          "f64": true,
+          "fp8": true,
+          "bf8": true
+        },
+        "performance_characteristics": {
+          "preferred_size": "16x16",
+          "power_efficiency": "mfma_16x16 > mfma_32x32",
+          "clock_variation_across_xcds": "3-10%",
+          "hotspotting_avoidance": "avoid matrix stride multiples of 512 bytes"
+        },
+        "detailed_instructions": {
+          "v_mfma_f32_4x4x1f32": {
+            "matrix_dimensions": {"M": 4, "N": 4, "K": 1, "blocks": 16},
+            "flops": 512,
+            "execution_cycles": 8,
+            "flops_per_cu_per_cycle": 256,
+            "can_coexecute_with_valu": true,
+            "valu_coexecution_cycles": 4,
+            "register_usage": {
+              "gprs_required_a": 1,
+              "gprs_required_b": 1,
+              "gprs_required_c": 4,
+              "gprs_required_d": 4,
+              "gpr_alignment": "8_bytes"
+            },
+            "issue_latency_cycles": 1,
+            "data_latency_cycles": 8,
+            "throughput_cycles": 8
+          },
+          "v_mfma_f32_16x16x1f32": {
+            "matrix_dimensions": {"M": 16, "N": 16, "K": 1, "blocks": 4},
+            "flops": 1024,
+            "execution_cycles": 16,
+            "flops_per_cu_per_cycle": 256,
+            "can_coexecute_with_valu": true,
+            "valu_coexecution_cycles": 8,
+            "register_usage": {
+              "gprs_required_a": 1,
+              "gprs_required_b": 1,
+              "gprs_required_c": 16,
+              "gprs_required_d": 16,
+              "gpr_alignment": "8_bytes"
+            },
+            "issue_latency_cycles": 1,
+            "data_latency_cycles": 16,
+            "throughput_cycles": 16
+          },
+          "v_mfma_f32_16x16x4f32": {
+            "matrix_dimensions": {"M": 16, "N": 16, "K": 4, "blocks": 1},
+            "flops": 2048,
+            "execution_cycles": 32,
+            "flops_per_cu_per_cycle": 256,
+            "can_coexecute_with_valu": true,
+            "valu_coexecution_cycles": 16,
+            "register_usage": {
+              "gprs_required_a": 4,
+              "gprs_required_b": 4,
+              "gprs_required_c": 16,
+              "gprs_required_d": 16,
+              "gpr_alignment": "8_bytes"
+            },
+            "issue_latency_cycles": 1,
+            "data_latency_cycles": 32,
+            "throughput_cycles": 32
+          },
+          "v_mfma_f32_16x16x16f16": {
+            "matrix_dimensions": {"M": 16, "N": 16, "K": 16, "blocks": 1},
+            "flops": 8192,
+            "execution_cycles": 32,
+            "flops_per_cu_per_cycle": 1024,
+            "can_coexecute_with_valu": true,
+            "valu_coexecution_cycles": 16,
+            "register_usage": {
+              "gprs_required_a": 8,
+              "gprs_required_b": 8,
+              "gprs_required_c": 16,
+              "gprs_required_d": 16,
+              "gpr_alignment": "8_bytes"
+            },
+            "issue_latency_cycles": 1,
+            "data_latency_cycles": 32,
+            "throughput_cycles": 32,
+            "preferred": true
+          },
+          "v_mfma_f32_32x32x1f32": {
+            "matrix_dimensions": {"M": 32, "N": 32, "K": 1, "blocks": 1},
+            "flops": 2048,
+            "execution_cycles": 64,
+            "flops_per_cu_per_cycle": 128,
+            "can_coexecute_with_valu": true,
+            "valu_coexecution_cycles": 32,
+            "register_usage": {
+              "gprs_required_a": 1,
+              "gprs_required_b": 1,
+              "gprs_required_c": 32,
+              "gprs_required_d": 32,
+              "gpr_alignment": "8_bytes"
+            },
+            "issue_latency_cycles": 1,
+            "data_latency_cycles": 64,
+            "throughput_cycles": 64
+          },
+          "v_mfma_f32_32x32x8f16": {
+            "matrix_dimensions": {"M": 32, "N": 32, "K": 8, "blocks": 1},
+            "flops": 16384,
+            "execution_cycles": 64,
+            "flops_per_cu_per_cycle": 1024,
+            "can_coexecute_with_valu": true,
+            "valu_coexecution_cycles": 32,
+            "register_usage": {
+              "gprs_required_a": 8,
+              "gprs_required_b": 8,
+              "gprs_required_c": 32,
+              "gprs_required_d": 32,
+              "gpr_alignment": "8_bytes"
+            },
+            "issue_latency_cycles": 1,
+            "data_latency_cycles": 64,
+            "throughput_cycles": 64
+          },
+          "v_mfma_i32_16x16x32i8": {
+            "matrix_dimensions": {"M": 16, "N": 16, "K": 32, "blocks": 1},
+            "ops": 16384,
+            "execution_cycles": 32,
+            "ops_per_cu_per_cycle": 2048,
+            "can_coexecute_with_valu": true,
+            "valu_coexecution_cycles": 16,
+            "register_usage": {
+              "gprs_required_a": 8,
+              "gprs_required_b": 8,
+              "gprs_required_c": 16,
+              "gprs_required_d": 16,
+              "gpr_alignment": "8_bytes"
+            },
+            "issue_latency_cycles": 1,
+            "data_latency_cycles": 32,
+            "throughput_cycles": 32
+          },
+          "v_mfma_f64_16x16x4f64": {
+            "matrix_dimensions": {"M": 16, "N": 16, "K": 4, "blocks": 1},
+            "flops": 8192,
+            "execution_cycles": 64,
+            "flops_per_cu_per_cycle": 512,
+            "can_coexecute_with_valu": false,
+            "register_usage": {
+              "gprs_required_a": 16,
+              "gprs_required_b": 16,
+              "gprs_required_c": 64,
+              "gprs_required_d": 64,
+              "gpr_alignment": "8_bytes"
+            },
+            "issue_latency_cycles": 1,
+            "data_latency_cycles": 64,
+            "throughput_cycles": 64
+          }
+        },
+        "control_modifiers": {
+          "cbsz": {
+            "description": "Control Broadcast Size modifier",
+            "function": "broadcasts input values to neighboring blocks",
+            "supported_values": [0, 1, 2, 3],
+            "default": 0
+          },
+          "abid": {
+            "description": "A Block ID modifier",
+            "function": "selects which input block to broadcast",
+            "works_with": "cbsz",
+            "supported_values": [0, 1, 2, 3]
+          },
+          "blgp": {
+            "description": "B Lane Group Pattern modifier",
+            "function": "controls data layout pattern for B matrix",
+            "supported_values": [0, 1, 2, 3]
+          }
+        }
+      },
+      "smfmac_instructions": {
+        "supported": true,
+        "sparse_matrix": true,
+        "sparsity_support": "2x improvement in math efficiency",
+        "encoding": "VOP3P",
+        "examples": {
+          "v_smfmac_f32_16x16x32_f16": {
+            "matrix_dimensions": {"M": 16, "N": 16, "K": 32},
+            "sparsity_pattern": "structured_sparse",
+            "issue_latency_cycles": 1,
+            "data_latency_cycles": 32,
+            "throughput_cycles": 32
+          },
+          "v_smfmac_f32_32x32x16_bf16": {
+            "matrix_dimensions": {"M": 32, "N": 32, "K": 16},
+            "sparsity_pattern": "structured_sparse",
+            "issue_latency_cycles": 1,
+            "data_latency_cycles": 64,
+            "throughput_cycles": 64
+          },
+          "v_smfmac_i32_16x16x64_i8": {
+            "matrix_dimensions": {"M": 16, "N": 16, "K": 64},
+            "sparsity_pattern": "structured_sparse",
+            "issue_latency_cycles": 1,
+            "data_latency_cycles": 32,
+            "throughput_cycles": 32
+          }
+        }
+      }
+    },
+    "memory_operations": {
+      "load_store_instructions": {
+        "buffer_operations": {
+          "buffer_load_dword": {
+            "description": "Load 32-bit word from buffer",
+            "issue_latency_cycles": 1,
+            "data_latency_cycles": 150,
+            "throughput_cycles": 1,
+            "cache_behavior": "cached_by_default",
+            "fifo_depth": 32,
+            "supports_modifiers": ["sc0", "nt", "sc1", "offset12"]
+          },
+          "buffer_load_dwordx2": {
+            "description": "Load 64-bit double word from buffer", 
+            "issue_latency_cycles": 1,
+            "data_latency_cycles": 150,
+            "throughput_cycles": 1,
+            "cache_behavior": "cached_by_default",
+            "fifo_depth": 32
+          },
+          "buffer_load_dwordx4": {
+            "description": "Load 128-bit quad word from buffer",
+            "issue_latency_cycles": 1,
+            "data_latency_cycles": 150,
+            "throughput_cycles": 1,
+            "cache_behavior": "cached_by_default",
+            "fifo_depth": 32
+          },
+          "buffer_store_dword": {
+            "description": "Store 32-bit word to buffer",
+            "issue_latency_cycles": 1,
+            "data_latency_cycles": 4,
+            "throughput_cycles": 1,
+            "cache_behavior": "write_through",
+            "fifo_depth": 32
+          },
+          "buffer_store_dwordx2": {
+            "description": "Store 64-bit double word to buffer",
+            "issue_latency_cycles": 1,
+            "data_latency_cycles": 4,
+            "throughput_cycles": 1,
+            "cache_behavior": "write_through",
+            "fifo_depth": 32
+          },
+          "buffer_store_dwordx4": {
+            "description": "Store 128-bit quad word to buffer",
+            "issue_latency_cycles": 1,
+            "data_latency_cycles": 4,
+            "throughput_cycles": 1,
+            "cache_behavior": "write_through",
+            "fifo_depth": 32
+          },
+          "buffer_atomic_add": {
+            "description": "Atomic add operation on buffer",
+            "issue_latency_cycles": 1,
+            "data_latency_cycles": 200,
+            "throughput_cycles": 1,
+            "cache_behavior": "bypass_cache",
+            "fifo_depth": 16
+          },
+          "buffer_atomic_add_f32": {
+            "description": "Atomic float32 add operation on buffer",
+            "issue_latency_cycles": 1,
+            "data_latency_cycles": 200,
+            "throughput_cycles": 1,
+            "cache_behavior": "bypass_cache",
+            "fifo_depth": 16
+          },
+          "buffer_load_format_x": {
+            "description": "Load formatted data from buffer",
+            "issue_latency_cycles": 1,
+            "data_latency_cycles": 160,
+            "throughput_cycles": 1,
+            "cache_behavior": "cached_by_default",
+            "fifo_depth": 32,
+            "supports_lds_load": true
+          }
+        },
+        "flat_operations": {
+          "flat_load_dword": {
+            "description": "Load 32-bit word via flat addressing",
+            "issue_latency_cycles": 1,
+            "data_latency_cycles": 150,
+            "throughput_cycles": 1,
+            "cache_behavior": "cached_by_default",
+            "fifo_depth": 32,
+            "address_space": "generic"
+          },
+          "flat_store_dword": {
+            "description": "Store 32-bit word via flat addressing",
+            "issue_latency_cycles": 1,
+            "data_latency_cycles": 4,
+            "throughput_cycles": 1,
+            "cache_behavior": "write_through",
+            "fifo_depth": 32,
+            "address_space": "generic"
+          },
+          "global_load_dword": {
+            "description": "Load from global memory",
+            "issue_latency_cycles": 1,
+            "data_latency_cycles": 150,
+            "throughput_cycles": 1,
+            "cache_behavior": "cached_by_default",
+            "fifo_depth": 32,
+            "address_space": "global"
+          },
+          "global_store_dword": {
+            "description": "Store to global memory",
+            "issue_latency_cycles": 1,
+            "data_latency_cycles": 4,
+            "throughput_cycles": 1,
+            "cache_behavior": "write_through",
+            "fifo_depth": 32,
+            "address_space": "global"
+          },
+          "scratch_load_dword": {
+            "description": "Load from scratch memory",
+            "issue_latency_cycles": 1,
+            "data_latency_cycles": 120,
+            "throughput_cycles": 1,
+            "cache_behavior": "cached_by_default",
+            "fifo_depth": 32,
+            "address_space": "private"
+          },
+          "scratch_store_dword": {
+            "description": "Store to scratch memory",
+            "issue_latency_cycles": 1,
+            "data_latency_cycles": 4,
+            "throughput_cycles": 1,
+            "cache_behavior": "write_through",
+            "fifo_depth": 32,
+            "address_space": "private"
+          }
+        },
+        "ds_operations": {
+          "ds_read_b32": {
+            "description": "Read 32-bit from Local Data Share",
+            "issue_latency_cycles": 1,
+            "data_latency_cycles": 20,
+            "throughput_cycles": 1,
+            "cache_behavior": "lds_direct",
+            "fifo_depth": 64,
+            "address_space": "local"
+          },
+          "ds_write_b32": {
+            "description": "Write 32-bit to Local Data Share",
+            "issue_latency_cycles": 1,
+            "data_latency_cycles": 2,
+            "throughput_cycles": 1,
+            "cache_behavior": "lds_direct",
+            "fifo_depth": 64,
+            "address_space": "local"
+          },
+          "ds_add_rtn_u32": {
+            "description": "Atomic add with return from LDS",
+            "issue_latency_cycles": 1,
+            "data_latency_cycles": 25,
+            "throughput_cycles": 1,
+            "cache_behavior": "lds_direct",
+            "fifo_depth": 32,
+            "address_space": "local"
+          }
+        },
+        "scalar_memory_operations": {
+          "s_load_dword": {
+            "description": "Scalar load 32-bit word",
+            "issue_latency_cycles": 1,
+            "data_latency_cycles": 100,
+            "throughput_cycles": 1,
+            "cache_behavior": "cached_by_default",
+            "fifo_depth": 16
+          },
+          "s_store_dword": {
+            "description": "Scalar store 32-bit word",
+            "issue_latency_cycles": 1,
+            "data_latency_cycles": 4,
+            "throughput_cycles": 1,
+            "cache_behavior": "write_through",
+            "fifo_depth": 16
+          },
+          "s_atomic_add": {
+            "description": "Scalar atomic add",
+            "issue_latency_cycles": 1,
+            "data_latency_cycles": 150,
+            "throughput_cycles": 1,
+            "cache_behavior": "bypass_cache",
+            "fifo_depth": 8
+          }
+        }
+      },
+      "fifo_specifications": {
+        "vector_memory_fifo": {
+          "depth": 32,
+          "width": 128,
+          "description": "Main vector memory operation queue",
+          "supports_reordering": true,
+          "max_outstanding_requests": 32
+        },
+        "scalar_memory_fifo": {
+          "depth": 16,
+          "width": 64,
+          "description": "Scalar memory operation queue",
+          "supports_reordering": false,
+          "max_outstanding_requests": 16
+        },
+        "lds_fifo": {
+          "depth": 64,
+          "width": 32,
+          "description": "Local Data Share operation queue",
+          "supports_reordering": true,
+          "max_outstanding_requests": 64
+        },
+        "atomic_fifo": {
+          "depth": 16,
+          "width": 64,
+          "description": "Atomic operation queue",
+          "supports_reordering": false,
+          "max_outstanding_requests": 16
+        },
+        "texture_fifo": {
+          "depth": 32,
+          "width": 128,
+          "description": "Texture/image operation queue",
+          "supports_reordering": true,
+          "max_outstanding_requests": 32
+        }
+      },
+      "cache_specifications": {
+        "l1_vector_cache": {
+          "size": "32KB",
+          "associativity": 8,
+          "line_size": 128,
+          "latency_cycles": 4,
+          "bandwidth_per_cycle": "128B",
+          "replacement_policy": "LRU"
+        },
+        "l1_scalar_cache": {
+          "size": "16KB",
+          "associativity": 4,
+          "line_size": 64,
+          "latency_cycles": 4,
+          "bandwidth_per_cycle": "64B",
+          "replacement_policy": "LRU"
+        },
+        "l2_cache": {
+          "size": "4MB",
+          "associativity": 16,
+          "line_size": 128,
+          "latency_cycles": 50,
+          "bandwidth_per_cycle": "256B",
+          "replacement_policy": "LRU"
+        },
+        "infinity_cache": {
+          "size": "256MB",
+          "associativity": 16,
+          "line_size": 128,
+          "latency_cycles": 100,
+          "bandwidth_per_cycle": "1024B",
+          "replacement_policy": "LRU"
+        }
+      },
+      "special_features": {
+        "cache_swizzle_support": {
+          "introduced_in": "gfx942",
+          "description": "Enhanced cache swizzling for buffer fat pointers",
+          "improves": "memory_access_patterns"
+        },
+        "buffer_fat_pointers": {
+          "supported": true,
+          "address_space": 7,
+          "descriptor_size": 128,
+          "offset_size": 32,
+          "total_pointer_size": 160
+        }
+      }
+    },
+    "address_spaces": {
+      "global": {
+        "id": 1,
+        "cacheable": true,
+        "coherent": true
+      },
+      "local": {
+        "id": 3,
+        "shared_memory": true,
+        "size": 65536
+      },
+      "private": {
+        "id": 5,
+        "stack_memory": true
+      },
+      "constant": {
+        "id": 4,
+        "read_only": true,
+        "cacheable": true
+      },
+      "generic": {
+        "id": 0,
+        "flat_addressing": true
+      }
+    },
+    "memory_ordering": {
+      "acquire": true,
+      "release": true,
+      "acq_rel": true,
+      "seq_cst": true
+    },
+    "memory_scopes": [
+      "workitem",
+      "subgroup", 
+      "workgroup",
+      "device",
+      "system"
+    ],
+    "register_file": {
+      "scalar_registers": {
+        "count": 512,
+        "width": 32,
+        "addressing": "s[0:511]"
+      },
+      "vector_registers": {
+        "count": 512,
+        "width": 32,
+        "addressing": "v[0:511]",
+        "accumulator_registers": {
+          "count": 512,
+          "width": 32,
+          "addressing": "a[0:511]",
+          "alignment_requirement": "even_pairs"
+        }
+      }
+    },
+    "code_object": {
+      "versions_supported": [4, 5, 6],
+      "default_version": 5,
+      "elf_format": true,
+      "metadata_format": "yaml",
+      "relocatable": true
+    },
+    "compilation_options": {
+      "target_cpu": "gfx942",
+      "target_features": {
+        "xnack": {
+          "supported": true,
+          "default": false,
+          "description": "Enable XNACK replay for page fault handling"
+        },
+        "sramecc": {
+          "supported": true,
+          "default": false,
+          "description": "Enable SRAM ECC"
+        },
+        "cumode": {
+          "supported": true,
+          "default": false,
+          "description": "Enable CU mode"
+        }
+      }
+    },
+    "operating_systems": {
+      "amdhsa": {
+        "supported": true,
+       "description": "AMD HSA runtime"  
+      },
+      "amdpal": {
+        "supported": true,
+        "description": "AMD PAL runtime"
+      },
+      "mesa3d": {
+        "supported": true,
+        "description": "Mesa 3D runtime"
+      }
+    },
+    "llvm_integration": {
+      "target_machine": "AMDGPUTargetMachine",
+      "instruction_selection": "AMDGPUDAGToDAGISel",
+      "register_info": "SIRegisterInfo",
+      "instruction_info": "SIInstrInfo",
+      "subtarget": "GCNSubtarget",
+      "calling_conventions": [
+        "AMDGPU_CS",
+        "AMDGPU_KERNEL", 
+        "AMDGPU_PS",
+        "AMDGPU_VS",
+        "AMDGPU_GS",
+        "AMDGPU_HS",
+        "AMDGPU_DS"
+      ]
+    },
+    "optimization_features": {
+      "scheduler": "GCNMaxOccupancySchedStrategy",
+      "register_pressure_tracking": true,
+      "instruction_bundling": true,
+      "memory_clause_formation": true,
+      "wwm_register_allocation": true,
+      "exec_mask_optimization": true
+    },
+    "debugging_support": {
+      "dwarf_support": true,
+      "trap_handler": true,
+      "printf_support": true,
+      "debugger_abi": "AMDGPU"
+    },
+    "compatibility": {
+      "backward_compatible_with": ["gfx940", "gfx941"],
+      "forward_compatible_with": [],
+      "related_targets": ["gfx940", "gfx941", "gfx943"]
+    },
+    "notes": {
+      "description": "GFX942 is part of the CDNA2 architecture family, likely targeting AMD Instinct MI300 series accelerators. It shares most features with GFX940 but may have minor variations or bug fixes.",
+      "typical_use_cases": [
+        "High-performance computing",
+        "Machine learning training",
+        "AI inference",
+        "Scientific computing",
+        "Data analytics"
+      ],
+      "llvm_commit": "9d0572797233857397f3fdc35fffcfb490354f56",
+      "added_in_llvm_version": "17.0",
+      "status": "Active development target"
+    }
+  },
   "marketSegments": ["HPC", "AI Training", "AI Inference", "Data Centers"],
   "variants": [
     {
