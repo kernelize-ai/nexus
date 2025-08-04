@@ -14,7 +14,7 @@ public:
 
   nxs_int numDevices;
   nxs_int current_device = -1;
-  rt::Pool<rt::Buffer> buffer_pool;
+  rt::Pool<rt::Buffer, 256> buffer_pool;
   rt::Pool<CudaCommand> command_pool;
   rt::Pool<CudaSchedule, 256> schedule_pool;
 
@@ -65,17 +65,17 @@ public:
   }
   void release(rt::Buffer *buffer) { buffer_pool.release(buffer); }
 
-  CudaSchedule *getSchedule(nxs_int device_id) {
-    return schedule_pool.get_new(device_id);
+  CudaSchedule *getSchedule(nxs_int device_id, nxs_uint settings = 0) {
+    return schedule_pool.get_new(device_id, settings);
   }
 
-  CudaCommand *getCommand(CUfunction kernel) {
-    return command_pool.get_new(kernel);
+  CudaCommand *getCommand(CUfunction kernel, nxs_uint settings = 0) {
+    return command_pool.get_new(kernel, settings);
   }
 
   CudaCommand *getCommand(cudaEvent_t event, nxs_command_type type,
-                         nxs_int event_value = 0) {
-    return command_pool.get_new(event, type, event_value);
+                          nxs_int event_value = 0, nxs_uint settings = 0) {
+    return command_pool.get_new(event, type, event_value, settings);
   }
 
   void release(CudaCommand *cmd) { command_pool.release(cmd); }

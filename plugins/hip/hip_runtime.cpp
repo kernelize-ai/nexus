@@ -461,8 +461,8 @@ nxsGetDeviceProperty(nxs_int device_id, nxs_uint device_property_id,
  * @return Error status or Succes.
  ***********************************************************************/
 extern "C" nxs_int NXS_API_CALL nxsCreateBuffer(nxs_int device_id, size_t size,
-                                                nxs_uint mem_flags,
-                                                void *host_ptr) {
+                                                void *host_ptr,
+                                                nxs_uint settings) {
   auto rt = getRuntime();
   auto dev = rt->getDevice(device_id);
   if (dev < 0) return NXS_InvalidDevice;
@@ -487,7 +487,8 @@ extern "C" nxs_int NXS_API_CALL nxsCreateBuffer(nxs_int device_id, size_t size,
  * @return Error status or Succes.
  ***********************************************************************/
 extern "C" nxs_status NXS_API_CALL nxsCopyBuffer(nxs_int buffer_id,
-                                                 void *host_ptr) {
+                                                 void *host_ptr,
+                                                 nxs_uint settings) {
   auto rt = getRuntime();
   auto buffer = rt->get<rt::Buffer>(buffer_id);
   if (!buffer) return NXS_InvalidBuffer;
@@ -519,7 +520,8 @@ extern "C" nxs_status NXS_API_CALL nxsReleaseBuffer(nxs_int buffer_id) {
  ***********************************************************************/
 extern "C" nxs_int NXS_API_CALL nxsCreateLibrary(nxs_int device_id,
                                                  void *library_data,
-                                                 nxs_uint data_size) {
+                                                 nxs_uint data_size,
+                                                 nxs_uint settings) {
   auto rt = getRuntime();
   auto dev = rt->getDevice(device_id);
   if (dev < 0) return NXS_InvalidDevice;
@@ -535,8 +537,8 @@ extern "C" nxs_int NXS_API_CALL nxsCreateLibrary(nxs_int device_id,
  * @brief Create a library from a file
  * @return Error status or Succes.
  ***********************************************************************/
-extern "C" nxs_int NXS_API_CALL
-nxsCreateLibraryFromFile(nxs_int device_id, const char *library_path) {
+extern "C" nxs_int NXS_API_CALL nxsCreateLibraryFromFile(
+    nxs_int device_id, const char *library_path, nxs_uint settings) {
   NXSAPI_LOG(NXSAPI_STATUS_NOTE,
              "createLibraryFromFile " << device_id << " - " << library_path);
   auto rt = getRuntime();
@@ -618,7 +620,8 @@ nxs_status NXS_API_CALL nxsReleaseKernel(nxs_int kernel_id) {
  *         Non-negative is the bufferId.
  ***********************************************************************/
 extern "C" nxs_int NXS_API_CALL nxsCreateEvent(nxs_int device_id,
-                                               nxs_event_type event_type) {
+                                               nxs_event_type event_type,
+                                               nxs_uint settings) {
   auto rt = getRuntime();
   auto parent = rt->getObject(device_id);
   if (!parent) return NXS_InvalidDevice;
@@ -688,7 +691,7 @@ nxs_status NXS_API_CALL nxsReleaseEvent(nxs_int event_id) {
  *         Non-negative is the bufferId.
  ***********************************************************************/
 extern "C" nxs_int NXS_API_CALL nxsCreateStream(nxs_int device_id,
-                                                nxs_uint stream_properties) {
+                                                nxs_uint settings) {
   auto rt = getRuntime();
   auto dev = rt->getDevice(device_id);
   if (dev < 0) return NXS_InvalidDevice;
@@ -726,7 +729,7 @@ extern "C" nxs_status NXS_API_CALL nxsReleaseStream(nxs_int stream_id) {
  *         Non-negative is the bufferId.
  ***********************************************************************/
 extern "C" nxs_int NXS_API_CALL nxsCreateSchedule(nxs_int device_id,
-                                                  nxs_uint sched_properties) {
+                                                  nxs_uint settings) {
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createSchedule " << device_id);
   auto rt = getRuntime();
   auto dev = rt->getDevice(device_id);
@@ -743,7 +746,8 @@ extern "C" nxs_int NXS_API_CALL nxsCreateSchedule(nxs_int device_id,
  ***********************************************************************/
 extern "C" nxs_status NXS_API_CALL nxsRunSchedule(nxs_int schedule_id,
                                                   nxs_int stream_id,
-                                                  nxs_bool blocking) {
+                                                  nxs_bool blocking,
+                                                  nxs_uint settings) {
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "runSchedule " << schedule_id << " - "
                                                 << stream_id << " - "
                                                 << blocking);
@@ -787,7 +791,8 @@ extern "C" nxs_status NXS_API_CALL nxsReleaseSchedule(nxs_int schedule_id) {
  *         Non-negative is the bufferId.
  ***********************************************************************/
 extern "C" nxs_int NXS_API_CALL nxsCreateCommand(nxs_int schedule_id,
-                                                 nxs_int kernel_id) {
+                                                 nxs_int kernel_id,
+                                                 nxs_uint settings) {
   NXSAPI_LOG(NXSAPI_STATUS_NOTE,
              "createCommand " << schedule_id << " - " << kernel_id);
   auto rt = getRuntime();
@@ -809,7 +814,8 @@ extern "C" nxs_int NXS_API_CALL nxsCreateCommand(nxs_int schedule_id,
  ***********************************************************************/
 extern "C" nxs_int NXS_API_CALL nxsCreateSignalCommand(nxs_int schedule_id,
                                                        nxs_int event_id,
-                                                       nxs_int signal_value) {
+                                                       nxs_int signal_value,
+                                                       nxs_uint settings) {
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createSignalCommand " << schedule_id << " - "
                                                         << event_id << " - "
                                                         << signal_value);
@@ -835,7 +841,8 @@ extern "C" nxs_int NXS_API_CALL nxsCreateSignalCommand(nxs_int schedule_id,
  ***********************************************************************/
 extern "C" nxs_int NXS_API_CALL nxsCreateWaitCommand(nxs_int schedule_id,
                                                      nxs_int event_id,
-                                                     nxs_int wait_value) {
+                                                     nxs_int wait_value,
+                                                     nxs_uint settings) {
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createWaitCommand " << schedule_id << " - "
                                                       << event_id << " - "
                                                       << wait_value);

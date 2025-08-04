@@ -14,10 +14,8 @@ class RuntimeImpl;
 // Runtime class
 class Runtime : public Object<detail::RuntimeImpl> {
  public:
-  Runtime(detail::Impl owner, const std::string& libraryPath);
+  Runtime(detail::Impl base, const std::string& libraryPath);
   using Object::Object;
-
-  nxs_int getId() const override;
 
   Devices getDevices() const;
   Device getDevice(nxs_uint deviceId) const;

@@ -84,11 +84,9 @@ class CommandImpl : public Impl {
 }  // namespace nexus
 
 ///////////////////////////////////////////////////////////////////////////////
-Command::Command(detail::Impl owner, Kernel kern) : Object(owner, kern) {}
+Command::Command(detail::Impl base, Kernel kern) : Object(base, kern) {}
 
-Command::Command(detail::Impl owner, Event event) : Object(owner, event) {}
-
-nxs_int Command::getId() const { NEXUS_OBJ_MCALL(NXS_InvalidCommand, getId); }
+Command::Command(detail::Impl base, Event event) : Object(base, event) {}
 
 std::optional<Property> Command::getProperty(nxs_int prop) const {
   NEXUS_OBJ_MCALL(std::nullopt, getProperty, prop);

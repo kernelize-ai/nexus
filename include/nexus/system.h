@@ -19,8 +19,6 @@ class System : Object<detail::SystemImpl> {
   System(int);
   using Object::Object;
 
-  nxs_int getId() const override { return 0; }
-
   std::optional<Property> getProperty(nxs_int prop) const override;
 
   Runtimes getRuntimes() const;
@@ -28,8 +26,9 @@ class System : Object<detail::SystemImpl> {
 
   Runtime getRuntime(int idx) const;
   Runtime getRuntime(const std::string &name);
-  Buffer createBuffer(size_t sz, const void *hostData = nullptr);
-  Buffer copyBuffer(Buffer buf, Device dev);
+  Buffer createBuffer(size_t sz, const void *hostData = nullptr,
+                      nxs_uint settings = 0);
+  Buffer copyBuffer(Buffer buf, Device dev, nxs_uint settings = 0);
 };
 
 extern System getSystem();

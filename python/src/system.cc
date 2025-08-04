@@ -65,6 +65,9 @@ static Buffer make_buffer(py::object tensor) {
   // TODO: track ownership of the py::object tensor (release on destruction of
   // Buffer)
   auto data_ptr = getPointer(tensor.ptr());
+  if (data_ptr.size == 0) {
+    throw std::runtime_error("Invalid buffer");
+  }
   if (!data_ptr.runtime_name.empty() && data_ptr.device_id != -1) {
     auto runtime = nexus::getSystem().getRuntime(data_ptr.runtime_name);
     if (runtime) {
@@ -392,28 +395,69 @@ void pynexus::init_system_bindings(py::module &m) {
       });
 
   make_object_class<Schedule>(m, "_schedule")
-      .def("create_command",
-           [](Schedule &self, Kernel kernel, std::vector<Buffer> buffers, std::vector<int> dims) {
-             auto cmd = self.createCommand(kernel);
-             int idx = 0;
-             for (auto &buf : buffers) {
-               cmd.setArgument(idx++, buf);
-             }
-             if (cmd && dims.size() == 2 && dims[0] > 0 && dims[1] > 0) {
-               cmd.finalize(dims[0], dims[1]);
-             }
-             return cmd;
-           }, py::arg("kernel"), py::arg("buffers") = std::vector<Buffer>(), py::arg("dims") = std::vector<int>())
-      .def("create_signal",
-           [](Schedule &self, Event event, int signal_value) {
-             return self.createSignalCommand(event, signal_value);
-           }, py::arg("event") = Event(), py::arg("signal_value") = 1)
-      .def("create_wait",
-           [](Schedule &self, Event event, int wait_value) {
-             return self.createWaitCommand(event, wait_value);
-           }, py::arg("event"), py::arg("wait_value") = 1)
-      .def("run", [](Schedule &self, Stream &stream, nxs_bool blocking) { return self.run(stream, blocking); },
-           py::arg("stream") = Stream(), py::arg("blocking") = true);
+      .def(
+          "create_command",
+          [](Schedule &self, Kernel kernel, std::vector<Buffer> buffers,
+             std::vector<int> dims) {
+            auto cmd = self.createCommand(kernel);
+            if (cmd) {
+              int idx = 0;
+              for (auto &buf : buffers) {
+                cmd.setArgument(idx++, buf);
+              }
+              if (dims.size() == 2 && dims[0] > 0 && dims[1] > 0) {
+                cmd.finalize(dims[0], dims[1]);
+              }
+            }
+            return cmd;
+          },
+          py::arg("kernel"), py::arg("buffers") = std::vector<Buffer>(),
+          py::arg("dims") = std::vector<int>())
+      .def(
+          "create_command",
+          [](Schedule &self, Kernel kernel, std::vector<py::object> buffers,
+             std::vector<int> dims) {
+            auto cmd = self.createCommand(kernel);
+            if (cmd) {
+              int idx = 0;
+              for (auto buf : buffers) {
+                if (PyLong_Check(buf.ptr())) {
+                  auto value = PyLong_AsLong(buf.ptr());
+                  cmd.setArgument(idx++, value);
+                } else if (PyFloat_Check(buf.ptr())) {
+                  auto value = PyFloat_AsDouble(buf.ptr());
+                  cmd.setArgument(idx++, value);
+                } else {
+                  auto buf_obj = make_buffer(buf);
+                  cmd.setArgument(idx++, buf_obj);
+                }
+              }
+              if (dims.size() == 2 && dims[0] > 0 && dims[1] > 0) {
+                cmd.finalize(dims[0], dims[1]);
+              }
+            }
+            return cmd;
+          },
+          py::arg("kernel"), py::arg("buffers") = std::vector<py::object>(),
+          py::arg("dims") = std::vector<int>())
+      .def(
+          "create_signal",
+          [](Schedule &self, Event event, int signal_value) {
+            return self.createSignalCommand(event, signal_value);
+          },
+          py::arg("event") = Event(), py::arg("signal_value") = 1)
+      .def(
+          "create_wait",
+          [](Schedule &self, Event event, int wait_value) {
+            return self.createWaitCommand(event, wait_value);
+          },
+          py::arg("event"), py::arg("wait_value") = 1)
+      .def(
+          "run",
+          [](Schedule &self, Stream &stream, nxs_bool blocking) {
+            return self.run(stream, blocking);
+          },
+          py::arg("stream") = Stream(), py::arg("blocking") = true);
 
   // Object Containers
   make_objects_class<Buffer>(m, "_buffers");

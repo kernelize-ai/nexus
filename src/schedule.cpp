@@ -1,7 +1,9 @@
-
 #include <nexus/command.h>
+#include <nexus/event.h>
+#include <nexus/kernel.h>
 #include <nexus/log.h>
 #include <nexus/schedule.h>
+#include <nexus/stream.h>
 
 #include "_schedule_impl.h"
 
@@ -11,7 +13,7 @@ using namespace nexus;
 using namespace nexus::detail;
 
 /// @brief Construct a Platform for the current system
-ScheduleImpl::ScheduleImpl(detail::Impl owner) : detail::Impl(owner) {
+ScheduleImpl::ScheduleImpl(detail::Impl base) : detail::Impl(base) {
   NEXUS_LOG(NEXUS_STATUS_NOTE, "  Schedule: " << getId());
 }
 
@@ -31,64 +33,83 @@ std::optional<Property> ScheduleImpl::getProperty(nxs_int prop) const {
   return rt->getAPIProperty<NF_nxsGetScheduleProperty>(prop, getId());
 }
 
-Command ScheduleImpl::createCommand(Kernel kern) {
+Command ScheduleImpl::createCommand(Kernel kern, nxs_uint settings) {
   auto *rt = getParentOfType<RuntimeImpl>();
-  nxs_int cid = rt->runAPIFunction<NF_nxsCreateCommand>(getId(), kern.getId());
-  Command cmd(detail::Impl(this, cid), kern);
+  nxs_int cid =
+      rt->runAPIFunction<NF_nxsCreateCommand>(getId(), kern.getId(), settings);
+  Command cmd(detail::Impl(this, cid, settings), kern);
   commands.add(cmd);
   return cmd;
 }
 
-Command ScheduleImpl::createSignalCommand(nxs_int signal_value) {
+Command ScheduleImpl::createSignalCommand(nxs_int signal_value,
+                                          nxs_uint settings) {
   auto *dev = getParentOfType<DeviceImpl>();
   Event event = dev->createEvent();
   auto *rt = getParentOfType<RuntimeImpl>();
-  nxs_int cid = rt->runAPIFunction<NF_nxsCreateSignalCommand>(getId(), event.getId(), signal_value);
-  Command cmd(detail::Impl(this, cid), event);
+  nxs_int cid = rt->runAPIFunction<NF_nxsCreateSignalCommand>(
+      getId(), event.getId(), signal_value, settings);
+  Command cmd(detail::Impl(this, cid, settings), event);
   commands.add(cmd);
   return cmd;
 }
 
-Command ScheduleImpl::createSignalCommand(Event event, nxs_int signal_value) {
+Command ScheduleImpl::createSignalCommand(Event event, nxs_int signal_value,
+                                          nxs_uint settings) {
   if (!event) {
     auto *dev = getParentOfType<DeviceImpl>();
     event = dev->createEvent();
   }
   auto *rt = getParentOfType<RuntimeImpl>();
-  nxs_int cid = rt->runAPIFunction<NF_nxsCreateSignalCommand>(getId(), event.getId(), signal_value);
-  Command cmd(detail::Impl(this, cid), event);
+  nxs_int cid = rt->runAPIFunction<NF_nxsCreateSignalCommand>(
+      getId(), event.getId(), signal_value, settings);
+  Command cmd(detail::Impl(this, cid, settings), event);
   commands.add(cmd);
   return cmd;
 }
 
-Command ScheduleImpl::createWaitCommand(Event event, nxs_int wait_value) {
+Command ScheduleImpl::createWaitCommand(Event event, nxs_int wait_value,
+                                        nxs_uint settings) {
   auto *rt = getParentOfType<RuntimeImpl>();
-  nxs_int cid = rt->runAPIFunction<NF_nxsCreateWaitCommand>(getId(), event.getId(), wait_value);
-  Command cmd(detail::Impl(this, cid), event);
+  nxs_int cid = rt->runAPIFunction<NF_nxsCreateWaitCommand>(
+      getId(), event.getId(), wait_value, settings);
+  Command cmd(detail::Impl(this, cid, settings), event);
   commands.add(cmd);
   return cmd;
 }
 
-nxs_status ScheduleImpl::run(Stream stream, nxs_bool blocking) {
+nxs_status ScheduleImpl::run(Stream stream, nxs_uint settings) {
   auto *rt = getParentOfType<RuntimeImpl>();
-  return (nxs_status)rt->runAPIFunction<NF_nxsRunSchedule>(getId(), stream.getId(), blocking);
+  return (nxs_status)rt->runAPIFunction<NF_nxsRunSchedule>(
+      getId(), stream.getId(), settings);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-Schedule::Schedule(detail::Impl owner) : Object(owner) {}
-
-nxs_int Schedule::getId() const { NEXUS_OBJ_MCALL(NXS_InvalidSchedule, getId); }
+Schedule::Schedule(detail::Impl base) : Object(base) {}
 
 std::optional<Property> Schedule::getProperty(nxs_int prop) const {
   NEXUS_OBJ_MCALL(std::nullopt, getProperty, prop);
 }
 
-Command Schedule::createCommand(Kernel kern) { NEXUS_OBJ_MCALL(Command(), createCommand, kern); }
+Command Schedule::createCommand(Kernel kern, nxs_uint settings) {
+  NEXUS_OBJ_MCALL(Command(), createCommand, kern, settings);
+}
 
-Command Schedule::createSignalCommand(nxs_int signal_value) { NEXUS_OBJ_MCALL(Command(), createSignalCommand, signal_value); }
+Command Schedule::createSignalCommand(nxs_int signal_value, nxs_uint settings) {
+  NEXUS_OBJ_MCALL(Command(), createSignalCommand, signal_value, settings);
+}
 
-Command Schedule::createSignalCommand(Event event, nxs_int signal_value) { NEXUS_OBJ_MCALL(Command(), createSignalCommand, event, signal_value); }
+Command Schedule::createSignalCommand(Event event, nxs_int signal_value,
+                                      nxs_uint settings) {
+  NEXUS_OBJ_MCALL(Command(), createSignalCommand, event, signal_value,
+                  settings);
+}
 
-Command Schedule::createWaitCommand(Event event, nxs_int wait_value) { NEXUS_OBJ_MCALL(Command(), createWaitCommand, event, wait_value); }
+Command Schedule::createWaitCommand(Event event, nxs_int wait_value,
+                                    nxs_uint settings) {
+  NEXUS_OBJ_MCALL(Command(), createWaitCommand, event, wait_value, settings);
+}
 
-nxs_status Schedule::run(Stream stream, nxs_bool blocking) { NEXUS_OBJ_MCALL(NXS_InvalidSchedule, run, stream, blocking); }
+nxs_status Schedule::run(Stream stream, nxs_uint settings) {
+  NEXUS_OBJ_MCALL(NXS_InvalidSchedule, run, stream, settings);
+}

@@ -14,10 +14,8 @@ class LibraryImpl;
 // System class
 class Library : public Object<detail::LibraryImpl> {
  public:
-  Library(detail::Impl owner);
+  Library(detail::Impl base);
   using Object::Object;
-
-  nxs_int getId() const override;
 
   std::optional<Property> getProperty(nxs_int prop) const override;
 

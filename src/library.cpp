@@ -11,7 +11,7 @@ using namespace nexus;
 using namespace nexus::detail;
 
 /// @brief Construct a Platform for the current system
-LibraryImpl::LibraryImpl(Impl owner) : Impl(owner) {
+LibraryImpl::LibraryImpl(Impl base) : Impl(base) {
   NEXUS_LOG(NEXUS_STATUS_NOTE, "CTOR: " << getId());
 }
 
@@ -41,9 +41,7 @@ Kernel LibraryImpl::getKernel(const std::string &kernelName) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-Library::Library(Impl owner) : Object(owner) {}
-
-nxs_int Library::getId() const { NEXUS_OBJ_MCALL(NXS_InvalidLibrary, getId); }
+Library::Library(Impl base) : Object(base) {}
 
 std::optional<Property> Library::getProperty(nxs_int prop) const {
   NEXUS_OBJ_MCALL(std::nullopt, getProperty, prop);

@@ -13,10 +13,8 @@ class StreamImpl;
 // System class
 class Stream : public Object<detail::StreamImpl> {
  public:
-  Stream(detail::Impl owner);
+  Stream(detail::Impl base);
   using Object::Object;
-
-  nxs_int getId() const override;
 
   std::optional<Property> getProperty(nxs_int prop) const override;
 

@@ -12,7 +12,7 @@ namespace detail {
 class StreamImpl : public Impl {
  public:
   /// @brief Construct a Platform for the current system
-  StreamImpl(detail::Impl owner) : detail::Impl(owner) {
+  StreamImpl(detail::Impl base) : detail::Impl(base) {
     NEXUS_LOG(NEXUS_STATUS_NOTE, "  Stream: " << getId());
   }
 
@@ -40,9 +40,7 @@ using namespace nexus;
 using namespace nexus::detail;
 
 ///////////////////////////////////////////////////////////////////////////////
-Stream::Stream(detail::Impl owner) : Object(owner) {}
-
-nxs_int Stream::getId() const { NEXUS_OBJ_MCALL(NXS_InvalidStream, getId); }
+Stream::Stream(detail::Impl base) : Object(base) {}
 
 std::optional<Property> Stream::getProperty(nxs_int prop) const {
   NEXUS_OBJ_MCALL(std::nullopt, getProperty, prop);

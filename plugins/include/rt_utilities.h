@@ -49,6 +49,22 @@ static nxs_status getPropertyInt(void *property_value,
   return NXS_Success;
 }
 
+static nxs_status getPropertyFlt(void *property_value,
+                                 size_t *property_value_size,
+                                 nxs_double value) {
+  if (property_value != NULL) {
+    if (property_value_size == NULL)
+      return NXS_InvalidArgSize;
+    else if (*property_value_size < sizeof(value))
+      return NXS_InvalidArgValue;
+    std::memcpy(property_value, &value, sizeof(value));
+  }
+  if (property_value_size != NULL) {
+    *property_value_size = sizeof(value);
+  }
+  return NXS_Success;
+}
+
 template <typename T>
 static nxs_status getPropertyVec(void *property_value,
                                  size_t *property_value_size, const T *values,

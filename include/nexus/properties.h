@@ -19,8 +19,6 @@ class Properties : public Object<detail::PropertiesImpl> {
   Properties(const std::string &filepath);
   using Object::Object;
 
-  nxs_int getId() const override { return 0; }
-
   // Query Device Properties
   //   from name
   std::optional<Property> getProperty(const std::string &prop) const;

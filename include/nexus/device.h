@@ -24,8 +24,6 @@ class Device : public Object<detail::DeviceImpl> {
   Device(detail::Impl base);
   using Object::Object;
 
-  nxs_int getId() const override;
-
   // Get Device Property Value
   std::optional<Property> getProperty(nxs_int prop) const override;
 
@@ -36,18 +34,20 @@ class Device : public Object<detail::DeviceImpl> {
   Schedules getSchedules() const;
   Streams getStreams() const;
   Events getEvents() const;
+  Buffers getBuffers() const;
 
-  Stream createStream();
-  Schedule createSchedule();
-  Event createEvent(nxs_event_type event_type = NXS_EventType_Shared);
+  Stream createStream(nxs_uint settings = 0);
+  Schedule createSchedule(nxs_uint settings = 0);
+  Event createEvent(nxs_event_type event_type = NXS_EventType_Shared,
+                    nxs_uint settings = 0);
 
-  Library createLibrary(void *libraryData, size_t librarySize);
-  Library createLibrary(const std::string &libraryPath);
+  Library createLibrary(void *libraryData, size_t librarySize,
+                        nxs_uint settings = 0);
+  Library createLibrary(const std::string &libraryPath, nxs_uint settings = 0);
 
   Buffer createBuffer(size_t size, const void *data = nullptr,
-                      bool on_device = false);
-  Buffer copyBuffer(Buffer buf);
-  Buffers getBuffers() const;
+                      nxs_uint settings = 0);
+  Buffer copyBuffer(Buffer buf, nxs_uint settings = 0);
 };
 
 typedef Objects<Device> Devices;

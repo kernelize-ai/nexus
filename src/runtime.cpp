@@ -12,8 +12,8 @@ using namespace nexus::detail;
 #define NEXUS_LOG_MODULE "runtime"
 
 /// @brief Construct a Runtime for the current system
-RuntimeImpl::RuntimeImpl(Impl owner, const std::string &path)
-    : Impl(owner), pluginLibraryPath(path), library(nullptr) {
+RuntimeImpl::RuntimeImpl(Impl base, const std::string &path)
+    : Impl(base), pluginLibraryPath(path), library(nullptr) {
   NEXUS_LOG(NEXUS_STATUS_NOTE, "  CTOR: " << path);
   loadPlugin();
 }
@@ -82,10 +82,8 @@ void RuntimeImpl::loadPlugin() {
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
-Runtime::Runtime(detail::Impl owner, const std::string &libraryPath)
-    : Object(owner, libraryPath) {}
-
-nxs_int Runtime::getId() const { NEXUS_OBJ_MCALL(NXS_InvalidRuntime, getId); }
+Runtime::Runtime(detail::Impl base, const std::string &libraryPath)
+    : Object(base, libraryPath) {}
 
 Devices Runtime::getDevices() const { NEXUS_OBJ_MCALL(Devices(), getDevices); }
 

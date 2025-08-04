@@ -17,7 +17,6 @@ using namespace nexus;
   nxs_int apiResult = getParent()->runAPIFunction<NF_##FUNC>(__VA_ARGS__)
 
 detail::DeviceImpl::DeviceImpl(detail::Impl base) : detail::Impl(base) {
-  auto id = getId();
   auto vendor = getProperty(NP_Vendor);
   auto type = getProperty(NP_Type);
   auto arch = getProperty(NP_Architecture);
@@ -54,61 +53,63 @@ std::optional<Property> detail::DeviceImpl::getProperty(nxs_int prop) const {
 }
 
 // Runtime functions
-Library detail::DeviceImpl::createLibrary(void *data, size_t size) {
+Library detail::DeviceImpl::createLibrary(void *data, size_t size,
+                                          nxs_uint settings) {
   NEXUS_LOG(NEXUS_STATUS_NOTE, "  createLibrary - Size: " << size);
-  APICALL(nxsCreateLibrary, getId(), data, size);
-  Library lib(detail::Impl(this, apiResult));
+  APICALL(nxsCreateLibrary, getId(), data, size, settings);
+  Library lib(detail::Impl(this, apiResult, settings));
   libraries.add(lib);
   return lib;
 }
 
-Library detail::DeviceImpl::createLibrary(const std::string &path) {
+Library detail::DeviceImpl::createLibrary(const std::string &path,
+                                          nxs_uint settings) {
   NEXUS_LOG(NEXUS_STATUS_NOTE, "  createLibrary - Path: " << path);
-  APICALL(nxsCreateLibraryFromFile, getId(), path.c_str());
-  Library lib(detail::Impl(this, apiResult));
+  APICALL(nxsCreateLibraryFromFile, getId(), path.c_str(), settings);
+  Library lib(detail::Impl(this, apiResult, settings));
   libraries.add(lib);
   return lib;
 }
 
-Schedule detail::DeviceImpl::createSchedule() {
+Schedule detail::DeviceImpl::createSchedule(nxs_uint settings) {
   NEXUS_LOG(NEXUS_STATUS_NOTE, "  createSchedule");
-  APICALL(nxsCreateSchedule, getId(), 0);
-  Schedule sched(detail::Impl(this, apiResult));
+  APICALL(nxsCreateSchedule, getId(), settings);
+  Schedule sched(detail::Impl(this, apiResult, settings));
   schedules.add(sched);
   return sched;
 }
 
-Stream detail::DeviceImpl::createStream() {
+Stream detail::DeviceImpl::createStream(nxs_uint settings) {
   NEXUS_LOG(NEXUS_STATUS_NOTE, "  createStream");
   APICALL(nxsCreateStream, getId(), 0);
-  Stream stream(detail::Impl(this, apiResult));
+  Stream stream(detail::Impl(this, apiResult, settings));
   streams.add(stream);
   return stream;
 }
 
-Event detail::DeviceImpl::createEvent(nxs_event_type event_type) {
+Event detail::DeviceImpl::createEvent(nxs_event_type event_type,
+                                      nxs_uint settings) {
   NEXUS_LOG(NEXUS_STATUS_NOTE, "  createEvent");
-  APICALL(nxsCreateEvent, getId(), event_type);
-  Event event(detail::Impl(this, apiResult));
+  APICALL(nxsCreateEvent, getId(), event_type, settings);
+  Event event(detail::Impl(this, apiResult, settings));
   events.add(event);
   return event;
 }
 
 Buffer detail::DeviceImpl::createBuffer(size_t size, const void *data,
-                                        bool on_device) {
+                                        nxs_uint settings) {
   NEXUS_LOG(NEXUS_STATUS_NOTE, "  createBuffer");
-  nxs_uint mem_flags =
-      on_device ? NXS_BufferProperty_OnDevice : NXS_BufferProperty_OnHost;
-  APICALL(nxsCreateBuffer, getId(), size, mem_flags, (void *)data);
-  Buffer nbuf(Impl(this, apiResult), getId(), size);
+  APICALL(nxsCreateBuffer, getId(), size, (void *)data, settings);
+  Buffer nbuf(Impl(this, apiResult, settings), getId(), size);
   buffers.add(nbuf);
   return nbuf;
 }
 
-Buffer detail::DeviceImpl::copyBuffer(Buffer buf) {
+Buffer detail::DeviceImpl::copyBuffer(Buffer buf, nxs_uint settings) {
   NEXUS_LOG(NEXUS_STATUS_NOTE, "  copyBuffer");
-  APICALL(nxsCreateBuffer, getId(), buf.getSize(), 0, (void *)buf.getData());
-  Buffer nbuf(Impl(this, apiResult), getId(), buf.getSize());
+  APICALL(nxsCreateBuffer, getId(), buf.getSize(), (void *)buf.getData(),
+          settings);
+  Buffer nbuf(Impl(this, apiResult, settings), getId(), buf.getSize());
   buffers.add(nbuf);
   return nbuf;
 }
@@ -117,8 +118,6 @@ Buffer detail::DeviceImpl::copyBuffer(Buffer buf) {
 /// Object wrapper - Device
 ///////////////////////////////////////////////////////////////////////////////
 Device::Device(detail::Impl base) : Object(base) {}
-
-nxs_int Device::getId() const { NEXUS_OBJ_MCALL(NXS_InvalidDevice, getId); }
 
 // Get Device Property Value
 std::optional<Property> Device::getProperty(nxs_int prop) const {
@@ -138,22 +137,32 @@ Buffers Device::getBuffers() const { NEXUS_OBJ_MCALL(Buffers(), getBuffers); }
 
 Events Device::getEvents() const { NEXUS_OBJ_MCALL(Events(), getEvents); }
 
-Event Device::createEvent(nxs_event_type event_type) { NEXUS_OBJ_MCALL(Event(), createEvent, event_type); }
-
-Stream Device::createStream() { NEXUS_OBJ_MCALL(Stream(), createStream); }
-
-Schedule Device::createSchedule() { NEXUS_OBJ_MCALL(Schedule(), createSchedule); }
-
-Buffer Device::createBuffer(size_t size, const void *data, bool on_device) {
-  NEXUS_OBJ_MCALL(Buffer(), createBuffer, size, data, on_device);
+Event Device::createEvent(nxs_event_type event_type, nxs_uint settings) {
+  NEXUS_OBJ_MCALL(Event(), createEvent, event_type, settings);
 }
 
-Buffer Device::copyBuffer(Buffer buf) { NEXUS_OBJ_MCALL(Buffer(), copyBuffer, buf); }
-
-Library Device::createLibrary(void *libraryData, size_t librarySize) {
-  NEXUS_OBJ_MCALL(Library(), createLibrary, libraryData, librarySize);
+Stream Device::createStream(nxs_uint settings) {
+  NEXUS_OBJ_MCALL(Stream(), createStream, settings);
 }
 
-Library Device::createLibrary(const std::string &libraryPath) {
-  NEXUS_OBJ_MCALL(Library(), createLibrary, libraryPath);
+Schedule Device::createSchedule(nxs_uint settings) {
+  NEXUS_OBJ_MCALL(Schedule(), createSchedule, settings);
+}
+
+Buffer Device::createBuffer(size_t size, const void *data, nxs_uint settings) {
+  NEXUS_OBJ_MCALL(Buffer(), createBuffer, size, data, settings);
+}
+
+Buffer Device::copyBuffer(Buffer buf, nxs_uint settings) {
+  NEXUS_OBJ_MCALL(Buffer(), copyBuffer, buf, settings);
+}
+
+Library Device::createLibrary(void *libraryData, size_t librarySize,
+                              nxs_uint settings) {
+  NEXUS_OBJ_MCALL(Library(), createLibrary, libraryData, librarySize, settings);
+}
+
+Library Device::createLibrary(const std::string &libraryPath,
+                              nxs_uint settings) {
+  NEXUS_OBJ_MCALL(Library(), createLibrary, libraryPath, settings);
 }

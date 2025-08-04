@@ -106,12 +106,12 @@ inline nxs_bool nxs_valid_id(nxs_int id) { return id >= 0; }
 /* ENUM nxs_event_type
  *
  * NXS_EventType_Shared:
- *   - Event is shared between multiple command queues
+ *   - Event is shared between multiple streams
  *   - Event is signaled when a signal command for this event is complete
- *   - Event is waited on by multiple command queues for specific signal values
+ *   - Event is waited on by multiple streams for specific signal values
  * NXS_EventType_Signal:
  *   - Event is signaled when a signal command is complete
- *   - Event is waited on by a wait command queue
+ *   - Event is waited on by a wait stream
  * NXS_EventType_Fence:
  *   - Event is signaled when a kernel command is complete
  *   - Event is waited on by a kernel command
@@ -122,6 +122,12 @@ enum _nxs_event_type {
     NXS_EventType_Fence = 2,
 };
 typedef enum _nxs_event_type nxs_event_type;
+
+enum _nxs_event_settings {
+    NXS_EventSettings_Profiling = 1 << 0,
+    NXS_EventSettings_Timing = 1 << 1,
+};
+typedef enum _nxs_event_settings nxs_event_settings;
 
 /* ENUM nxs_event_status */
 /*
@@ -185,20 +191,20 @@ typedef enum _nxs_execution_type nxs_execution_type;
  * NXS_CommandQueueProperty_OnDeviceDefault:
  *   - Command queue supports on-device default execution
  */
-enum _nxs_command_queue_properties {
-    NXS_CommandQueueProperty_OutOfOrderExecution = 0,
-    NXS_CommandQueueProperty_Profiling = 1,
-    NXS_CommandQueueProperty_OnDevice = 2,
-    NXS_CommandQueueProperty_OnDeviceDefault = 3,
+enum _nxs_stream_settings {
+    NXS_StreamProperty_OutOfOrderExecution = 0,
+    NXS_StreamProperty_Profiling = 1,
+    NXS_StreamProperty_OnDevice = 2,
+    NXS_StreamProperty_OnDeviceDefault = 3,
 };
-typedef enum _nxs_command_queue_properties nxs_command_queue_properties;
+typedef enum _nxs_stream_settings nxs_stream_settings;
 
-enum _nxs_buffer_properties {
+enum _nxs_buffer_settings {
     NXS_BufferProperty_OnHost = 0,
     NXS_BufferProperty_OnDevice = 1,
     NXS_BufferProperty_Maintained = 2,
 };
-typedef enum _nxs_buffer_properties nxs_buffer_properties;
+typedef enum _nxs_buffer_settings nxs_buffer_settings;
 
 /* nxs_bool */
 #define NXS_FALSE                                    0

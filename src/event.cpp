@@ -49,9 +49,7 @@ class EventImpl : public Impl {
 }  // namespace nexus
 
 ///////////////////////////////////////////////////////////////////////////////
-Event::Event(detail::Impl owner, nxs_int value) : Object(owner, value) {}
-
-nxs_int Event::getId() const { NEXUS_OBJ_MCALL(NXS_InvalidEvent, getId); }
+Event::Event(detail::Impl base, nxs_int value) : Object(base, value) {}
 
 std::optional<Property> Event::getProperty(nxs_int prop) const {
   NEXUS_OBJ_MCALL(std::nullopt, getProperty, prop);

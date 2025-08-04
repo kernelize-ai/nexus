@@ -88,8 +88,8 @@ NEXUS_API_FUNC(nxs_status, GetDeviceProperty,
 NEXUS_API_FUNC(nxs_int, CreateBuffer,
     nxs_int device_id,
     size_t size,
-    nxs_uint mem_flags,
-    void* host_ptr
+    void* host_ptr,
+    nxs_uint buffer_settings
 )
 /************************************************************************
  * @def GetBufferProperty
@@ -109,7 +109,8 @@ NEXUS_API_FUNC(nxs_status, GetBufferProperty,
 ***********************************************************************/
 NEXUS_API_FUNC(nxs_status, CopyBuffer,
     nxs_int buffer_id,
-    void* host_ptr
+    void* host_ptr,
+    nxs_uint buffer_settings
 )
 /************************************************************************
  * @def ReleaseBuffer
@@ -130,7 +131,8 @@ NEXUS_API_FUNC(nxs_status, ReleaseBuffer,
 NEXUS_API_FUNC(nxs_int, CreateLibrary,
     nxs_int device_id,
     void *library_data,
-    nxs_uint data_size
+    nxs_uint data_size,
+    nxs_uint library_settings
 )
 /************************************************************************
  * @def CreateLibrary
@@ -140,7 +142,8 @@ NEXUS_API_FUNC(nxs_int, CreateLibrary,
  ***********************************************************************/
 NEXUS_API_FUNC(nxs_int, CreateLibraryFromFile,
     nxs_int device_id,
-    const char *library_data
+    const char *library_data,
+    nxs_uint library_settings
 )
 /************************************************************************
  * @def GetLibraryProperty
@@ -190,7 +193,8 @@ NEXUS_API_FUNC(nxs_status, GetKernelProperty,
  ***********************************************************************/
 NEXUS_API_FUNC(nxs_int, CreateEvent,
     nxs_int device_id,
-    nxs_event_type event_type
+    nxs_event_type event_type,
+    nxs_uint event_settings
 )
 /************************************************************************
  * @def GetEventProperty
@@ -235,7 +239,7 @@ NEXUS_API_FUNC(nxs_status, ReleaseEvent,
  ***********************************************************************/
 NEXUS_API_FUNC(nxs_int, CreateStream,
     nxs_int device_id,
-    nxs_uint stream_properties
+    nxs_uint stream_settings
 )
 /************************************************************************
  * @def GetStreamProperty
@@ -264,7 +268,7 @@ NEXUS_API_FUNC(nxs_status, ReleaseStream,
  ***********************************************************************/
 NEXUS_API_FUNC(nxs_int, CreateSchedule,
     nxs_int device_id,
-    nxs_uint sched_properties
+    nxs_uint schedule_settings
 )
 /************************************************************************
  * @def GetScheduleProperty
@@ -284,7 +288,7 @@ NEXUS_API_FUNC(nxs_status, GetScheduleProperty,
 NEXUS_API_FUNC(nxs_status, RunSchedule,
     nxs_int schedule_id,
     nxs_int stream_id,
-    nxs_bool blocking
+    nxs_uint run_settings
 )
 /************************************************************************
  * @def ReleaseCommandList
@@ -303,7 +307,8 @@ NEXUS_API_FUNC(nxs_status, ReleaseSchedule,
  ***********************************************************************/
 NEXUS_API_FUNC(nxs_int, CreateCommand,
     nxs_int schedule_id,
-    nxs_int kernel_id
+    nxs_int kernel_id,
+    nxs_uint command_settings
 )
 /************************************************************************
  * @def CreateSignalCommand
@@ -314,7 +319,8 @@ NEXUS_API_FUNC(nxs_int, CreateCommand,
 NEXUS_API_FUNC(nxs_int, CreateSignalCommand,
     nxs_int schedule_id,
     nxs_int event_id,
-    nxs_int signal_value
+    nxs_int signal_value,
+    nxs_uint command_settings
 )
 /************************************************************************
  * @def CreateWaitCommand
@@ -325,7 +331,8 @@ NEXUS_API_FUNC(nxs_int, CreateSignalCommand,
 NEXUS_API_FUNC(nxs_int, CreateWaitCommand,
     nxs_int schedule_id,
     nxs_int event_id,
-    nxs_int wait_value
+    nxs_int wait_value,
+    nxs_uint command_settings
 )
 /************************************************************************
  * @def GetCommandProperty
@@ -370,7 +377,6 @@ NEXUS_API_FUNC(nxs_status, FinalizeCommand,
     nxs_int grid_size,
     nxs_int group_size
 )
-
 
 
 #ifdef NEXUS_API_GENERATE_FUNC_ENUM

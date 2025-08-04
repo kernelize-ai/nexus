@@ -16,10 +16,13 @@ namespace detail {
 // + and ID within the owner
 class Impl {
  public:
-  Impl(Impl *_owner = nullptr, nxs_int _id = -1) : owner(_owner), id(_id) {}
+  Impl(Impl *_owner = nullptr, nxs_int _id = -1, nxs_uint _settings = 0)
+      : owner(_owner), id(_id), settings(_settings) {}
   virtual ~Impl() {}
 
   nxs_int getId() const { return id; }
+
+  nxs_uint getSettings() const { return settings; }
 
  protected:
   // Only the derived class can access
@@ -38,7 +41,9 @@ class Impl {
  private:
   Impl *owner;
   nxs_int id;
+  nxs_uint settings;
 };
+
 }  // namespace detail
 
 // Facade base-class
@@ -48,8 +53,11 @@ class Object {
   typedef std::shared_ptr<Timpl> ImplRef;
   ImplRef impl;
 
- public:
+  const detail::Impl *getImpl() const {
+    return reinterpret_cast<const detail::Impl *>(impl.get());
+  }
 
+ public:
   template <typename... Args>
   Object(detail::Impl owner, Args... args)
       : impl(std::make_shared<Timpl>(owner, args...)) {}
@@ -64,13 +72,18 @@ class Object {
 
   virtual ~Object() {}
 
-  operator bool() const { return impl && nxs_valid_id(getId()); }
-  bool operator==(const Object &that) const { return impl == that.impl; }
-  bool operator!=(const Object &that) const { return impl != that.impl; }
+  operator bool() const { return nxs_valid_id(getId()); }
 
   void release() { impl.clear(); }
 
-  virtual nxs_int getId() const = 0;
+  nxs_int getId() const {
+    if (auto *impl = getImpl()) return impl->getId();
+    return NXS_InvalidObject;
+  }
+  nxs_uint getSettings() const {
+    if (auto *impl = getImpl()) return impl->getSettings();
+    return 0;
+  }
 
   virtual std::optional<Property> getProperty(nxs_int prop) const = 0;
 

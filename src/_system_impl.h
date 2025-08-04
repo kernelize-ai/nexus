@@ -22,8 +22,9 @@ class SystemImpl : public detail::Impl {
       return it->second;
     return Runtime();
   }
-  Buffer createBuffer(size_t sz, const void *hostData = nullptr);
-  Buffer copyBuffer(Buffer buf, Device dev);
+  Buffer createBuffer(size_t sz, const void *hostData = nullptr,
+                      nxs_uint options = 0);
+  Buffer copyBuffer(Buffer buf, Device dev, nxs_uint options = 0);
 
   Runtimes getRuntimes() const { return runtimes; }
 

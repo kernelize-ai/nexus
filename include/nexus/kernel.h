@@ -13,10 +13,8 @@ class KernelImpl;
 // System class
 class Kernel : public Object<detail::KernelImpl> {
  public:
-  Kernel(detail::Impl owner, const std::string &kernelName);
+  Kernel(detail::Impl base, const std::string &kernelName);
   using Object::Object;
-
-  nxs_int getId() const override;
 
   std::optional<Property> getProperty(nxs_int prop) const override;
 };

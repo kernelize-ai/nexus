@@ -21,7 +21,6 @@ class Buffer : public Object<detail::BufferImpl> {
          const void *_deviceData = nullptr);
   using Object::Object;
 
-  nxs_int getId() const override;
   nxs_int getDeviceId() const;
 
   std::optional<Property> getProperty(nxs_int prop) const override;
@@ -35,6 +34,7 @@ class Buffer : public Object<detail::BufferImpl> {
 };
 
 typedef Objects<Buffer> Buffers;
+
 }  // namespace nexus
 
 #endif  // NEXUS_BUFFER_H

@@ -12,7 +12,7 @@ namespace detail {
 class LibraryImpl : public Impl {
  public:
   /// @brief Construct a Platform for the current system
-  LibraryImpl(Impl owner);
+  LibraryImpl(Impl base);
 
   ~LibraryImpl();
 

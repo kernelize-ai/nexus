@@ -167,14 +167,14 @@ nxsGetDevicePropertyFromPath(
  * Allocate a buffer on the device.
  */
 extern "C" nxs_int NXS_API_CALL nxsCreateBuffer(nxs_int device_id, size_t size,
-                                                nxs_uint mem_flags,
-                                                void *data_ptr) {
+                                                void *data_ptr,
+                                                nxs_uint buffer_settings) {
   auto rt = getRuntime();
   auto deviceObject = rt->get<CudaDevice>(device_id);
   if (!deviceObject) return NXS_InvalidDevice;
 
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createBuffer: " << size);
-  if (!(mem_flags & NXS_BufferProperty_OnDevice)) {
+  if (!(buffer_settings & NXS_BufferProperty_OnDevice)) {
     void *cuda_ptr = nullptr;
     CUDA_CHECK(NXS_InvalidBuffer, cudaMalloc, &cuda_ptr, size);
     if (data_ptr != nullptr)
@@ -189,12 +189,9 @@ extern "C" nxs_int NXS_API_CALL nxsCreateBuffer(nxs_int device_id, size_t size,
   return rt->addObject(buf);
 }
 
-extern "C" nxs_status NXS_API_CALL
-nxsCopyBuffer(
-  nxs_int buffer_id,
-  void* host_ptr
-)
-{
+extern "C" nxs_status NXS_API_CALL nxsCopyBuffer(nxs_int buffer_id,
+                                                 void *host_ptr,
+                                                 nxs_uint copy_settings) {
   auto rt = getRuntime();
 
   auto buffer = rt->get<rt::Buffer>(buffer_id);
@@ -205,7 +202,6 @@ nxsCopyBuffer(
              buffer->size(), cudaMemcpyDeviceToHost);
   return NXS_Success;
 }
-
 
 /*
  * Release a buffer on the device.
@@ -229,13 +225,10 @@ nxsReleaseBuffer(
 /*
  * Allocate a buffer on the device.
  */
-extern "C" nxs_int NXS_API_CALL
-nxsCreateLibrary(
-  nxs_int device_id,
-  void *library_data,
-  nxs_uint data_size
-)
-{
+extern "C" nxs_int NXS_API_CALL nxsCreateLibrary(nxs_int device_id,
+                                                 void *library_data,
+                                                 nxs_uint data_size,
+                                                 nxs_uint library_settings) {
   auto rt = getRuntime();
 
   auto device = rt->getDevice(device_id);
@@ -250,12 +243,8 @@ nxsCreateLibrary(
 /*
  * Allocate a buffer on the device.
  */
-extern "C" nxs_int NXS_API_CALL
-nxsCreateLibraryFromFile(
-  nxs_int device_id,
-  const char *library_path
-)
-{
+extern "C" nxs_int NXS_API_CALL nxsCreateLibraryFromFile(
+    nxs_int device_id, const char *library_path, nxs_uint library_settings) {
   auto rt = getRuntime();
   auto device = rt->getDevice(device_id);
   if (!device)
@@ -398,7 +387,8 @@ extern "C" nxs_status NXS_API_CALL nxsGetKernelProperty(nxs_int kernel_id,
  * @brief Create event on the device using CUDA Driver API
  ***********************************************************************/
 extern "C" nxs_int NXS_API_CALL nxsCreateEvent(nxs_int device_id,
-                                               nxs_event_type event_type) {
+                                               nxs_event_type event_type,
+                                               nxs_uint event_settings) {
   auto rt = getRuntime();
   auto parent = rt->getObject(device_id);
   if (!parent) return NXS_InvalidDevice;
@@ -463,7 +453,7 @@ extern "C" nxs_status NXS_API_CALL nxsReleaseEvent(nxs_int event_id) {
  *         Non-negative is the bufferId.
  ***********************************************************************/
 extern "C" nxs_int NXS_API_CALL nxsCreateStream(nxs_int device_id,
-                                                nxs_uint stream_properties) {
+                                                nxs_uint stream_settings) {
   auto rt = getRuntime();
   auto device = rt->get<CudaDevice>(device_id);
   if (!device) return NXS_InvalidDevice;
@@ -483,6 +473,20 @@ extern "C" nxs_status NXS_API_CALL
 nxsGetStreamProperty(nxs_int stream_id, nxs_uint stream_property_id,
                      void *property_value, size_t *property_value_size) {
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "getStreamProperty " << stream_property_id);
+  auto rt = getRuntime();
+  auto stream = rt->getPtr<cudaStream_t>(stream_id);
+  if (!stream) return NXS_InvalidStream;
+
+  switch (stream_property_id) {
+    case NP_Keys: {
+      nxs_long keys[] = {NP_Value};
+      return rt::getPropertyVec(property_value, property_value_size, keys, 1);
+    }
+    case NP_Value: {
+      return rt::getPropertyInt(property_value, property_value_size,
+                                (nxs_long)stream);
+    }
+  }
   return NXS_Success;
 }
 
@@ -504,20 +508,43 @@ extern "C" nxs_status NXS_API_CALL nxsReleaseStream(nxs_int stream_id) {
  * @return Negative value is an error status.
  *         Non-negative is the bufferId.
  ***********************************************************************/
-extern "C" nxs_int NXS_API_CALL nxsCreateSchedule(
-  nxs_int device_id,
-  nxs_uint sched_properties
-)
-{
+extern "C" nxs_int NXS_API_CALL nxsCreateSchedule(nxs_int device_id,
+                                                  nxs_uint sched_settings) {
   auto rt = getRuntime();
-
   auto dev = rt->getDevice(device_id);
   if (!dev) return NXS_InvalidDevice;
 
-  auto schedule = rt->getSchedule(device_id);
+  auto schedule = rt->getSchedule(device_id, sched_settings);
   if (!schedule) return NXS_InvalidSchedule;
   return rt->addObject(schedule);
 }
+
+/************************************************************************
+ * @def GetScheduleProperty
+ * @brief Return Schedule properties
+ ***********************************************************************/
+extern "C" nxs_status NXS_API_CALL
+nxsGetScheduleProperty(nxs_int schedule_id, nxs_uint schedule_property_id,
+                       void *property_value, size_t *property_value_size) {
+  NXSAPI_LOG(NXSAPI_STATUS_NOTE,
+             "getScheduleProperty " << schedule_property_id);
+  auto rt = getRuntime();
+  auto schedule = rt->get<CudaSchedule>(schedule_id);
+  if (!schedule) return NXS_InvalidSchedule;
+
+  switch (schedule_property_id) {
+    case NP_Keys: {
+      nxs_long keys[] = {NP_ElapsedTime};
+      return rt::getPropertyVec(property_value, property_value_size, keys, 1);
+    }
+    case NP_ElapsedTime: {
+      return rt::getPropertyFlt(property_value, property_value_size,
+                                schedule->getTime());
+    }
+  }
+  return NXS_Success;
+}
+
 /************************************************************************
  * @def ReleaseSchedule
  * @brief Release the schedule on the device
@@ -538,15 +565,12 @@ extern "C" nxs_status NXS_API_CALL nxsReleaseSchedule(nxs_int schedule_id) {
  * @brief Run the schedule on the device
  * @return Error status or Succes.
  ***********************************************************************/
-extern "C" nxs_status NXS_API_CALL nxsRunSchedule(
-  nxs_int schedule_id,
-  nxs_int stream_id,
-  nxs_bool blocking
-)
-{
+extern "C" nxs_status NXS_API_CALL nxsRunSchedule(nxs_int schedule_id,
+                                                  nxs_int stream_id,
+                                                  nxs_uint run_settings) {
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "runSchedule " << schedule_id << " - "
                                                 << stream_id << " - "
-                                                << blocking);
+                                                << run_settings);
 
   auto rt = getRuntime();
 
@@ -557,7 +581,7 @@ extern "C" nxs_status NXS_API_CALL nxsRunSchedule(
   auto status = schedule->run(stream);
   if (!nxs_success(status)) return status;
 
-  if (blocking)
+  if (run_settings & NXS_ExecutionType_Blocking)
     if (stream)
       CUDA_CHECK(NXS_InvalidStream, cudaStreamSynchronize, stream);
     else
@@ -572,8 +596,9 @@ extern "C" nxs_status NXS_API_CALL nxsRunSchedule(
  * @return Negative value is an error status.
  *         Non-negative is the bufferId.
  ***********************************************************************/
-extern "C" nxs_int NXS_API_CALL
-nxsCreateCommand(nxs_int schedule_id, nxs_int kernel_id) {
+extern "C" nxs_int NXS_API_CALL nxsCreateCommand(nxs_int schedule_id,
+                                                 nxs_int kernel_id,
+                                                 nxs_uint command_settings) {
   auto rt = getRuntime();
 
   auto schedule = rt->get<CudaSchedule>(schedule_id);
@@ -582,7 +607,7 @@ nxsCreateCommand(nxs_int schedule_id, nxs_int kernel_id) {
   auto kernel = rt->getPtr<CUfunction>(kernel_id);
   if (!kernel) return NXS_InvalidKernel;
 
-  auto command = rt->getCommand(kernel);
+  auto command = rt->getCommand(kernel, command_settings);
   schedule->addCommand(command);
   return rt->addObject(command);
 }
@@ -593,9 +618,9 @@ nxsCreateCommand(nxs_int schedule_id, nxs_int kernel_id) {
  * @return Negative value is an error status.
  *         Non-negative is the bufferId.
  ***********************************************************************/
-extern "C" nxs_int NXS_API_CALL nxsCreateSignalCommand(nxs_int schedule_id,
-                                                       nxs_int event_id,
-                                                       nxs_int signal_value) {
+extern "C" nxs_int NXS_API_CALL
+nxsCreateSignalCommand(nxs_int schedule_id, nxs_int event_id,
+                       nxs_int signal_value, nxs_uint command_settings) {
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createSignalCommand " << schedule_id << " - "
                                                         << event_id << " - "
                                                         << signal_value);
@@ -609,7 +634,8 @@ extern "C" nxs_int NXS_API_CALL nxsCreateSignalCommand(nxs_int schedule_id,
     rt->addObject(event);
   }
 
-  auto *cmd = rt->getCommand(event, NXS_CommandType_Signal, signal_value);
+  auto *cmd = rt->getCommand(event, NXS_CommandType_Signal, signal_value,
+                             command_settings);
   sched->addCommand(cmd);
   return rt->addObject(cmd);
 }
@@ -620,9 +646,9 @@ extern "C" nxs_int NXS_API_CALL nxsCreateSignalCommand(nxs_int schedule_id,
  * @return Negative value is an error status.
  *         Non-negative is the bufferId.
  ***********************************************************************/
-extern "C" nxs_int NXS_API_CALL nxsCreateWaitCommand(nxs_int schedule_id,
-                                                     nxs_int event_id,
-                                                     nxs_int wait_value) {
+extern "C" nxs_int NXS_API_CALL
+nxsCreateWaitCommand(nxs_int schedule_id, nxs_int event_id, nxs_int wait_value,
+                     nxs_uint command_settings) {
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createWaitCommand " << schedule_id << " - "
                                                       << event_id << " - "
                                                       << wait_value);
@@ -633,11 +659,35 @@ extern "C" nxs_int NXS_API_CALL nxsCreateWaitCommand(nxs_int schedule_id,
   if (!event) return NXS_InvalidEvent;
 
   //NXSAPI_LOG(NXSAPI_STATUS_NOTE, "EventQuery: " << hipEventQuery(event));
-  auto *cmd = rt->getCommand(event, NXS_CommandType_Wait, wait_value);
+  auto *cmd =
+      rt->getCommand(event, NXS_CommandType_Wait, wait_value, command_settings);
   sched->addCommand(cmd);
   return rt->addObject(cmd);
 }
 
+/************************************************************************
+ * @def GetCommandProperty
+ * @brief Return Command properties
+ ***********************************************************************/
+extern "C" nxs_status NXS_API_CALL
+nxsGetCommandProperty(nxs_int command_id, nxs_uint command_property_id,
+                      void *property_value, size_t *property_value_size) {
+  auto rt = getRuntime();
+  auto command = rt->get<CudaCommand>(command_id);
+  if (!command) return NXS_InvalidCommand;
+
+  switch (command_property_id) {
+    case NP_Keys: {
+      nxs_long keys[] = {NP_ElapsedTime};
+      return rt::getPropertyVec(property_value, property_value_size, keys, 1);
+    }
+    case NP_ElapsedTime: {
+      return rt::getPropertyFlt(property_value, property_value_size,
+                                command->getTime());
+    }
+  }
+  return NXS_Success;
+}
 /************************************************************************
  * @def SetCommandArgument
  * @brief Set command argument on the device

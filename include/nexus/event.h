@@ -21,10 +21,8 @@ class EventImpl;
 
 class Event : public Object<detail::EventImpl> {
  public:
-  Event(detail::Impl owner, nxs_int value = 1);
+  Event(detail::Impl base, nxs_int value = 1);
   using Object::Object;
-
-  nxs_int getId() const override;
 
   std::optional<Property> getProperty(nxs_int prop) const override;
 

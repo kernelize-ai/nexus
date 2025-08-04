@@ -61,10 +61,10 @@ nxsGetRuntimeProperty(nxs_uint runtime_property_id, void *property_value,
   /* return value */
   switch (runtime_property_id) {
     case NP_Name:
-      return rt::getPropertyStr(property_value, property_value_size,
-                                "cpu-generic");
+      return rt::getPropertyStr(property_value, property_value_size, "cpu");
     case NP_Size:
-      return rt::getPropertyInt(property_value, property_value_size, 1);
+      return rt::getPropertyInt(property_value, property_value_size,
+                                cpuinfo_get_processors_count());
     case NP_Vendor: {
       auto name = cpuinfo_vendor_to_string(proc->core->vendor);
       assert(name);
@@ -127,8 +127,8 @@ nxsGetDeviceProperty(nxs_int device_id, nxs_uint device_property_id,
  * @return Error status or Succes.
  ***********************************************************************/
 extern "C" nxs_int NXS_API_CALL nxsCreateBuffer(nxs_int device_id, size_t size,
-                                                nxs_uint mem_flags,
-                                                void *host_ptr) {
+                                                void *host_ptr,
+                                                nxs_uint settings) {
   auto rt = getRuntime();
   auto dev = rt->getObject(device_id);
   if (!dev) return NXS_InvalidDevice;
@@ -144,7 +144,8 @@ extern "C" nxs_int NXS_API_CALL nxsCreateBuffer(nxs_int device_id, size_t size,
  * @return Error status or Succes.
  ***********************************************************************/
 extern "C" nxs_status NXS_API_CALL nxsCopyBuffer(nxs_int buffer_id,
-                                                 void *host_ptr) {
+                                                 void *host_ptr,
+                                                 nxs_uint settings) {
   auto rt = getRuntime();
   auto buf = rt->getObject(buffer_id);
   if (!buf) return NXS_InvalidBuffer;
@@ -172,7 +173,8 @@ extern "C" nxs_status NXS_API_CALL nxsReleaseBuffer(nxs_int buffer_id) {
  ***********************************************************************/
 extern "C" nxs_int NXS_API_CALL nxsCreateLibrary(nxs_int device_id,
                                                  void *library_data,
-                                                 nxs_uint data_size) {
+                                                 nxs_uint data_size,
+                                                 nxs_uint settings) {
   auto rt = getRuntime();
   auto dev = rt->getObject(device_id);
   if (!dev) return NXS_InvalidDevice;
@@ -205,8 +207,8 @@ extern "C" nxs_int NXS_API_CALL nxsCreateLibrary(nxs_int device_id,
  * @brief Create a library from a file
  * @return Error status or Succes.
  ***********************************************************************/
-extern "C" nxs_int NXS_API_CALL
-nxsCreateLibraryFromFile(nxs_int device_id, const char *library_path) {
+extern "C" nxs_int NXS_API_CALL nxsCreateLibraryFromFile(
+    nxs_int device_id, const char *library_path, nxs_uint settings) {
   NXSAPI_LOG(NXSAPI_STATUS_NOTE,
              "createLibraryFromFile " << device_id << " - " << library_path);
   auto rt = getRuntime();
@@ -306,7 +308,7 @@ extern "C" nxs_status NXS_API_CALL nxsReleaseKernel(nxs_int kernel_id) {
  *         Non-negative is the bufferId.
  ***********************************************************************/
 extern "C" nxs_int NXS_API_CALL nxsCreateStream(nxs_int device_id,
-                                                nxs_uint stream_properties) {
+                                                nxs_uint stream_settings) {
   auto rt = getRuntime();
   auto dev = rt->getObject(device_id);
   if (!dev) return NXS_InvalidDevice;
@@ -337,7 +339,7 @@ extern "C" nxs_status NXS_API_CALL nxsReleaseStream(nxs_int stream_id) {
  *         Non-negative is the bufferId.
  ***********************************************************************/
 extern "C" nxs_int NXS_API_CALL nxsCreateSchedule(nxs_int device_id,
-                                                  nxs_uint sched_properties) {
+                                                  nxs_uint schedule_settings) {
   auto rt = getRuntime();
   auto dev = rt->getObject(device_id);
   if (!dev) return NXS_InvalidDevice;
@@ -352,7 +354,7 @@ extern "C" nxs_int NXS_API_CALL nxsCreateSchedule(nxs_int device_id,
  ***********************************************************************/
 extern "C" nxs_status NXS_API_CALL nxsRunSchedule(nxs_int schedule_id,
                                                   nxs_int stream_id,
-                                                  nxs_bool blocking) {
+                                                  nxs_uint run_settings) {
   auto rt = getRuntime();
   auto sched = rt->getObject(schedule_id);
   if (!sched) return NXS_InvalidDevice;
@@ -419,8 +421,8 @@ extern "C" nxs_status NXS_API_CALL nxsRunSchedule(nxs_int schedule_id,
     }
   }
 
-  if (blocking) {
-  }
+  // if (blocking) {
+  // }
   return NXS_Success;
 }
 
@@ -442,7 +444,8 @@ extern "C" nxs_status NXS_API_CALL nxsReleaseSchedule(nxs_int schedule_id) {
  *         Non-negative is the bufferId.
  ***********************************************************************/
 extern "C" nxs_int NXS_API_CALL nxsCreateCommand(nxs_int schedule_id,
-                                                 nxs_int kernel_id) {
+                                                 nxs_int kernel_id,
+                                                 nxs_uint settings) {
   auto rt = getRuntime();
   auto sched = rt->getObject(schedule_id);
   if (!sched) return NXS_InvalidBuildOptions;  // fix

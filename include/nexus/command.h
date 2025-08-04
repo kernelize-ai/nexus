@@ -19,11 +19,9 @@ class CommandImpl;
 // System class
 class Command : public Object<detail::CommandImpl> {
  public:
-  Command(detail::Impl owner, Kernel kern);
-  Command(detail::Impl owner, Event event);
+  Command(detail::Impl base, Kernel kern);
+  Command(detail::Impl base, Event event);
   using Object::Object;
-
-  nxs_int getId() const override;
 
   std::optional<Property> getProperty(nxs_int prop) const override;
 

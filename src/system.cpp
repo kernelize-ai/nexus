@@ -33,17 +33,18 @@ std::optional<Property> SystemImpl::getProperty(nxs_int prop) const {
   return std::nullopt;
 }
 
-Buffer SystemImpl::createBuffer(size_t sz, const void *hostData) {
+Buffer SystemImpl::createBuffer(size_t sz, const void *hostData,
+                                nxs_uint settings) {
   NEXUS_LOG(NEXUS_STATUS_NOTE, "createBuffer " << sz);
   nxs_uint id = buffers.size();
-  Buffer buf(detail::Impl(this, id), sz, hostData);
+  Buffer buf(detail::Impl(this, id, settings), sz, hostData);
   buffers.add(buf);
   return buf;
 }
 
-Buffer SystemImpl::copyBuffer(Buffer buf, Device dev) {
+Buffer SystemImpl::copyBuffer(Buffer buf, Device dev, nxs_uint settings) {
   NEXUS_LOG(NEXUS_STATUS_NOTE, "copyBuffer " << buf.getSize());
-  Buffer nbuf = dev.copyBuffer(buf);
+  Buffer nbuf = dev.copyBuffer(buf, settings);
   return nbuf;
 }
 
@@ -62,12 +63,13 @@ Runtimes System::getRuntimes() const { NEXUS_OBJ_MCALL(Runtimes(), getRuntimes);
 Runtime System::getRuntime(int idx) const { NEXUS_OBJ_MCALL(Runtime(), getRuntime, idx); }
 Runtime System::getRuntime(const std::string &name) { NEXUS_OBJ_MCALL(Runtime(), getRuntime, name); }
 
-Buffer System::createBuffer(size_t sz, const void *hostData) {
-  NEXUS_OBJ_MCALL(Buffer(), createBuffer, sz, hostData);
+Buffer System::createBuffer(size_t sz, const void *hostData,
+                            nxs_uint settings) {
+  NEXUS_OBJ_MCALL(Buffer(), createBuffer, sz, hostData, settings);
 }
 
-Buffer System::copyBuffer(Buffer buf, Device dev) {
-  NEXUS_OBJ_MCALL(Buffer(), copyBuffer, buf, dev);
+Buffer System::copyBuffer(Buffer buf, Device dev, nxs_uint settings) {
+  NEXUS_OBJ_MCALL(Buffer(), copyBuffer, buf, dev, settings);
 }
 
 /// @brief Get the System Platform

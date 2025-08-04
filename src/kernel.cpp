@@ -13,8 +13,8 @@ namespace detail {
 class KernelImpl : public Impl {
  public:
   /// @brief Construct a Platform for the current system
-  KernelImpl(Impl owner, const std::string &kName)
-      : Impl(owner), kernelName(kName) {
+  KernelImpl(Impl base, const std::string &kName)
+      : Impl(base), kernelName(kName) {
     NEXUS_LOG(NEXUS_STATUS_NOTE,
               "  Kernel: " << kernelName << " - " << getId());
   }
@@ -41,10 +41,8 @@ class KernelImpl : public Impl {
 }  // namespace nexus
 
 ///////////////////////////////////////////////////////////////////////////////
-Kernel::Kernel(detail::Impl owner, const std::string &kernelName)
-    : Object(owner, kernelName) {}
-
-nxs_int Kernel::getId() const { NEXUS_OBJ_MCALL(NXS_InvalidKernel, getId); }
+Kernel::Kernel(detail::Impl base, const std::string &kernelName)
+    : Object(base, kernelName) {}
 
 std::optional<Property> Kernel::getProperty(nxs_int prop) const {
   NEXUS_OBJ_MCALL(std::nullopt, getProperty, prop);

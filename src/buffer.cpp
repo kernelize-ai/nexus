@@ -30,9 +30,8 @@ void detail::BufferImpl::release() {}
 
 std::optional<Property> detail::BufferImpl::getProperty(nxs_int prop) const {
   if (getDeviceId()) {
-    //auto *rt = getParentOfType<RuntimeImpl>();
-    //if (nxs_success(rt->runAPIFunction<NF_nxsGetBufferProperty>(getId(), prop))) {
-    //}
+    auto *rt = getParentOfType<RuntimeImpl>();
+    return rt->getAPIProperty<NF_nxsGetBufferProperty>(prop, getId());
   }
   switch (prop) {
     case NP_Type: return Property("buffer");
@@ -52,12 +51,13 @@ void detail::BufferImpl::setData(size_t sz, const char *hostData) {
 }
 
 Buffer detail::BufferImpl::getLocal() const {
-  if (!nxs_valid_id(getDeviceId())) return *this;
-  void *lbuf = data->data();
-  auto *rt = getParentOfType<RuntimeImpl>();
-  if (nxs_success(rt->runAPIFunction<NF_nxsCopyBuffer>(getId(), lbuf))) {
-    auto *sys = getParentOfType<detail::SystemImpl>();
-    return sys->createBuffer(data->size(), data->data());
+  if (data) {
+    void *lbuf = data->data();
+    auto *rt = getParentOfType<RuntimeImpl>();
+    if (nxs_success(rt->runAPIFunction<NF_nxsCopyBuffer>(getId(), lbuf, 0))) {
+      auto *sys = getParentOfType<detail::SystemImpl>();
+      return sys->createBuffer(data->size(), data->data());
+    }
   }
   return Buffer();
 }
@@ -65,7 +65,8 @@ Buffer detail::BufferImpl::getLocal() const {
 nxs_status detail::BufferImpl::copyData(void *_hostBuf) const {
   if (nxs_valid_id(getDeviceId())) {
     auto *rt = getParentOfType<RuntimeImpl>();
-    return (nxs_status)rt->runAPIFunction<NF_nxsCopyBuffer>(getId(), _hostBuf);
+    return (nxs_status)rt->runAPIFunction<NF_nxsCopyBuffer>(getId(), _hostBuf,
+                                                            0);
   }
   memcpy(_hostBuf, getData(), getSize());
   return NXS_Success;
@@ -78,8 +79,6 @@ Buffer::Buffer(detail::Impl base, size_t _sz, const void *_hostData)
 Buffer::Buffer(detail::Impl base, nxs_int _devId, size_t _sz, const void *_hostData)
     : Object(base, _devId, _sz, (const char *)_hostData) {}
 
-nxs_int Buffer::getId() const { NEXUS_OBJ_MCALL(NXS_InvalidBuffer, getId); }
-
 nxs_int Buffer::getDeviceId() const { NEXUS_OBJ_MCALL(NXS_InvalidBuffer, getDeviceId); }
 
 std::optional<Property> Buffer::getProperty(nxs_int prop) const {
@@ -89,6 +88,9 @@ std::optional<Property> Buffer::getProperty(nxs_int prop) const {
 size_t Buffer::getSize() const { NEXUS_OBJ_MCALL(0, getSize); }
 const char *Buffer::getData() const { NEXUS_OBJ_MCALL(nullptr, getData); }
 
-Buffer Buffer::getLocal() const { NEXUS_OBJ_MCALL(Buffer(), getLocal); }
+Buffer Buffer::getLocal() const {
+  if (!nxs_valid_id(getDeviceId())) return *this;
+  return get()->getLocal();
+}
 
 nxs_status Buffer::copy(void *_hostBuf) { NEXUS_OBJ_MCALL(NXS_InvalidBuffer, copyData, _hostBuf); }
