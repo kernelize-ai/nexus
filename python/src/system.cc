@@ -422,10 +422,10 @@ void pynexus::init_system_bindings(py::module &m) {
               int idx = 0;
               for (auto buf : buffers) {
                 if (PyLong_Check(buf.ptr())) {
-                  auto value = PyLong_AsLong(buf.ptr());
+                  nxs_long value = PyLong_AsLong(buf.ptr());
                   cmd.setArgument(idx++, value);
                 } else if (PyFloat_Check(buf.ptr())) {
-                  auto value = PyFloat_AsDouble(buf.ptr());
+                  nxs_float value = PyFloat_AsDouble(buf.ptr());
                   cmd.setArgument(idx++, value);
                 } else {
                   auto buf_obj = make_buffer(buf);
