@@ -123,11 +123,14 @@ enum _nxs_event_type {
 };
 typedef enum _nxs_event_type nxs_event_type;
 
-enum _nxs_event_settings {
-    NXS_EventSettings_Profiling = 1 << 0,
-    NXS_EventSettings_Timing = 1 << 1,
+enum _nxs_execution_settings {
+    NXS_ExecutionSettings_Profiling = 1 << 0,
+    NXS_ExecutionSettings_Timing = 1 << 1,
+    NXS_ExecutionSettings_Capture = 1 << 2,
+    NXS_ExecutionSettings_Blocking = 1 << 3,
+    NXS_ExecutionSettings_NonBlocking = 1 << 4,
 };
-typedef enum _nxs_event_settings nxs_event_settings;
+typedef enum _nxs_execution_settings nxs_execution_settings;
 
 /* ENUM nxs_event_status */
 /*
@@ -166,19 +169,6 @@ enum _nxs_command_type {
     NXS_CommandType_Wait = 2,
 };
 typedef enum _nxs_command_type nxs_command_type;
-
-/* ENUM nxs_execution_type
- *
- * NXS_ExecutionType_Blocking:
- *   - Command is blocking
- * NXS_ExecutionType_NonBlocking:
- *   - Command is non-blocking
- */
-enum _nxs_execution_type {
-    NXS_ExecutionType_Blocking = 0,
-    NXS_ExecutionType_NonBlocking = 1,
-};
-typedef enum _nxs_execution_type nxs_execution_type;
 
 /* ENUM nxs_command_queue_properties
  *

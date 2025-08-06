@@ -20,14 +20,14 @@ class Schedule : public Object<detail::ScheduleImpl> {
 
   std::optional<Property> getProperty(nxs_int prop) const override;
 
-  Command createCommand(Kernel kern, nxs_uint options = 0);
-  Command createSignalCommand(nxs_int signal_value = 1, nxs_uint options = 0);
+  Command createCommand(Kernel kern, nxs_uint settings = 0);
+  Command createSignalCommand(nxs_int signal_value = 1, nxs_uint settings = 0);
   Command createSignalCommand(Event event, nxs_int signal_value = 1,
-                              nxs_uint options = 0);
+                              nxs_uint settings = 0);
   Command createWaitCommand(Event event, nxs_int wait_value = 1,
-                            nxs_uint options = 0);
+                            nxs_uint settings = 0);
 
-  nxs_status run(Stream stream = Stream(), nxs_uint options = 0);
+  nxs_status run(Stream stream = Stream(), nxs_uint settings = 0);
 };
 
 typedef Objects<Schedule> Schedules;

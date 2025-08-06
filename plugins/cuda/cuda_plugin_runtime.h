@@ -86,7 +86,7 @@ public:
   void release(CudaCommand *cmd) { command_pool.release(cmd); }
 
   void release(CudaSchedule *sched) {
-    sched->release(this);
+    sched->release();
     schedule_pool.release(sched);
   }
 };

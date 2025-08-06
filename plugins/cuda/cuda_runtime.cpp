@@ -588,7 +588,7 @@ extern "C" nxs_status NXS_API_CALL nxsReleaseSchedule(nxs_int schedule_id) {
   auto rt = getRuntime();
   auto sched = rt->get<CudaSchedule>(schedule_id);
   if (!sched) return NXS_InvalidSchedule;
-  sched->release(rt);
+  sched->release();
   if (!rt->dropObject(schedule_id)) return NXS_InvalidSchedule;
   return NXS_Success;
 }
@@ -611,10 +611,10 @@ extern "C" nxs_status NXS_API_CALL nxsRunSchedule(nxs_int schedule_id,
   if (!schedule) return NXS_InvalidSchedule;
 
   auto stream = rt->getPtr<cudaStream_t>(stream_id);
-  auto status = schedule->run(stream);
+  auto status = schedule->run(stream, run_settings);
   if (!nxs_success(status)) return status;
 
-  if (run_settings & NXS_ExecutionType_Blocking)
+  if (run_settings & NXS_ExecutionSettings_Blocking)
     if (stream)
       CUDA_CHECK(NXS_InvalidStream, cudaStreamSynchronize, stream);
     else
