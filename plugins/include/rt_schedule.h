@@ -10,7 +10,6 @@ template <typename Tcommand, typename Tstream>
 class Schedule {
   typedef std::vector<Tcommand *> Commands;
 
- protected:
   nxs_int device_id;
   nxs_uint settings;
   Commands commands;
@@ -23,6 +22,8 @@ class Schedule {
   virtual ~Schedule() = default;
 
   nxs_int getDeviceId() const { return device_id; }
+
+  nxs_uint getSettings() const { return settings; }
 
   void addCommand(Tcommand *command) { commands.push_back(command); }
 

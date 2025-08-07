@@ -9,13 +9,10 @@
 #define SUCCESS 0
 #define FAILURE 1
 
-int g_argc;
-char** g_argv;
-
-int test_basic_kernel(int argc, char **argv) {
-
+int test_graph(int argc, char** argv) {
   if (argc < 4) {
-    std::cout << "Usage: " << argv[0] << " <runtime_name> <kernel_file> <kernel_name>" << std::endl;
+    std::cout << "Usage: " << argv[0]
+              << " <runtime_name> <kernel_file> <kernel_name>" << std::endl;
     return FAILURE;
   }
 
@@ -39,9 +36,10 @@ int test_basic_kernel(int argc, char **argv) {
   auto count = runtime.getDevices().size();
 
   std::string runtimeName = runtime.getProp<std::string>(NP_Name);
-  
-  std::cout << std::endl << "RUNTIME: " << runtimeName << " - " << count
-            << std::endl << std::endl;
+
+  std::cout << std::endl
+            << "RUNTIME: " << runtimeName << " - " << count << std::endl
+            << std::endl;
 
   for (int i = 0; i < count; ++i) {
     auto dev = runtime.getDevice(i);
@@ -71,16 +69,27 @@ int test_basic_kernel(int argc, char **argv) {
 
   auto sched = dev0.createSchedule();
 
-  auto cmd = sched.createCommand(kern);
-  cmd.setArgument(0, buf0);
-  cmd.setArgument(1, buf1);
-  cmd.setArgument(2, buf2);
+  for (int i = 0; i < 10; ++i) {
+    auto cmd = sched.createCommand(kern);
+    cmd.setArgument(0, buf0);
+    cmd.setArgument(1, buf1);
+    cmd.setArgument(2, buf2);
 
-  cmd.finalize(32, 32);
+    cmd.finalize(32, 32);
+  }
 
-  sched.run(stream0);
+  sched.run(stream0,
+            NXS_ExecutionSettings_Timing | NXS_ExecutionSettings_Capture);
+
+  float time = 0.0;
+  for (int i = 0; i < 10; ++i) {
+    sched.run(stream0, NXS_ExecutionSettings_Timing);
+    time = sched.getProp<nxs_double>(NP_ElapsedTime);
+  }
 
   buf2.copy(vecResult_GPU.data());
+
+  std::cout << std::endl << "Test Time: " << time << std::endl;
 
   int i = 0;
   for (auto v : vecResult_GPU) {
@@ -96,6 +105,9 @@ int test_basic_kernel(int argc, char **argv) {
   return SUCCESS;
 }
 
+int g_argc;
+char** g_argv;
+
 // Create the NexusIntegration test fixture class
 class NexusIntegration : public ::testing::Test {
  protected:
@@ -103,8 +115,8 @@ class NexusIntegration : public ::testing::Test {
   void TearDown() override {}
 };
 
-TEST_F(NexusIntegration, BASIC_KERNEL) {
-  int result = test_basic_kernel(g_argc, g_argv);
+TEST_F(NexusIntegration, GRAPH_KERNEL) {
+  int result = test_graph(g_argc, g_argv);
   EXPECT_EQ(result, SUCCESS);
 }
 

@@ -614,12 +614,12 @@ extern "C" nxs_status NXS_API_CALL nxsRunSchedule(nxs_int schedule_id,
   auto status = schedule->run(stream, run_settings);
   if (!nxs_success(status)) return status;
 
-  if (run_settings & NXS_ExecutionSettings_Blocking)
+  if (!(run_settings & NXS_ExecutionSettings_NonBlocking)) {
     if (stream)
       CUDA_CHECK(NXS_InvalidStream, cudaStreamSynchronize, stream);
     else
       CUDA_CHECK(NXS_InvalidStream, cudaDeviceSynchronize);
-
+  }
   return NXS_Success;
 }
 

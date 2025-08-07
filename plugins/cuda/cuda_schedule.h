@@ -37,7 +37,7 @@ class CudaSchedule : public nxs::rt::Schedule<CudaCommand, CUstream> {
   }
 
   nxs_status run(CUstream stream, nxs_uint run_settings) override {
-    nxs_uint settings = settings | run_settings;
+    nxs_uint settings = getSettings() | run_settings;
     if (settings & NXS_ExecutionSettings_Timing) {
       if (!start_event) {
         CUDA_CHECK(NXS_InvalidCommand, cudaEventCreate, &start_event);

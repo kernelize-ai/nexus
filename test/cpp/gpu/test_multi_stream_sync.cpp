@@ -1,3 +1,4 @@
+#include <gtest/gtest.h>
 #include <nexus.h>
 
 #include <cstdlib>
@@ -7,6 +8,9 @@
 
 #define SUCCESS 0
 #define FAILURE 1
+
+int g_argc;
+char** g_argv;
 
 int test_multi_stream_sync(int argc, char **argv) {
 
@@ -104,8 +108,8 @@ int test_multi_stream_sync(int argc, char **argv) {
   sched1.createSignalCommand(evFinal);
 
   // Run streams -- order is important for HIP events :-(
-  sched0.run(stream0, false);
-  sched1.run(stream1, false);
+  sched0.run(stream0, NXS_ExecutionSettings_NonBlocking);
+  sched1.run(stream1, NXS_ExecutionSettings_NonBlocking);
 
   evFinal.wait();
 
@@ -122,4 +126,24 @@ int test_multi_stream_sync(int argc, char **argv) {
   std::cout << "\n\n Test PASSED \n\n" << std::endl;
 
   return SUCCESS;
+}
+
+// Create the NexusIntegration test fixture class
+class NexusIntegration : public ::testing::Test {
+ protected:
+  void SetUp() override {}
+  void TearDown() override {}
+};
+
+TEST_F(NexusIntegration, MULTI_STREAM_SYNC) {
+  int result = test_multi_stream_sync(g_argc, g_argv);
+  EXPECT_EQ(result, SUCCESS);
+}
+
+int main(int argc, char** argv) {
+  g_argc = argc;
+  g_argv = argv;
+
+  ::testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
 }

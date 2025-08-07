@@ -10,12 +10,14 @@ detect_os() {
   esac
 }
 
+BUILD_DIR=build.local
+
 main() {
   local original_dir=$(pwd)
   local os_type=$(detect_os)
 
-  mkdir -p build
-  cd build
+  mkdir -p $BUILD_DIR
+  cd $BUILD_DIR
   cmake ..
   make -j$(nproc)
 
@@ -25,7 +27,10 @@ main() {
 
   elif [[ "$os_type" == "linux" ]]; then
     printf "Running Linux test"
-    ./test/cpp/gpu/nexus_gpu_integration_test cuda cuda_kernels/add_vectors.ptx add_vectors
+    ./test/cpp/gpu/test_basic_kernel cuda cuda_kernels/add_vectors.ptx add_vectors
+    ./test/cpp/gpu/test_smi cuda cuda_kernels/add_vectors.ptx add_vectors
+    ./test/cpp/gpu/test_multi_stream_sync cuda cuda_kernels/add_vectors.ptx add_vectors
+    ./test/cpp/gpu/test_graph cuda cuda_kernels/add_vectors.ptx add_vectors
   else
     printf "Unsupported OS: $os_type"
     exit 1

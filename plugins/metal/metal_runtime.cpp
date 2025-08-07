@@ -802,7 +802,7 @@ extern "C" nxs_status nxsRunSchedule(nxs_int schedule_id, nxs_int stream_id,
   cmdbuf->enqueue();
 
   cmdbuf->commit();
-  if (sched_settings & NXS_ExecutionType_Blocking) {
+  if (!(sched_settings & NXS_ExecutionSettings_NonBlocking)) {
     cmdbuf->waitUntilCompleted();  // Synchronous wait for simplicity
     if (cmdbuf->status() == MTL::CommandBufferStatusError) {
       NXSAPI_LOG(

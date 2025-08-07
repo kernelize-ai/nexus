@@ -127,8 +127,7 @@ enum _nxs_execution_settings {
     NXS_ExecutionSettings_Profiling = 1 << 0,
     NXS_ExecutionSettings_Timing = 1 << 1,
     NXS_ExecutionSettings_Capture = 1 << 2,
-    NXS_ExecutionSettings_Blocking = 1 << 3,
-    NXS_ExecutionSettings_NonBlocking = 1 << 4,
+    NXS_ExecutionSettings_NonBlocking = 1 << 3,
 };
 typedef enum _nxs_execution_settings nxs_execution_settings;
 
