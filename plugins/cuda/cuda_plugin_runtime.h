@@ -10,6 +10,8 @@
 
 #include <nvml.h>
 
+using namespace nxs;
+
 class CudaRuntime : public rt::Runtime {
 
 public:
