@@ -43,12 +43,14 @@ void RuntimeImpl::loadPlugin() {
   NEXUS_LOG(NEXUS_STATUS_NOTE, "Loading Runtime plugin: " << pluginLibraryPath);
   library = dlopen(pluginLibraryPath.c_str(), RTLD_NOW | RTLD_GLOBAL);
   char *dlError = dlerror();
-  if (dlError) {
-    NEXUS_LOG(NEXUS_STATUS_ERR, "  Failed to dlopen plugin: " << dlError);
-    assert(0);
-  } else if (library == nullptr) {
-    NEXUS_LOG(NEXUS_STATUS_ERR, "  Failed to load plugin");
-    assert(0);
+  if (dlError || library == nullptr) {
+    if (dlError)
+      NEXUS_LOG(NEXUS_STATUS_ERR, "  Failed to dlopen plugin: " << dlError);
+    else
+      NEXUS_LOG(NEXUS_STATUS_ERR, "  Failed to load plugin: " << pluginLibraryPath);
+    memset(runtimeFns, 0, sizeof(runtimeFns));
+    library = nullptr;
+    return;
   }
 
   auto loadFn = [&](nxs_function fn) {

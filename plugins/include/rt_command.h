@@ -18,8 +18,8 @@ class Command {
   nxs_int event_value;
   float time_ms;
   nxs_uint settings;
-  std::vector<void *> args;
-  std::vector<void *> args_ref;
+  std::array<void *, RT_COMMAND_MAX_ARGS> args;
+  std::array<void *, RT_COMMAND_MAX_ARGS> args_ref;
   nxs_long block_size;
   nxs_long grid_size;
 
@@ -28,9 +28,9 @@ class Command {
       : kernel(kernel),
         type(NXS_CommandType_Dispatch),
         time_ms(0),
-        args(RT_COMMAND_MAX_ARGS, nullptr),
-        args_ref(RT_COMMAND_MAX_ARGS, nullptr),
-        settings(settings) {}
+        settings(settings) {
+          args_ref.fill(nullptr);
+        }
 
   Command(Tevent event, nxs_command_type type, nxs_int event_value = 1,
           nxs_uint settings = 0)
