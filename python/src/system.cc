@@ -73,7 +73,7 @@ static Buffer make_buffer(py::object tensor) {
     if (runtime) {
       auto device = runtime.getDevice(data_ptr.device_id);
       if (device) {
-        return device.createBuffer(data_ptr.size, data_ptr.ptr, true);
+        return device.createBuffer(data_ptr.size, data_ptr.ptr, NXS_BufferSettings_OnDevice);
       }
     } else {
       throw std::runtime_error("Runtime not found: " +
@@ -388,7 +388,12 @@ void pynexus::init_system_bindings(py::module &m) {
            })
       .def("set_arg",
            [](Command &self, int index, py::object value) {
-             return self.setArgument(index, make_buffer(value));
+             if (value.is_none()) {
+               auto none_buf = nexus::getSystem().createBuffer(0, nullptr, NXS_BufferSettings_OnDevice);
+               return self.setArgument(index, none_buf);
+             } else {
+               return self.setArgument(index, make_buffer(value));
+             }
            })
       .def("finalize", [](Command &self, int gridSize, int groupSize) {
         return self.finalize(gridSize, groupSize);
