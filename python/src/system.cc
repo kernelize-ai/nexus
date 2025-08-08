@@ -426,11 +426,14 @@ void pynexus::init_system_bindings(py::module &m) {
             if (cmd) {
               int idx = 0;
               for (auto buf : buffers) {
-                if (PyLong_Check(buf.ptr())) {
+                if (buf.is_none()) {
+                  auto none_buf = nexus::getSystem().createBuffer(0, nullptr, NXS_BufferSettings_OnDevice);
+                  cmd.setArgument(idx++, none_buf);
+                } else if (PyLong_Check(buf.ptr())) {
                   nxs_long value = PyLong_AsLong(buf.ptr());
                   cmd.setArgument(idx++, value);
                 } else if (PyFloat_Check(buf.ptr())) {
-                  nxs_float value = PyFloat_AsDouble(buf.ptr());
+                  nxs_double value = PyFloat_AsDouble(buf.ptr());
                   cmd.setArgument(idx++, value);
                 } else {
                   auto buf_obj = make_buffer(buf);
