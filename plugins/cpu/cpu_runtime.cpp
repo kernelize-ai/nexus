@@ -1,3 +1,5 @@
+#define NXSAPI_LOGGING
+
 #include <assert.h>
 #include <dlfcn.h>
 #include <rt_buffer.h>
@@ -14,7 +16,6 @@
 #include <magic_enum/magic_enum.hpp>
 #include <cpuinfo.h>
 
-#define NXSAPI_LOGGING
 #include <nexus-api.h>
 
 #define NXSAPI_LOG_MODULE "cpu_runtime"
@@ -395,12 +396,12 @@ extern "C" nxs_status NXS_API_CALL nxsRunSchedule(nxs_int schedule_id,
     // call func with bufs + dims (int64[3], int64[3], int64[3])
     int64_t *global_size = bufs[args.size() - 2]->get<int64_t>();
     int64_t *local_size = bufs[args.size() - 1]->get<int64_t>();
-    for (int64_t i = 0; i < global_size[0]; i += local_size[0]) {
-      for (int64_t j = 0; j < global_size[1]; j += local_size[1]) {
-        for (int64_t k = 0; k < global_size[2]; k += local_size[2]) {
-          coords[0] = i;
-          coords[1] = j;
-          coords[2] = k;
+    for (int64_t i = 0; i < global_size[0]; i++) {
+      for (int64_t j = 0; j < global_size[1]; j++) {
+        for (int64_t k = 0; k < global_size[2]; k++) {
+          coords[0] = i * local_size[0];
+          coords[1] = j * local_size[1];
+          coords[2] = k * local_size[2];
           try {
             std::invoke(func_ptr, bufs[0]->data(), bufs[1]->data(),
                         bufs[2]->data(), bufs[3]->data(), bufs[4]->data(),

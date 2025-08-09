@@ -22,7 +22,7 @@ main() {
   make -j$(nproc)
 
   printf "Running CPU tests"
-  ./test/cpp/test_basic_kernel cpu kernel_libs/cpu_kernels.so add_vectors
+  ./test/cpp/test_basic_kernel cpu kernel_libs/cpu_kernel.so add_vectors
 
   if [[ "$os_type" == "macos" ]]; then
     printf "Running macOS test"

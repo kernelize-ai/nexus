@@ -1,8 +1,10 @@
+//#include <stdio.h>
 
 typedef long long int64;
 
 void add_vectors(float *a, float *b, float *out, int64 global_size[],
                  int64 local_size[], int64 dims[]) {
+  //printf("DIMS: %lld\n", dims[0]);
   a += dims[0];
   b += dims[0];
   out += dims[0];
