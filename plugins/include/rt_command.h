@@ -1,7 +1,6 @@
 #ifndef RT_COMMAND_H
 #define RT_COMMAND_H
 
-#include <cuda_utils.h>
 #include <rt_buffer.h>
 
 #define RT_COMMAND_MAX_ARGS 64
