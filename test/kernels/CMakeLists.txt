@@ -102,16 +102,6 @@ if(LINUX)
   ### CUDA Kernels
   if(CMAKE_CUDA_COMPILER)
     find_package(CUDAToolkit REQUIRED)
-    target_link_libraries(cuda_plugin CUDA::cudart CUDA::cuda_driver)
-
-    target_compile_options(cuda_plugin PRIVATE -fvisibility=default)
-    target_link_options(cuda_plugin PRIVATE "LINKER:--exclude-libs,ALL")
-    if(WIN32)
-      target_link_options(cuda_plugin PRIVATE "LINKER:--enable-auto-import,--enable-runtime-pseudo-reloc")
-    endif()
-
-    # Compile Cuda kernels
-
     # Auto-detect GPU architecture
     execute_process(
       COMMAND nvidia-smi --query-gpu=compute_cap --format=csv,noheader,nounits --id=0
@@ -123,25 +113,23 @@ if(LINUX)
       string(REPLACE "." "" GPU_ARCH ${GPU_ARCH})
     endif()
 
-    set(KERNEL_DIR "${PROJECT_SOURCE_DIR}/cuda_kernels")
-
-    file(GLOB CU_FILES "${KERNEL_DIR}/*.cu")
+    file(GLOB CU_FILES "${CMAKE_CURRENT_SOURCE_DIR}/cuda_kernels/*.cu")
     foreach(CU_FILE ${CU_FILES})
       get_filename_component(KERNEL_NAME ${CU_FILE} NAME_WE)
-      set(PTX_FILE "${PTX_DIR}/${KERNEL_NAME}.ptx")
+      set(PTX_FILE "${KERNEL_LIBS}/${KERNEL_NAME}.ptx")
 
       add_custom_command(
         OUTPUT "${PTX_FILE}"
         COMMAND ${CUDAToolkit_NVCC_EXECUTABLE} -ptx -arch sm_${GPU_ARCH} -o "${PTX_FILE}" "${CU_FILE}"
         DEPENDS "${CU_FILE}")
 
-        list(APPEND PTX_TARGETS "${PTX_FILE}")
+      list(APPEND PTX_TARGETS "${PTX_FILE}")
     endforeach()
 
     if(PTX_TARGETS)
       add_custom_target(cuda_libraries ALL
         DEPENDS ${PTX_TARGETS}
-        COMMENT "Building all CUDA libraries")
+        COMMENT "Building all CUDA libraries ${PTX_TARGETS}")
     endif()
   endif()
 endif()
