@@ -1,16 +1,15 @@
 #include <nexus.h>
 
+#include <chrono>
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <numeric>
-#include <chrono>
 
 #define SUCCESS 0
 #define FAILURE -1
 
 int test_smi(int argc, char **argv) {
-
   if (argc < 2) {
     std::cout << "Usage: " << argv[0] << " <runtime_name>" << std::endl;
     return FAILURE;
@@ -35,13 +34,14 @@ int test_smi(int argc, char **argv) {
 
   std::string runtimeName = runtime.getProp<std::string>(NP_Name);
 
-  std::cout << std::endl << "RUNTIME: " << runtimeName << " - " << count
-            << std::endl << std::endl;
+  std::cout << std::endl
+            << "RUNTIME: " << runtimeName << " - " << count << std::endl
+            << std::endl;
 
   for (int i = 0; i < count; ++i) {
     auto dev = runtime.getDevice(i);
     std::cout << "  Device: " << dev.getProp<std::string>(NP_Name) << " - "
-      << dev.getProp<std::string>(NP_Architecture) << std::endl;
+              << dev.getProp<std::string>(NP_Architecture) << std::endl;
   }
 
   nexus::Device dev0 = runtime.getDevice(0);

@@ -10,6 +10,8 @@ if(LINUX)
 
     if(CMAKE_CUDA_COMPILER)
 
+        message(STATUS "CUDA compiler found")
+
         enable_language(CUDA)
         set(CUDA_AVAILABLE TRUE)
 

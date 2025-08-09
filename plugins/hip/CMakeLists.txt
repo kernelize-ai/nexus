@@ -8,7 +8,7 @@ if(NOT DEFINED HIP_CMAKE_PATH)
     endif()
 endif()
 
-message(STATUS "HIP: ${HIP_CMAKE_PATH}")
+message(STATUS "HIP path: ${HIP_CMAKE_PATH}")
 
 if(EXISTS ${HIP_CMAKE_PATH})
     list(APPEND CMAKE_PREFIX_PATH ${HIP_CMAKE_PATH})
@@ -22,6 +22,8 @@ if(EXISTS ${HIP_CMAKE_PATH})
     target_link_libraries(hip_runtime PRIVATE hip::host)
     target_link_options(hip_runtime PRIVATE "LINKER:-R/opt/rocm/lib")
     set_target_properties(hip_runtime PROPERTIES POSITION_INDEPENDENT_CODE ON)
+else()
+    message(STATUS "HIP not found")
 endif()
 
 

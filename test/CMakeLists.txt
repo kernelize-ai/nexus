@@ -40,5 +40,6 @@ function(add_nexus_it)
   # add_dependencies(NexusIntegrationTest ${__NAME})
 endfunction()
 
+add_subdirectory(kernels)
 add_subdirectory(cpp)
 #add_subdirectory(pynexus)
