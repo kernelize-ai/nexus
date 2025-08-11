@@ -175,23 +175,17 @@ typedef enum _nxs_command_type nxs_command_type;
  *   - Command queue supports out-of-order execution
  * NXS_CommandQueueProperty_Profiling:
  *   - Command queue supports profiling
- * NXS_CommandQueueProperty_OnDevice:
- *   - Command queue supports on-device execution
- * NXS_CommandQueueProperty_OnDeviceDefault:
- *   - Command queue supports on-device default execution
  */
 enum _nxs_stream_settings {
-    NXS_StreamProperty_OutOfOrderExecution = 0,
-    NXS_StreamProperty_Profiling = 1,
-    NXS_StreamProperty_OnDevice = 2,
-    NXS_StreamProperty_OnDeviceDefault = 3,
+    NXS_StreamSettings_OutOfOrderExecution = 1 << 0,
+    NXS_StreamSettings_Profiling = 1 << 1,
 };
 typedef enum _nxs_stream_settings nxs_stream_settings;
 
 enum _nxs_buffer_settings {
-    NXS_BufferProperty_OnHost = 0,
-    NXS_BufferProperty_OnDevice = 1,
-    NXS_BufferProperty_Maintained = 2,
+    NXS_BufferSettings_OnHost = 1 << 0,
+    NXS_BufferSettings_OnDevice = 1 << 1,
+    NXS_BufferSettings_Maintained = 1 << 2,
 };
 typedef enum _nxs_buffer_settings nxs_buffer_settings;
 

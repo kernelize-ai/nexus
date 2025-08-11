@@ -207,7 +207,7 @@ extern "C" nxs_int NXS_API_CALL nxsCreateBuffer(nxs_int device_id, size_t size,
   if (!deviceObject) return NXS_InvalidDevice;
 
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createBuffer: " << size);
-  if (!(buffer_settings & NXS_BufferProperty_OnDevice)) {
+  if (!(buffer_settings & NXS_BufferSettings_OnDevice)) {
     void *cuda_ptr = nullptr;
     CUDA_CHECK(NXS_InvalidBuffer, cudaMalloc, &cuda_ptr, size);
     if (data_ptr != nullptr)
