@@ -69,6 +69,14 @@ NEXUS_API_FUNC(nxs_status, GetRuntimeProperty,
 )
 
 /************************************************************************
+ * @def SetDevice
+ * @brief Set the Device to use
+ ***********************************************************************/
+NEXUS_API_FUNC(nxs_int, SetDevice,
+    nxs_int device_id
+)
+
+/************************************************************************
  * @def GetDeviceProperty
  * @brief Return Device properties
  ***********************************************************************/

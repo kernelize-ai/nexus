@@ -20,6 +20,8 @@ class Runtime : public Object<detail::RuntimeImpl> {
   Devices getDevices() const;
   Device getDevice(nxs_uint deviceId) const;
 
+  nxs_int setDevice(nxs_int deviceId);
+
   // Get Runtime Property Value
   std::optional<Property> getProperty(nxs_int prop) const override;
 };

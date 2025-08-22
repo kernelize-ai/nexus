@@ -23,4 +23,6 @@ int test_multi_stream_sync(int argc, char **argv);
 
 int test_smi(int argc, char **argv);
 
+int test_rotary_embedding_kernel(int argc, char** argv);
+
 #endif  // NEXUS_TESTS_H
