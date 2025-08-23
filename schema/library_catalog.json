@@ -1,0 +1,372 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/library-catalog.schema.json",
+  "title": "Library Catalog",
+  "description": "A catalog of software libraries with architecture and function details",
+  "type": "object",
+  "properties": {
+    "catalog": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string",
+          "description": "Catalog version",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "created": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Catalog creation timestamp"
+        },
+        "updated": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp"
+        },
+        "description": {
+          "type": "string",
+          "description": "Catalog description"
+        }
+      },
+      "required": ["version", "created"]
+    },
+    "libraries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique library identifier"
+          },
+          "name": {
+            "type": "string",
+            "description": "Library name"
+          },
+          "version": {
+            "type": "string",
+            "description": "Library version"
+          },
+          "description": {
+            "type": "string",
+            "description": "Library description"
+          },
+          "vendor": {
+            "type": "string",
+            "description": "Library vendor/publisher"
+          },
+          "license": {
+            "type": "string",
+            "description": "License type (MIT, Apache-2.0, etc.)"
+          },
+          "homepage": {
+            "type": "string",
+            "format": "uri",
+            "description": "Library homepage URL"
+          },
+          "repository": {
+            "type": "string",
+            "format": "uri",
+            "description": "Source code repository URL"
+          },
+          "documentation": {
+            "type": "string",
+            "format": "uri",
+            "description": "Documentation URL"
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "graphics",
+                "compute",
+                "networking",
+                "database",
+                "ui",
+                "machine-learning",
+                "cryptography",
+                "compression",
+                "audio",
+                "video",
+                "system",
+                "utility",
+                "framework",
+                "testing",
+                "development"
+              ]
+            },
+            "description": "Library categories/tags"
+          },
+          "architectures": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Architecture name",
+                  "enum": [
+                    "x86",
+                    "x86_64",
+                    "arm",
+                    "arm64",
+                    "aarch64",
+                    "mips",
+                    "mips64",
+                    "riscv",
+                    "riscv64",
+                    "wasm",
+                    "wasm64",
+                    "universal"
+                  ]
+                },
+                "platforms": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "windows",
+                      "linux",
+                      "macos",
+                      "android",
+                      "ios",
+                      "freebsd",
+                      "openbsd",
+                      "netbsd",
+                      "solaris",
+                      "web"
+                    ]
+                  },
+                  "description": "Supported platforms for this architecture"
+                },
+                "binary_format": {
+                  "type": "string",
+                  "enum": ["dll", "so", "dylib", "a", "lib", "wasm"],
+                  "description": "Binary file format"
+                },
+                "binary_data": {
+                  "type": "string",
+                  "description": "Base64-encoded binary library data"
+                },
+                "file_size": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Binary file size in bytes"
+                },
+                "checksum": {
+                  "type": "object",
+                  "properties": {
+                    "algorithm": {
+                      "type": "string",
+                      "enum": ["md5", "sha1", "sha256", "sha512"]
+                    },
+                    "value": {
+                      "type": "string",
+                      "pattern": "^[a-fA-F0-9]+$"
+                    }
+                  },
+                  "required": ["algorithm", "value"]
+                }
+              },
+              "required": ["name", "platforms", "binary_format"],
+              "additionalProperties": false
+            },
+            "minItems": 1,
+            "description": "Supported architectures and their binaries"
+          },
+          "functions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Function name"
+                },
+                "symbol": {
+                  "type": "string",
+                  "description": "Exported symbol name (may differ from function name)"
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Function description"
+                },
+                "return_type": {
+                  "type": "string",
+                  "description": "Return data type"
+                },
+                "parameters": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "description": "Parameter name"
+                      },
+                      "type": {
+                        "type": "string",
+                        "description": "Parameter data type"
+                      },
+                      "description": {
+                        "type": "string",
+                        "description": "Parameter description"
+                      },
+                      "optional": {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "Whether parameter is optional"
+                      },
+                      "default_value": {
+                        "description": "Default value if optional"
+                      }
+                    },
+                    "required": ["name", "type"],
+                    "additionalProperties": false
+                  },
+                  "description": "Function parameters"
+                },
+                "calling_convention": {
+                  "type": "string",
+                  "enum": ["cdecl", "stdcall", "fastcall", "vectorcall", "thiscall"],
+                  "description": "Function calling convention"
+                },
+                "thread_safety": {
+                  "type": "string",
+                  "enum": ["thread-safe", "not-thread-safe", "conditionally-safe", "unknown"],
+                  "description": "Thread safety characteristics"
+                },
+                "performance": {
+                  "type": "object",
+                  "properties": {
+                    "complexity": {
+                      "type": "string",
+                      "description": "Big O complexity (e.g., O(n), O(log n))"
+                    },
+                    "notes": {
+                      "type": "string",
+                      "description": "Performance notes and considerations"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "examples": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "language": {
+                        "type": "string",
+                        "description": "Programming language"
+                      },
+                      "code": {
+                        "type": "string",
+                        "description": "Example code snippet"
+                      },
+                      "description": {
+                        "type": "string",
+                        "description": "Example description"
+                      }
+                    },
+                    "required": ["language", "code"],
+                    "additionalProperties": false
+                  },
+                  "description": "Usage examples"
+                },
+                "deprecated": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Whether function is deprecated"
+                },
+                "since_version": {
+                  "type": "string",
+                  "description": "Version when function was introduced"
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Function tags/keywords"
+                }
+              },
+              "required": ["name", "return_type"],
+              "additionalProperties": false
+            },
+            "description": "Library functions and their details"
+          },
+          "dependencies": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Dependency library name"
+                },
+                "version": {
+                  "type": "string",
+                  "description": "Required version or version range"
+                },
+                "optional": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Whether dependency is optional"
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Dependency description"
+                }
+              },
+              "required": ["name"],
+              "additionalProperties": false
+            },
+            "description": "Library dependencies"
+          },
+          "build_info": {
+            "type": "object",
+            "properties": {
+              "compiler": {
+                "type": "string",
+                "description": "Compiler used to build the library"
+              },
+              "compiler_version": {
+                "type": "string",
+                "description": "Compiler version"
+              },
+              "build_flags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Compilation flags used"
+              },
+              "optimization_level": {
+                "type": "string",
+                "enum": ["O0", "O1", "O2", "O3", "Os", "Oz"],
+                "description": "Optimization level"
+              },
+              "debug_symbols": {
+                "type": "boolean",
+                "description": "Whether debug symbols are included"
+              }
+            },
+            "additionalProperties": false,
+            "description": "Build configuration information"
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Additional metadata (extensible)",
+            "additionalProperties": true
+          }
+        },
+        "required": ["id", "name", "version", "architectures", "functions"],
+        "additionalProperties": false
+      },
+      "minItems": 0
+    }
+  },
+  "required": ["catalog", "libraries"],
+  "additionalProperties": false
+}
