@@ -1,4 +1,3 @@
-
 #include <nexus/log.h>
 #include <nexus/system.h>
 #include <nexus/utility.h>
@@ -48,6 +47,13 @@ Buffer SystemImpl::copyBuffer(Buffer buf, Device dev, nxs_uint settings) {
   return nbuf;
 }
 
+Properties SystemImpl::loadCatalog(const std::string &catalogPath) {
+  NEXUS_LOG(NEXUS_STATUS_NOTE, "loadCatalog " << catalogPath);
+  Properties cat(catalogPath);
+  catalogs.add(cat);
+  return cat;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 /// @param
 System::System(int i) : Object(i) {}
@@ -60,8 +66,16 @@ Buffers System::getBuffers() const { NEXUS_OBJ_MCALL(Buffers(), getBuffers); }
 
 Runtimes System::getRuntimes() const { NEXUS_OBJ_MCALL(Runtimes(), getRuntimes); }
 
+Propertiess System::getCatalogs() const {
+  NEXUS_OBJ_MCALL(Propertiess(), getCatalogs);
+}
+
 Runtime System::getRuntime(int idx) const { NEXUS_OBJ_MCALL(Runtime(), getRuntime, idx); }
 Runtime System::getRuntime(const std::string &name) { NEXUS_OBJ_MCALL(Runtime(), getRuntime, name); }
+
+Properties System::loadCatalog(const std::string &catalogPath) {
+  NEXUS_OBJ_MCALL(Properties(), loadCatalog, catalogPath);
+}
 
 Buffer System::createBuffer(size_t sz, const void *hostData,
                             nxs_uint settings) {

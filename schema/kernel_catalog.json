@@ -1,0 +1,664 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/library-catalog.schema.json",
+  "title": "Library Catalog",
+  "description": "A catalog of software libraries with architecture and function details",
+  "type": "object",
+  "properties": {
+    "Catalog": {
+      "type": "object",
+      "properties": {
+        "Version": {
+          "type": "string",
+          "description": "Catalog version",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "Created": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Catalog creation timestamp"
+        },
+        "Updated": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp"
+        },
+        "Description": {
+          "type": "string",
+          "description": "Catalog description"
+        }
+      },
+      "required": [
+        "Version",
+        "Created"
+      ]
+    },
+    "Libraries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "Id": {
+            "type": "string",
+            "description": "Unique library identifier"
+          },
+          "Name": {
+            "type": "string",
+            "description": "Library name"
+          },
+          "Version": {
+            "type": "string",
+            "description": "Library version"
+          },
+          "Description": {
+            "type": "string",
+            "description": "Library description"
+          },
+          "Vendor": {
+            "type": "string",
+            "description": "Library vendor/publisher"
+          },
+          "License": {
+            "type": "string",
+            "description": "License type (MIT, Apache-2.0, etc.)"
+          },
+          "Homepage": {
+            "type": "string",
+            "format": "uri",
+            "description": "Library homepage URL"
+          },
+          "Repository": {
+            "type": "string",
+            "format": "uri",
+            "description": "Source code repository URL"
+          },
+          "Documentation": {
+            "type": "string",
+            "format": "uri",
+            "description": "Documentation URL"
+          },
+          "Categories": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "Graphics",
+                "Compute",
+                "Networking",
+                "Database",
+                "UI",
+                "MachineLearning",
+                "Cryptography",
+                "Compression",
+                "Audio",
+                "Video",
+                "System",
+                "Utility",
+                "Framework",
+                "Testing",
+                "Development"
+              ]
+            },
+            "description": "Library categories/tags"
+          },
+          "Architectures": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "Name": {
+                  "type": "string",
+                  "description": "Target GPU architecture (e.g., sm_70, gfx906, macos-metal2.4)"
+                },
+                "HostArch": {
+                  "type": "string",
+                  "description": "Host architecture name",
+                  "enum": [
+                    "X86",
+                    "X86_64",
+                    "ARM",
+                    "ARM64",
+                    "AArch64",
+                    "MIPS",
+                    "MIPS64",
+                    "RISCV",
+                    "RISCV64",
+                    "WASM",
+                    "WASM64",
+                    "Universal"
+                  ]
+                },
+                "Platforms": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "Windows",
+                      "Linux",
+                      "MacOS",
+                      "Android",
+                      "iOS",
+                      "FreeBSD",
+                      "OpenBSD",
+                      "NetBSD",
+                      "Solaris",
+                      "Web"
+                    ]
+                  },
+                  "description": "Supported platforms for this architecture"
+                },
+                "BinaryFormat": {
+                  "type": "string",
+                  "enum": [
+                    "DLL",
+                    "SO",
+                    "DYLIB",
+                    "A",
+                    "LIB",
+                    "WASM",
+                    "METALLIB",
+                    "CUBIN"
+                  ],
+                  "description": "Binary file format"
+                },
+                "BinaryData": {
+                  "type": "string",
+                  "description": "Base64-encoded binary library data"
+                },
+                "FileSize": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Binary file size in bytes"
+                },
+                "Checksum": {
+                  "type": "object",
+                  "properties": {
+                    "Algorithm": {
+                      "type": "string",
+                      "enum": [
+                        "MD5",
+                        "SHA1",
+                        "SHA256",
+                        "SHA512"
+                      ]
+                    },
+                    "Value": {
+                      "type": "string",
+                      "pattern": "^[a-fA-F0-9]+$"
+                    }
+                  },
+                  "required": [
+                    "Algorithm",
+                    "Value"
+                  ]
+                },
+                "TargetPlatform": {
+                  "type": "string",
+                  "description": "Target platform (e.g., macos-metal2.4, ios-metal2.4)"
+                },
+                "PtxCode": {
+                  "type": "string",
+                  "description": "Base64-encoded PTX intermediate code (CUDA)"
+                },
+                "AirCode": {
+                  "type": "string",
+                  "description": "Base64-encoded AIR intermediate code (Metal)"
+                },
+                "MetallibInfo": {
+                  "type": "object",
+                  "description": "Additional metallib information",
+                  "additionalProperties": true
+                }
+              },
+              "required": [
+                "Name",
+                "HostArch",
+                "Platforms",
+                "BinaryFormat"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1,
+            "description": "Supported architectures and their binaries"
+          },
+          "Functions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "Name": {
+                  "type": "string",
+                  "description": "Function name"
+                },
+                "Symbol": {
+                  "type": "string",
+                  "description": "Exported symbol name (may differ from function name)"
+                },
+                "TemplateParameters": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "Name": {
+                        "type": "string",
+                        "description": "Template parameter name"
+                      },
+                      "Type": {
+                        "type": "string",
+                        "enum": [
+                          "typename",
+                          "class",
+                          "int",
+                          "size_t",
+                          "bool",
+                          "auto"
+                        ],
+                        "description": "Template parameter type"
+                      },
+                      "DefaultValue": {
+                        "type": "string",
+                        "description": "Default value for the template parameter"
+                      },
+                      "Description": {
+                        "type": "string",
+                        "description": "Description of the template parameter"
+                      },
+                      "Constraints": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "description": "Type constraints or concepts (C++20)"
+                      }
+                    },
+                    "required": [
+                      "Name",
+                      "Type"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "description": "Template parameters for templated functions/kernels"
+                },
+                "Description": {
+                  "type": "string",
+                  "description": "Function description"
+                },
+                "ReturnType": {
+                  "type": "string",
+                  "description": "Return data type"
+                },
+                "Parameters": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "Name": {
+                        "type": "string",
+                        "description": "Parameter name"
+                      },
+                      "Type": {
+                        "type": "string",
+                        "description": "Parameter data type"
+                      },
+                      "BaseType": {
+                        "type": "string",
+                        "description": "Base type without qualifiers"
+                      },
+                      "Description": {
+                        "type": "string",
+                        "description": "Parameter description"
+                      },
+                      "Optional": {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "Whether parameter is optional"
+                      },
+                      "DefaultValue": {
+                        "description": "Default value if optional"
+                      },
+                      "Qualifiers": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "description": "Type qualifiers (const, volatile, etc.)"
+                      },
+                      "MetalAttributes": {
+                        "type": "object",
+                        "description": "Metal-specific attributes",
+                        "additionalProperties": true
+                      },
+                      "PointerLevel": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "description": "Number of pointer indirections"
+                      },
+                      "IsReference": {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "Whether parameter is a reference"
+                      }
+                    },
+                    "required": [
+                      "Name",
+                      "Type"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "description": "Function parameters"
+                },
+                "CallingConvention": {
+                  "type": "string",
+                  "enum": [
+                    "CDECL",
+                    "STDCALL",
+                    "FASTCALL",
+                    "VECTORCALL",
+                    "THISCALL",
+                    "DEVICE",
+                    "METAL"
+                  ],
+                  "description": "Function calling convention"
+                },
+                "ThreadSafety": {
+                  "type": "string",
+                  "enum": [
+                    "ThreadSafe",
+                    "NotThreadSafe",
+                    "ConditionallySafe",
+                    "Unknown"
+                  ],
+                  "description": "Thread safety characteristics"
+                },
+                "Performance": {
+                  "type": "object",
+                  "properties": {
+                    "Complexity": {
+                      "type": "string",
+                      "description": "Big O complexity (e.g., O(n), O(log n))"
+                    },
+                    "Notes": {
+                      "type": "string",
+                      "description": "Performance notes and considerations"
+                    },
+                    "MaxThreadsPerBlock": {
+                      "type": "integer",
+                      "description": "Maximum threads per block (CUDA/HIP)"
+                    },
+                    "MinBlocksPerMultiprocessor": {
+                      "type": "integer",
+                      "description": "Minimum blocks per multiprocessor (CUDA/HIP)"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "Examples": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "Language": {
+                        "type": "string",
+                        "description": "Programming language"
+                      },
+                      "Code": {
+                        "type": "string",
+                        "description": "Example code snippet"
+                      },
+                      "Description": {
+                        "type": "string",
+                        "description": "Example description"
+                      }
+                    },
+                    "required": [
+                      "Language",
+                      "Code"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "description": "Usage examples"
+                },
+                "Deprecated": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Whether function is deprecated"
+                },
+                "SinceVersion": {
+                  "type": "string",
+                  "description": "Version when function was introduced"
+                },
+                "Tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Function tags/keywords"
+                },
+                "KernelType": {
+                  "type": "string",
+                  "enum": [
+                    "Compute",
+                    "Vertex",
+                    "Fragment",
+                    "Geometry",
+                    "Tessellation"
+                  ],
+                  "description": "Type of GPU kernel/shader"
+                },
+                "LaunchBounds": {
+                  "type": "object",
+                  "properties": {
+                    "MaxThreadsPerBlock": {
+                      "type": "integer",
+                      "description": "Maximum threads per block"
+                    },
+                    "MinBlocksPerMultiprocessor": {
+                      "type": "integer",
+                      "description": "Minimum blocks per multiprocessor"
+                    }
+                  },
+                  "description": "CUDA launch bounds information"
+                }
+              },
+              "required": [
+                "Name",
+                "ReturnType"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Library functions and their details"
+          },
+          "Dependencies": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "Name": {
+                  "type": "string",
+                  "description": "Dependency library name"
+                },
+                "Version": {
+                  "type": "string",
+                  "description": "Required version or version range"
+                },
+                "Optional": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Whether dependency is optional"
+                },
+                "Description": {
+                  "type": "string",
+                  "description": "Dependency description"
+                }
+              },
+              "required": [
+                "Name"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Library dependencies"
+          },
+          "BuildInfo": {
+            "type": "object",
+            "properties": {
+              "Compiler": {
+                "type": "string",
+                "description": "Compiler used to build the library"
+              },
+              "CompilerVersion": {
+                "type": "string",
+                "description": "Compiler version"
+              },
+              "BuildFlags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Compilation flags used"
+              },
+              "OptimizationLevel": {
+                "type": "string",
+                "enum": [
+                  "O0",
+                  "O1",
+                  "O2",
+                  "O3",
+                  "Os",
+                  "Oz"
+                ],
+                "description": "Optimization level"
+              },
+              "DebugSymbols": {
+                "type": "boolean",
+                "description": "Whether debug symbols are included"
+              },
+              "XcrunVersion": {
+                "type": "string",
+                "description": "Xcode xcrun version (Metal)"
+              },
+              "SdkInfo": {
+                "type": "object",
+                "properties": {
+                  "Version": {
+                    "type": "string",
+                    "description": "SDK version"
+                  },
+                  "Path": {
+                    "type": "string",
+                    "description": "SDK path"
+                  }
+                },
+                "description": "SDK information"
+              },
+              "AvailableTargets": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Available compilation targets"
+              },
+              "AvailableArchitectures": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Available GPU architectures"
+              }
+            },
+            "additionalProperties": false,
+            "description": "Build configuration information"
+          },
+          "Metadata": {
+            "type": "object",
+            "description": "Additional metadata (extensible)",
+            "properties": {
+              "SourceFile": {
+                "type": "string",
+                "description": "Original source file path"
+              },
+              "GpuArchitectures": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Target GPU architectures"
+              },
+              "TargetPlatforms": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Target platforms"
+              },
+              "Framework": {
+                "type": "string",
+                "enum": [
+                  "CUDA",
+                  "HIP",
+                  "Metal",
+                  "OpenCL",
+                  "DirectX"
+                ],
+                "description": "GPU programming framework"
+              },
+              "MetalVersion": {
+                "type": "string",
+                "description": "Metal shading language version"
+              },
+              "PreprocessorUsed": {
+                "type": "boolean",
+                "description": "Whether preprocessor was used for type extraction"
+              },
+              "TotalKernels": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Total number of kernels/shaders"
+              },
+              "KernelNames": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "List of kernel/shader function names"
+              },
+              "KernelTypes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "List of kernel/shader types present"
+              },
+              "IncludesPtx": {
+                "type": "boolean",
+                "description": "Whether PTX intermediate code is included"
+              },
+              "IncludesAir": {
+                "type": "boolean",
+                "description": "Whether AIR intermediate code is included"
+              },
+              "RequiresMacos": {
+                "type": "boolean",
+                "description": "Whether library requires macOS"
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "Id",
+          "Name",
+          "Version",
+          "Architectures",
+          "Functions"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0
+    }
+  },
+  "required": [
+    "Catalog",
+    "Libraries"
+  ],
+  "additionalProperties": false
+}

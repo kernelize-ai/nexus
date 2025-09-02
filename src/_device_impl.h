@@ -45,6 +45,7 @@ class DeviceImpl : public Impl {
   Schedule createSchedule(nxs_uint settings = 0);
   Event createEvent(nxs_event_type event_type = NXS_EventType_Shared,
                     nxs_uint settings = 0);
+  Library loadLibrary(Properties catalog, const std::string &libraryName);
   Library createLibrary(const std::string &path, nxs_uint settings = 0);
   Library createLibrary(void *libraryData, size_t size, nxs_uint settings = 0);
 

@@ -1,10 +1,12 @@
+#include <Python.h>
 #include <nexus-api.h>
 #include <nexus.h>
 #include <pybind11/stl.h>
-#include <Python.h>
 
 #include <iostream>
+#include <pybind11_json/pybind11_json.hpp>
 
+#include "../src/_properties_impl.h"
 #include "pynexus.h"
 
 namespace py = pybind11;
@@ -93,36 +95,30 @@ static std::string get_key_str(const nxs_int &key) {
   return nxsGetPropName(key);
 }
 
-static std::string get_key_str(const std::vector<std::string> &key) {
+static std::string get_key_str(const std::vector<std::string_view> &key) {
   std::string str;
+  bool first = true;
   for (const auto &k : key) {
-    str += k + ".";
+    if (!first) {
+      str += ".";
+    }
+    str += k;
+    first = false;
   }
   return str;
 }
 
 static std::string get_key_str(const std::vector<nxs_int> &key) {
   std::string str;
+  bool first = true;
   for (const auto &k : key) {
-    str += std::string(nxsGetPropName(k)) + ".";
+    if (!first) {
+      str += ".";
+    }
+    str += std::string(nxsGetPropName(k));
+    first = false;
   }
   return str;
-}
-
-template <typename T, typename Tkey>
-static T get_info(Properties &self, const Tkey &key) {
-  if (auto pval = self.getProperty(key))
-    return pval->template getValue<T>();
-  auto str = get_key_str(key);
-  throw std::runtime_error("Property not found: " + str);
-}
-
-template <typename T, typename Tkey>
-static std::vector<T> get_info_vec(Properties &self, const Tkey &key) {
-  if (auto pval = self.getProperty(key))
-    return pval->template getValueVec<T>();
-  auto str = get_key_str(key);
-  throw std::runtime_error("Property not found: " + str);
 }
 
 template <typename T, typename Tobj>
@@ -289,46 +285,18 @@ void pynexus::init_system_bindings(py::module &m) {
   // Properties Object
   py::class_<Properties>(m, "_properties", py::module_local())
       .def("__bool__", [](Properties &self) { return (bool)self; })
-      .def("get_str",
-           [](Properties &self, const std::string &name) {
-             return get_info<std::string>(self, name);
-           })
-      .def("get_str",
-           [](Properties &self, nxs_property prop) {
-             return self.getProp<std::string>(prop);
-           })
-      .def("get_int",
-           [](Properties &self, const std::string &name) {
-             return get_info<nxs_long>(self, name);
-           })
-      .def("get_int",
-           [](Properties &self, nxs_property prop) {
-             return self.getProp<nxs_long>(prop);
-           })
-      .def("get_str",
-           [](Properties &self, const std::vector<std::string> &path) {
-             return get_info<std::string>(self, path);
-           })
-      .def("get_str",
-           [](Properties &self, const std::vector<nxs_int> &path) {
-             return get_info<std::string>(self, path);
-           })
-      .def("get_int",
-           [](Properties &self, const std::vector<std::string> &path) {
-             return get_info<nxs_long>(self, path);
-           })
-      .def("get_int",
-           [](Properties &self, const std::vector<nxs_int> &path) {
-             return get_info<nxs_long>(self, path);
-           })
-      .def("get_str_vec",
-           [](Properties &self, const std::vector<std::string> &path) {
-             return get_info_vec<std::string>(self, path);
-           })
-      .def("get_str_vec",
-           [](Properties &self, const std::vector<nxs_int> &path) {
-             return get_info_vec<std::string>(self, path);
-           });
+      .def(
+          "get",
+          [](Properties &self, const std::vector<std::string_view> &path) {
+            if (auto node = self.getNode(path)) {
+              return *node;
+            } else {
+              throw std::runtime_error("Property not found: " +
+                                       get_key_str(path));
+            }
+            return Properties::Node();
+          },
+          py::arg("path") = std::vector<std::string_view>());
 
   make_object_class<Buffer>(m, "_buffer")
       .def("copy", [](Buffer &self, py::object tensor) {
@@ -536,12 +504,19 @@ void pynexus::init_system_bindings(py::module &m) {
            [](Runtime &self, nxs_int id) { return self.getDevice(id); })
       .def("get_devices", [](Runtime &self) { return self.getDevices(); });
 
+  make_objects_class<Properties>(m, "_propertiess");
+
   // query
   m.def("get_runtime", [](const std::string &name) { return nexus::getSystem().getRuntime(name); });
   m.def("get_runtimes", []() { return nexus::getSystem().getRuntimes(); });
   m.def("get_device_info", []() { return *nexus::getDeviceInfoDB(); });
   m.def("lookup_device_info",
         [](const std::string &name) { return nexus::lookupDeviceInfo(name); });
+
+  m.def("load_catalog", [](const std::string &catalog_path) {
+    return nexus::getSystem().loadCatalog(catalog_path);
+  });
+  m.def("get_catalogs", []() { return nexus::getSystem().getCatalogs(); });
 
   // create System Buffers
   m.def("create_buffer",

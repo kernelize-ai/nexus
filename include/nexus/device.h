@@ -41,6 +41,7 @@ class Device : public Object<detail::DeviceImpl> {
   Event createEvent(nxs_event_type event_type = NXS_EventType_Shared,
                     nxs_uint settings = 0);
 
+  Library loadLibrary(Properties catalog, const std::string &libraryName);
   Library createLibrary(void *libraryData, size_t librarySize,
                         nxs_uint settings = 0);
   Library createLibrary(const std::string &libraryPath, nxs_uint settings = 0);

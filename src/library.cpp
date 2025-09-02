@@ -15,6 +15,12 @@ LibraryImpl::LibraryImpl(Impl base) : Impl(base) {
   NEXUS_LOG(NEXUS_STATUS_NOTE, "CTOR: " << getId());
 }
 
+LibraryImpl::LibraryImpl(Impl base, const Properties &info)
+    : Impl(base), info(info) {
+  // auto name = info.get<std::string_view>("Name");
+  NEXUS_LOG(NEXUS_STATUS_NOTE, "CTOR: " << getId());
+}
+
 LibraryImpl::~LibraryImpl() {
   NEXUS_LOG(NEXUS_STATUS_NOTE, "DTOR: " << getId());
   release();
@@ -42,6 +48,12 @@ Kernel LibraryImpl::getKernel(const std::string &kernelName) {
 
 ///////////////////////////////////////////////////////////////////////////////
 Library::Library(Impl base) : Object(base) {}
+
+Library::Library(Impl base, Properties info) : Object(base, info) {
+  NEXUS_LOG(NEXUS_STATUS_NOTE, "CTOR: " << getId());
+}
+
+Properties Library::getInfo() const { NEXUS_OBJ_MCALL(Properties(), getInfo); }
 
 std::optional<Property> Library::getProperty(nxs_int prop) const {
   NEXUS_OBJ_MCALL(std::nullopt, getProperty, prop);

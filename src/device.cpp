@@ -2,11 +2,13 @@
 #include <nexus/device_db.h>
 #include <nexus/log.h>
 #include <nexus/runtime.h>
+#include <nexus/utility.h>
 
 #include <filesystem>
 
 #include "_buffer_impl.h"
 #include "_device_impl.h"
+#include "_properties_impl.h"
 #include "_runtime_impl.h"
 
 #define NEXUS_LOG_MODULE "device"
@@ -53,6 +55,62 @@ std::optional<Property> detail::DeviceImpl::getProperty(nxs_int prop) const {
 }
 
 // Runtime functions
+// Private helper function to find a library in a catalog
+struct LibraryInfo {
+  std::string arch;
+  std::string binaryData;
+  nxs_long size;
+  Properties libraryNode;
+};
+
+static void findDeviceBinary(LibraryInfo &info, Properties catalogInfo,
+                             const std::string &libraryName,
+                             const std::string &arch) {
+  if (auto libs = catalogInfo.getNode({"Libraries"})) {
+    for (auto lib : *libs) {
+      try {
+        auto name = lib.at("Name").get<std::string_view>();
+        if (name == libraryName) {
+          for (auto &narch : lib.at("Architectures")) {
+            // TODO: check compatibility
+            auto narchName = narch.at("Name").get<std::string_view>();
+            if (narchName == arch) {
+              // TODO: check
+              auto binaryData = narch.at("BinaryData").get<std::string_view>();
+              auto size = narch.at("FileSize").get<nxs_long>();
+              info.arch = narchName.data();
+              info.binaryData = binaryData.data();
+              info.size = size;
+              info.libraryNode = Properties(Properties::Node(lib));
+              break;
+            }
+          }
+        }
+      } catch (...) {
+        NEXUS_LOG(NEXUS_STATUS_ERR, "  binary not found");
+      }
+    }
+  }
+}
+
+Library detail::DeviceImpl::loadLibrary(Properties catalog,
+                                        const std::string &libraryName) {
+  NEXUS_LOG(NEXUS_STATUS_NOTE, "  loadLibrary");
+  auto arch = getProperty(NP_Architecture)->getValue<std::string>();
+  LibraryInfo libInfo;
+  findDeviceBinary(libInfo, catalog, libraryName, arch);
+  if (libInfo.arch.empty()) {
+    NEXUS_LOG(NEXUS_STATUS_ERR, "  library not found");
+    return Library();
+  }
+  // std::vector<uint8_t> data = base64Decode(libInfo.binaryData, libInfo.size);
+  APICALL(nxsCreateLibrary, getId(), (void *)libInfo.binaryData.data(),
+          libInfo.binaryData.size(), 0);
+  Library lib(detail::Impl(this, apiResult, 0), libInfo.libraryNode);
+  libraries.add(lib);
+  return lib;
+}
+
 Library detail::DeviceImpl::createLibrary(void *data, size_t size,
                                           nxs_uint settings) {
   NEXUS_LOG(NEXUS_STATUS_NOTE, "  createLibrary - Size: " << size);
@@ -155,6 +213,10 @@ Buffer Device::createBuffer(size_t size, const void *data, nxs_uint settings) {
 
 Buffer Device::copyBuffer(Buffer buf, nxs_uint settings) {
   NEXUS_OBJ_MCALL(Buffer(), copyBuffer, buf, settings);
+}
+
+Library Device::loadLibrary(Properties catalog, const std::string &libraryName) {
+  NEXUS_OBJ_MCALL(Library(), loadLibrary, catalog, libraryName);
 }
 
 Library Device::createLibrary(void *libraryData, size_t librarySize,

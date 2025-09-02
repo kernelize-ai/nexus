@@ -122,6 +122,7 @@ if(NEXUS_BUILD_PYTHON_MODULE)
 
   set(NEXUS_LIBRARIES
     nexus-api
+    nlohmann_json::nlohmann_json
 
     Python3::Module
     pybind11::headers

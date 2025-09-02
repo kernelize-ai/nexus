@@ -11,16 +11,6 @@ using namespace nexus;
 
 #define NEXUS_LOG_MODULE "device_info"
 
-std::vector<std::string> splitPaths(const std::string &paths, char delimiter) {
-  std::vector<std::string> result;
-  std::stringstream ss(paths);
-  std::string path;
-  while (std::getline(ss, path, delimiter)) {
-    result.push_back(path);
-  }
-  return result;
-}
-
 static bool initDeviceInfoDB(DeviceInfoMap &devs) {
   iterateEnvPaths("NEXUS_DEVICE_PATH", "./device_lib",
                   [&](const std::string &path, const std::string &name) {
