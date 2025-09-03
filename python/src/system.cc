@@ -289,12 +289,12 @@ void pynexus::init_system_bindings(py::module &m) {
           "get",
           [](Properties &self, const std::vector<std::string_view> &path) {
             if (auto node = self.getNode(path)) {
-              return *node;
+              return node->getJson();
             } else {
               throw std::runtime_error("Property not found: " +
                                        get_key_str(path));
             }
-            return Properties::Node();
+            return json::object();
           },
           py::arg("path") = std::vector<std::string_view>());
 

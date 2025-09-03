@@ -16,6 +16,7 @@ class Properties::Node : public json {
  public:
   Node(json node = json::object()) : json(node) {}
   ~Node() = default;
+  json &getJson() { return *this; }
   std::optional<Node> getNode(const std::string_view &name) const {
     try {
       return Node(this->at(name));

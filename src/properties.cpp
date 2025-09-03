@@ -18,7 +18,7 @@ template <>
 std::string_view Properties::Node::get<std::string_view>(
     const std::string_view &name) const {
   try {
-    return this->at(name).get<std::string>();
+    return this->at(name).get<std::string_view>();
   } catch (...) {
     return std::string_view();
   }

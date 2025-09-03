@@ -102,9 +102,11 @@ file(COPY ${CMAKE_SOURCE_DIR}/device_lib/
 
 include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${PROJECT_SOURCE_DIR}/third_party/magic_enum/include)
+include_directories(${PROJECT_SOURCE_DIR}/third_party/pybind11_json/include)
 
 # -----
 add_subdirectory(third_party/json json)
+add_subdirectory(third_party/pybind11_json pybind11_json)
 
 # ------
 # Core API source directory
