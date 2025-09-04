@@ -360,32 +360,30 @@ void pynexus::init_system_bindings(py::module &m) {
   make_object_class<Command>(m, "_command")
       .def("get_event", [](Command &self) { return self.getEvent(); })
       .def("get_kernel", [](Command &self) { return self.getKernel(); })
-      .def("set_arg", [](Command &self, int index,
-                         Buffer buf) { return self.setArgument(index, buf); })
-      .def("set_arg",
-           [](Command &self, int index, nxs_int value) {
-             return self.setArgument(index, value);
-           })
-      .def("set_arg",
-           [](Command &self, int index, nxs_uint value) {
-             return self.setArgument(index, value);
-           })
-      .def("set_arg",
-           [](Command &self, int index, nxs_long value) {
-             return self.setArgument(index, value);
-           })
-      .def("set_arg",
-           [](Command &self, int index, nxs_ulong value) {
-             return self.setArgument(index, value);
-           })
-      .def("set_arg",
-           [](Command &self, int index, nxs_float value) {
-             return self.setArgument(index, value);
-           })
-      .def("set_arg",
-           [](Command &self, int index, nxs_double value) {
-             return self.setArgument(index, value);
-           })
+      .def("set_arg", [](Command &self, int index, Buffer buf) {
+          return self.setArgument(index, buf);
+      })
+      .def("set_arg", [](Command &self, int index, nxs_int v) {
+          return self.setArgument(index, (nxs_int)v);
+      })
+      .def("set_arg", [](Command &self, int index, nxs_uint v) {
+          return self.setArgument(index, (nxs_uint)v);
+      })
+      .def("set_arg", [](Command &self, int index, nxs_long v) {
+          return self.setArgument(index, (nxs_long)v);
+      })
+      .def("set_arg", [](Command &self, int index, nxs_ulong v) {
+          return self.setArgument(index, (nxs_ulong)v);
+      })
+      .def("set_arg", [](Command &self, int index, nxs_ulong v, bool is_64bit) {
+          return self.setArgument(index, (nxs_ulong)v);
+      })
+      .def("set_arg", [](Command &self, int index, nxs_float v) {
+          return self.setArgument(index, (nxs_float)v);
+      })
+      .def("set_arg", [](Command &self, int index, nxs_double v) {
+          return self.setArgument(index, (nxs_double)v);
+      })
       .def("set_arg",
            [](Command &self, int index, py::object value) {
              if (value.is_none()) {
@@ -407,6 +405,7 @@ void pynexus::init_system_bindings(py::module &m) {
       .def("finalize", [](Command& self, nxs_uint grid, nxs_uint block) {
         return self.finalize({grid,1,1}, {block,1,1});
       });
+
 
   make_object_class<Schedule>(m, "_schedule")
       .def(

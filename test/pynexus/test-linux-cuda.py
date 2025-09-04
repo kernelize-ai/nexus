@@ -1,8 +1,8 @@
 import numpy
 
 import sys
-import subprocess
-subprocess.check_call([sys.executable, "-m", "pip", "install", "torch"])
+#import subprocess
+#subprocess.check_call([sys.executable, "-m", "pip", "install", "torch"])
 
 import torch
 import nexus

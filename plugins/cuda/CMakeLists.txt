@@ -1,6 +1,4 @@
-#set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/runtime_libs")
-#set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}")
 
 add_library(cuda_plugin SHARED cuda_runtime.cpp cuda_schedule.cpp)
 
@@ -24,22 +22,42 @@ execute_process(
 )
 string(REPLACE "." "" GPU_ARCH ${GPU_ARCH})
 
-# Directories
+message(STATUS "Compiling for GPU architecture: sm_${GPU_ARCH}")
+
 set(KERNEL_DIR "${CMAKE_SOURCE_DIR}/plugins/cuda/kernels")
 set(PTX_DIR "${PROJECT_BINARY_DIR}/cuda_kernels")
 file(MAKE_DIRECTORY ${PTX_DIR})
 
+# Find all .cu files
 file(GLOB CU_FILES "${KERNEL_DIR}/*.cu")
+
+# Compile each .cu file to PTX
 foreach(CU_FILE ${CU_FILES})
-    get_filename_component(KERNEL_NAME ${CU_FILE} NAME_WE)
-    set(PTX_FILE "${PTX_DIR}/${KERNEL_NAME}.ptx")
-    
-    add_custom_command(
-        OUTPUT "${PTX_FILE}"
-        COMMAND ${CUDAToolkit_NVCC_EXECUTABLE} -ptx -arch sm_${GPU_ARCH} -o "${PTX_FILE}" "${CU_FILE}"
-        DEPENDS "${CU_FILE}"
-    )
-    list(APPEND PTX_TARGETS "${PTX_FILE}")
+  get_filename_component(KERNEL_NAME ${CU_FILE} NAME_WE)
+  set(PTX_FILE "${PTX_DIR}/${KERNEL_NAME}.ptx")
+  
+  add_custom_command(
+    OUTPUT "${PTX_FILE}"
+    COMMAND ${CUDAToolkit_NVCC_EXECUTABLE} 
+      -ptx 
+      -arch sm_${GPU_ARCH}
+      -O3
+      --use_fast_math
+      -I${CMAKE_SOURCE_DIR}/build_venv/lib/python3.12/site-packages/torch/include
+      -I${CMAKE_SOURCE_DIR}/build_venv/lib/python3.12/site-packages/torch/include/torch/csrc/api/include
+      -I${CMAKE_SOURCE_DIR}/build_venv/lib/python3.12/site-packages/torch/include/torch/csrc
+      -I${CMAKE_SOURCE_DIR}/build_venv/lib/python3.11/site-packages/torch/include
+      -I${CMAKE_SOURCE_DIR}/build_venv/lib/python3.11/site-packages/torch/include/torch/csrc/api/include
+      -I${CMAKE_SOURCE_DIR}/build_venv/lib/python3.11/site-packages/torch/include/torch/csrc
+      -I${CMAKE_SOURCE_DIR}/build_venv/lib/python3.10/site-packages/torch/include
+      -I${CMAKE_SOURCE_DIR}/build_venv/lib/python3.10/site-packages/torch/include/torch/csrc/api/include
+      -I${CMAKE_SOURCE_DIR}/build_venv/lib/python3.10/site-packages/torch/include/torch/csrc
+      -o "${PTX_FILE}" 
+      "${CU_FILE}"
+    DEPENDS "${CU_FILE}"
+    COMMENT "Compiling ${KERNEL_NAME}.cu to PTX"
+  )
+  list(APPEND PTX_TARGETS "${PTX_FILE}")
 endforeach()
 
 add_custom_target(cuda_ptx ALL DEPENDS ${PTX_TARGETS})
