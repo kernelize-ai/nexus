@@ -72,6 +72,15 @@ nxsGetRuntimeProperty(nxs_uint runtime_property_id, void *property_value,
   return NXS_Success;
 }
 
+extern "C" nxs_int NXS_API_CALL
+nxsSetDevice(nxs_int device_id) {
+  auto *rt = getRuntime();
+  auto *device = rt->getDevice(device_id);
+  if (!device) return NXS_InvalidDevice;
+
+  return NXS_Success;
+}
+
 extern "C" nxs_status NXS_API_CALL
 nxsGetDeviceProperty(nxs_int device_id, nxs_uint property_id,
                      void *property_value, size_t *property_value_size) {

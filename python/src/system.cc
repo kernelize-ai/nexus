@@ -534,7 +534,8 @@ void pynexus::init_system_bindings(py::module &m) {
   make_object_class<Runtime>(m, "_runtime")
       .def("get_device",
            [](Runtime &self, nxs_int id) { return self.getDevice(id); })
-      .def("get_devices", [](Runtime &self) { return self.getDevices(); });
+      .def("get_devices", [](Runtime &self) { return self.getDevices(); })
+      .def("set_device", [](Runtime &self, nxs_int id) { return self.setDevice(id); });
 
   // query
   m.def("get_runtime", [](const std::string &name) { return nexus::getSystem().getRuntime(name); });

@@ -16,6 +16,11 @@ main() {
   local original_dir=$(pwd)
   local os_type=$(detect_os)
 
+  python -m venv build_venv
+  source build_venv/bin/activate
+  pip install -r requirements.txt
+
+  rm -rf $BUILD_DIR
   mkdir -p $BUILD_DIR
   cd $BUILD_DIR
   cmake ..
@@ -34,12 +39,19 @@ main() {
     ./test/cpp/test_smi cuda kernel_libs/add_vectors.ptx add_vectors
     ./test/cpp/test_multi_stream_sync cuda kernel_libs/add_vectors.ptx add_vectors
     ./test/cpp/test_graph cuda kernel_libs/add_vectors.ptx add_vectors
+    ./test/cpp/test_rotary_embedding cuda cuda_kernels/pos_encoding_kernels.ptx \
+    _ZN4vllm23rotary_embedding_kernelIfLb0EEEvPKlPT_S4_PKS3_illliii
   else
     printf "Unsupported OS: $os_type"
     exit 1
   fi
 
   cd "$original_dir"
+
+  deactivate
+
+  rm -rf build_venv
+
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then

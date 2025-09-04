@@ -26,6 +26,7 @@ class RuntimeImpl : public Impl {
 
   Devices getDevices() const { return devices; }
   Device getDevice(nxs_int deviceId) const;
+  nxs_int setDevice(nxs_int deviceId);
 
   template <nxs_function Tfn,
             typename Tfnp = typename nxsFunctionType<Tfn>::type>

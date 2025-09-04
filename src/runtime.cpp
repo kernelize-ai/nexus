@@ -11,6 +11,9 @@ using namespace nexus::detail;
 
 #define NEXUS_LOG_MODULE "runtime"
 
+#define APICALL(FUNC, ...)                                                   \
+  nxs_int apiResult = runAPIFunction<NF_##FUNC>(__VA_ARGS__)
+
 /// @brief Construct a Runtime for the current system
 RuntimeImpl::RuntimeImpl(Impl base, const std::string &path)
     : Impl(base), pluginLibraryPath(path), library(nullptr) {
@@ -31,6 +34,15 @@ void RuntimeImpl::release() {
 Device RuntimeImpl::getDevice(nxs_int deviceId) const {
   if (deviceId < 0 || deviceId >= devices.size()) return Device();
   return devices.get(deviceId);
+}
+
+nxs_int RuntimeImpl::setDevice(nxs_int deviceId) {
+  if (deviceId < 0 || deviceId >= devices.size()) return NXS_InvalidDevice;
+  auto device = devices.get(deviceId);
+  if (!device) return NXS_InvalidDevice;
+
+  APICALL(nxsSetDevice, deviceId);
+  return apiResult;
 }
 
 std::optional<Property> detail::RuntimeImpl::getProperty(nxs_int prop) const {
@@ -91,6 +103,10 @@ Devices Runtime::getDevices() const { NEXUS_OBJ_MCALL(Devices(), getDevices); }
 
 Device Runtime::getDevice(nxs_uint deviceId) const {
   NEXUS_OBJ_MCALL(Device(), getDevice, deviceId);
+}
+
+nxs_int Runtime::setDevice(nxs_int deviceId) {
+  NEXUS_OBJ_MCALL(NXS_InvalidDevice, runAPIFunction<NF_nxsSetDevice>, deviceId);
 }
 
 // Get Runtime Property Value
