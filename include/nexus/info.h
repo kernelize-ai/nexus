@@ -1,5 +1,5 @@
-#ifndef NEXUS_PROPERTIES_H
-#define NEXUS_PROPERTIES_H
+#ifndef NEXUS_INFO_H
+#define NEXUS_INFO_H
 
 #include <nexus-api.h>
 #include <nexus/object.h>
@@ -12,20 +12,20 @@
 namespace nexus {
 
 namespace detail {
-class PropertiesImpl;
+class InfoImpl;
 }
-class Properties : public Object<detail::PropertiesImpl> {
+class Info : public Object<detail::InfoImpl> {
  public:
   class Node;
 
-  Properties(const std::string &filepath);
-  Properties(const Node &node);
-  Properties() = default;
+  Info(const std::string &filepath);
+  Info(const Node &node);
+  Info() = default;
   // using Object::Object;
 
   // Query Device Properties
   //   from name
-  std::optional<Property> getProperty(const std::string &prop) const;
+  std::optional<Property> getProperty(const std::string_view &prop) const;
   //   from path
   std::optional<Property> getProperty(
       const std::vector<std::string_view> &path) const;
@@ -47,8 +47,8 @@ class Properties : public Object<detail::PropertiesImpl> {
   std::optional<Node> getNode(const std::vector<std::string_view> &path) const;
 };
 
-typedef Objects<Properties> Propertiess;
+typedef Objects<Info> Infos;
 
 }  // namespace nexus
 
-#endif  // NEXUS_PROPERTIES_H
+#endif  // NEXUS_INFO_H

@@ -1,21 +1,21 @@
 
 #include <nexus/log.h>
-#include <nexus/properties.h>
+#include <nexus/info.h>
 
 #include <fstream>
 #include <mutex>
 
-#include "_properties_impl.h"
+#include "_info_impl.h"
 
 using namespace nexus;
 using namespace nexus::detail;
 
-#define NEXUS_LOG_MODULE "properties"
+#define NEXUS_LOG_MODULE "info"
 
 namespace nexus {
 
 template <>
-std::string_view Properties::Node::get<std::string_view>(
+std::string_view Info::Node::get<std::string_view>(
     const std::string_view &name) const {
   try {
     return this->at(name).get<std::string_view>();
@@ -26,21 +26,21 @@ std::string_view Properties::Node::get<std::string_view>(
 
 namespace detail {
 
-PropertiesImpl::PropertiesImpl(const std::string &filepath)
+InfoImpl::InfoImpl(const std::string &filepath)
     : propertyFilePath(filepath) {}
-PropertiesImpl::PropertiesImpl(const Properties::Node &node) : props(node) {
+InfoImpl::InfoImpl(const Info::Node &node) : props(node) {
   std::call_once(loaded, [&]() {});
 }
 
-std::optional<Property> PropertiesImpl::getProperty(
+std::optional<Property> InfoImpl::getProperty(
     const std::vector<std::string_view> &propPath) {
-  std::call_once(loaded, [&]() { loadProperties(); });
+  std::call_once(loaded, [&]() { loadInfo(); });
   return getProp(propPath);
 }
 
-Properties::Node PropertiesImpl::getNode(
+Info::Node InfoImpl::getNode(
     const std::vector<std::string_view> &path) {
-  std::call_once(loaded, [&]() { loadProperties(); });
+  std::call_once(loaded, [&]() { loadInfo(); });
   json node = props;
   for (auto &key : path) {
     if (node.is_array())
@@ -48,10 +48,10 @@ Properties::Node PropertiesImpl::getNode(
     else
       node = node.at(key.data());
   }
-  return Properties::Node(node);
+  return Info::Node(node);
 }
 
-nxs_int PropertiesImpl::getIndex(const std::string_view &name) const {
+nxs_int InfoImpl::getIndex(const std::string_view &name) const {
   if (name.empty()) return 0;
   char *end = nullptr;
   auto num = strtol(name.data(), &end, 10);
@@ -61,7 +61,7 @@ nxs_int PropertiesImpl::getIndex(const std::string_view &name) const {
   return nxsGetPropEnum(name.data());
 }
 
-json PropertiesImpl::getNode(const std::vector<std::string_view> &path) const {
+json InfoImpl::getNode(const std::vector<std::string_view> &path) const {
   json node = props;
   auto end = path.end() - 1;
   for (auto ii = path.begin(); ii != end; ++ii) {
@@ -74,7 +74,7 @@ json PropertiesImpl::getNode(const std::vector<std::string_view> &path) const {
   return node;
 }
 
-nxs_property_type PropertiesImpl::getNodeType(json node) const {
+nxs_property_type InfoImpl::getNodeType(json node) const {
   if (node.is_array())
     return (nxs_property_type)(NPT_INT_VEC + getNodeType(node[0]));
   else if (node.is_string())
@@ -88,8 +88,8 @@ nxs_property_type PropertiesImpl::getNodeType(json node) const {
   return NPT_UNK;
 }
 
-std::optional<Property> PropertiesImpl::getValue(json node,
-                                                 nxs_int propTypeId) const {
+std::optional<Property> InfoImpl::getValue(json node,
+                                           nxs_int propTypeId) const {
   nxs_property_type propType = NPT_UNK;
   if (nxs_success(propTypeId)) {
     propType = nxs_property_type_map[propTypeId];
@@ -111,7 +111,7 @@ std::optional<Property> PropertiesImpl::getValue(json node,
   return std::nullopt;
 }
 
-std::optional<Property> PropertiesImpl::getKeys(json node) const {
+std::optional<Property> InfoImpl::getKeys(json node) const {
   if (node.is_object()) {
     std::vector<std::string> keys;
     for (auto &elem : node.items()) keys.push_back(elem.key());
@@ -120,7 +120,7 @@ std::optional<Property> PropertiesImpl::getKeys(json node) const {
   return std::nullopt;
 }
 
-std::optional<Property> PropertiesImpl::getProp(
+std::optional<Property> InfoImpl::getProp(
     const std::vector<std::string_view> &path) const {
   if (!path.empty()) {
     try {
@@ -144,7 +144,7 @@ std::optional<Property> PropertiesImpl::getProp(
   return std::nullopt;
 }
 
-void PropertiesImpl::loadProperties() {
+void InfoImpl::loadInfo() {
   // Load json from file
   try {
     std::ifstream f(propertyFilePath);
@@ -163,23 +163,23 @@ void PropertiesImpl::loadProperties() {
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief
 ///////////////////////////////////////////////////////////////////////////////
-Properties::Properties(const std::string &filepath) : Object(filepath) {}
+Info::Info(const std::string &filepath) : Object(filepath) {}
 
-Properties::Properties(const Node &node) : Object(node) {}
+Info::Info(const Node &node) : Object(node) {}
 
 // Get top level node
-std::optional<Property> Properties::getProperty(const std::string &name) const {
+std::optional<Property> Info::getProperty(const std::string_view &name) const {
   std::vector<std::string_view> path{name};
   NEXUS_OBJ_MCALL(std::nullopt, getProperty, path);
 }
 
 // Get sub-node
-std::optional<Property> Properties::getProperty(
+std::optional<Property> Info::getProperty(
     const std::vector<std::string_view> &path) const {
   NEXUS_OBJ_MCALL(std::nullopt, getProperty, path);
 }
 
-std::optional<Properties::Node> Properties::getNode(
+std::optional<Info::Node> Info::getNode(
     const std::vector<std::string_view> &path) const {
   NEXUS_OBJ_MCALL(std::nullopt, getNode, path);
 }

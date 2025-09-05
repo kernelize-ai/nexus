@@ -3,7 +3,7 @@
 
 #include <nexus-api.h>
 #include <nexus/object.h>
-#include <nexus/properties.h>
+#include <nexus/info.h>
 
 namespace nexus {
 
@@ -15,10 +15,10 @@ class KernelImpl;
 class Kernel : public Object<detail::KernelImpl> {
  public:
   Kernel(detail::Impl base, const std::string &kernelName);
-  Kernel(detail::Impl base, const Properties &info);
+  Kernel(detail::Impl base, const Info &info);
   using Object::Object;
 
-  Properties getInfo() const;
+  Info getInfo() const;
 
   std::optional<Property> getProperty(nxs_int prop) const override;
 };

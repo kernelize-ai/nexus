@@ -28,9 +28,9 @@ const DeviceInfoMap *nexus::getDeviceInfoDB() {
   return &s_device_info_map;
 }
 
-Properties nexus::lookupDeviceInfo(const std::string &archName) {
+Info nexus::lookupDeviceInfo(const std::string &archName) {
   const DeviceInfoMap *devmap = getDeviceInfoDB();
   auto ii = devmap->find(archName);
   if (ii != devmap->end()) return ii->second;
-  return Properties();
+  return Info();
 }

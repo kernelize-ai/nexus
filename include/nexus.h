@@ -7,7 +7,7 @@
 #include <nexus/device.h>
 #include <nexus/device_db.h>
 #include <nexus/library.h>
-#include <nexus/properties.h>
+#include <nexus/info.h>
 #include <nexus/runtime.h>
 #include <nexus/schedule.h>
 #include <nexus/stream.h>

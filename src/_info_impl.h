@@ -1,7 +1,7 @@
-#ifndef _NEXUS_PROPERTIES_IMPL_H
-#define _NEXUS_PROPERTIES_IMPL_H
+#ifndef _NEXUS_INFO_IMPL_H
+#define _NEXUS_INFO_IMPL_H
 
-#include <nexus/properties.h>
+#include <nexus/info.h>
 
 #include <mutex>
 #include <nlohmann/json.hpp>
@@ -12,7 +12,7 @@ using json = nlohmann::json;
 
 namespace nexus {
 
-class Properties::Node : public json {
+class Info::Node : public json {
  public:
   Node(json node = json::object()) : json(node) {}
   ~Node() = default;
@@ -36,21 +36,21 @@ class Properties::Node : public json {
 };
 
 template <>
-std::string_view Properties::Node::get<std::string_view>(
+std::string_view Info::Node::get<std::string_view>(
     const std::string_view &name) const;
 
 namespace detail {
-class PropertiesImpl {
+class InfoImpl {
   std::string propertyFilePath;
   std::once_flag loaded;
   json props;
 
  public:
-  PropertiesImpl(const std::string &filepath);
-  PropertiesImpl(const Properties::Node &node);
+  InfoImpl(const std::string &filepath);
+  InfoImpl(const Info::Node &node);
   std::optional<Property> getProperty(
       const std::vector<std::string_view> &propPath);
-  Properties::Node getNode(const std::vector<std::string_view> &path);
+  Info::Node getNode(const std::vector<std::string_view> &path);
 
  private:
   nxs_int getIndex(const std::string_view &name) const;
@@ -62,10 +62,10 @@ class PropertiesImpl {
       const std::vector<std::string_view> &path) const;
 
  private:
-  void loadProperties();
+  void loadInfo();
 };
 
 }  // namespace detail
 }  // namespace nexus
 
-#endif  // _NEXUS_PROPERTIES_IMPL_H
+#endif  // _NEXUS_INFO_IMPL_H

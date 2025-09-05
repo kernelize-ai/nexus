@@ -5,7 +5,7 @@
 #include <nexus/buffer.h>
 #include <nexus/event.h>
 #include <nexus/library.h>
-#include <nexus/properties.h>
+#include <nexus/info.h>
 #include <nexus/schedule.h>
 #include <nexus/stream.h>
 
@@ -27,7 +27,7 @@ class Device : public Object<detail::DeviceImpl> {
   // Get Device Property Value
   std::optional<Property> getProperty(nxs_int prop) const override;
 
-  Properties getInfo() const;
+  Info getInfo() const;
 
   // Runtime functions
   Librarys getLibraries() const;
@@ -41,7 +41,7 @@ class Device : public Object<detail::DeviceImpl> {
   Event createEvent(nxs_event_type event_type = NXS_EventType_Shared,
                     nxs_uint settings = 0);
 
-  Library loadLibrary(Properties catalog, const std::string &libraryName);
+  Library loadLibrary(Info catalog, const std::string &libraryName);
   Library createLibrary(void *libraryData, size_t librarySize,
                         nxs_uint settings = 0);
   Library createLibrary(const std::string &libraryPath, nxs_uint settings = 0);

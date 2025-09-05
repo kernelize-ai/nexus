@@ -1,7 +1,7 @@
 #ifndef NEXUS_DEVICE_DB_H
 #define NEXUS_DEVICE_DB_H
 
-#include <nexus/properties.h>
+#include <nexus/info.h>
 
 #include <optional>
 #include <string>
@@ -9,11 +9,11 @@
 
 namespace nexus {
 
-typedef std::unordered_map<std::string, Properties> DeviceInfoMap;
+typedef std::unordered_map<std::string, Info> DeviceInfoMap;
 
 const DeviceInfoMap *getDeviceInfoDB();
 
-Properties lookupDeviceInfo(const std::string &archName);
+Info lookupDeviceInfo(const std::string &archName);
 
 }  // namespace nexus
 

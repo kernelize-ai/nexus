@@ -3,7 +3,7 @@
 #define _NEXUS_SYSTEM_IMPL_H
 
 #include <nexus/buffer.h>
-#include <nexus/properties.h>
+#include <nexus/info.h>
 #include <nexus/runtime.h>
 
 namespace nexus {
@@ -26,17 +26,17 @@ class SystemImpl : public detail::Impl {
   Buffer createBuffer(size_t sz, const void *hostData = nullptr,
                       nxs_uint options = 0);
   Buffer copyBuffer(Buffer buf, Device dev, nxs_uint options = 0);
-  Properties loadCatalog(const std::string &catalogPath);
+  Info loadCatalog(const std::string &catalogPath);
 
   Runtimes getRuntimes() const { return runtimes; }
-  Propertiess getCatalogs() const { return catalogs; }
+  Infos getCatalogs() const { return catalogs; }
   Buffers getBuffers() const { return buffers; }
 
  private:
   // set of runtimes
   Runtimes runtimes;
   std::unordered_map<std::string, Runtime> runtimeMap;
-  Propertiess catalogs;
+  Infos catalogs;
   Buffers buffers;
 };
 }  // namespace detail

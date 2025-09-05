@@ -13,7 +13,7 @@ class LibraryImpl : public Impl {
  public:
   /// @brief Construct a Platform for the current system
   LibraryImpl(Impl base);
-  LibraryImpl(Impl base, const Properties &info);
+  LibraryImpl(Impl base, const Info &info);
 
   ~LibraryImpl();
 
@@ -21,13 +21,14 @@ class LibraryImpl : public Impl {
 
   std::optional<Property> getProperty(nxs_int prop) const;
 
-  Properties getInfo() const { return info; }
+  Info getInfo() const { return info; }
 
   Kernel getKernel(const std::string &kernelName);
 
  private:
   Objects<Kernel> kernels;
-  Properties info;
+  std::unordered_map<std::string, Kernel> kernelMap;
+  Info info;
 };
 }  // namespace detail
 }  // namespace nexus

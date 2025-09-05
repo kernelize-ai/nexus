@@ -6,7 +6,7 @@
 #include <iostream>
 #include <pybind11_json/pybind11_json.hpp>
 
-#include "../src/_properties_impl.h"
+#include "../src/_info_impl.h"
 #include "pynexus.h"
 
 namespace py = pybind11;
@@ -283,11 +283,11 @@ void pynexus::init_system_bindings(py::module &m) {
   //////////////////////////////////////////////////////////////////////////
 
   // Properties Object
-  py::class_<Properties>(m, "_properties", py::module_local())
-      .def("__bool__", [](Properties &self) { return (bool)self; })
+  py::class_<Info>(m, "_info", py::module_local())
+      .def("__bool__", [](Info &self) { return (bool)self; })
       .def(
           "get",
-          [](Properties &self, const std::vector<std::string_view> &path) {
+          [](Info &self, const std::vector<std::string_view> &path) {
             if (auto node = self.getNode(path)) {
               return node->getJson();
             } else {
@@ -504,7 +504,7 @@ void pynexus::init_system_bindings(py::module &m) {
            [](Runtime &self, nxs_int id) { return self.getDevice(id); })
       .def("get_devices", [](Runtime &self) { return self.getDevices(); });
 
-  make_objects_class<Properties>(m, "_propertiess");
+  make_objects_class<Info>(m, "_infos");
 
   // query
   m.def("get_runtime", [](const std::string &name) { return nexus::getSystem().getRuntime(name); });

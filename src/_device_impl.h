@@ -3,7 +3,7 @@
 
 #include <nexus/buffer.h>
 #include <nexus/library.h>
-#include <nexus/properties.h>
+#include <nexus/info.h>
 #include <nexus/runtime.h>
 #include <nexus/schedule.h>
 
@@ -14,7 +14,7 @@ namespace detail {
 
 /// @class DesignImpl
 class DeviceImpl : public Impl {
-  Properties deviceInfo;
+  Info deviceInfo;
   Buffers buffers;
   Librarys libraries;
   Schedules schedules;
@@ -31,7 +31,7 @@ class DeviceImpl : public Impl {
   // Get Runtime Property Value
   std::optional<Property> getProperty(nxs_int prop) const;
 
-  Properties getInfo() const { return deviceInfo; }
+  Info getInfo() const { return deviceInfo; }
 
   // Runtime functions
   Librarys getLibraries() const { return libraries; }
@@ -45,7 +45,7 @@ class DeviceImpl : public Impl {
   Schedule createSchedule(nxs_uint settings = 0);
   Event createEvent(nxs_event_type event_type = NXS_EventType_Shared,
                     nxs_uint settings = 0);
-  Library loadLibrary(Properties catalog, const std::string &libraryName);
+  Library loadLibrary(Info catalog, const std::string &libraryName);
   Library createLibrary(const std::string &path, nxs_uint settings = 0);
   Library createLibrary(void *libraryData, size_t size, nxs_uint settings = 0);
 

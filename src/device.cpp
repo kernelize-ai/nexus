@@ -8,7 +8,7 @@
 
 #include "_buffer_impl.h"
 #include "_device_impl.h"
-#include "_properties_impl.h"
+#include "_info_impl.h"
 #include "_runtime_impl.h"
 
 #define NEXUS_LOG_MODULE "device"
@@ -28,8 +28,8 @@ detail::DeviceImpl::DeviceImpl(detail::Impl base) : detail::Impl(base) {
                 type->getValue<NP_Type>() + "-" +
                 arch->getValue<NP_Architecture>();
   NEXUS_LOG(NEXUS_STATUS_NOTE, "    DeviceTag: " << devTag);
-  if (auto props = nexus::lookupDeviceInfo(devTag))
-    deviceInfo = props;
+  if (auto info = nexus::lookupDeviceInfo(devTag))
+    deviceInfo = info;
   else  // load defaults
     NEXUS_LOG(NEXUS_STATUS_ERR, "    Device Properties not found");
 }
@@ -60,10 +60,10 @@ struct LibraryInfo {
   std::string arch;
   std::string binaryData;
   nxs_long size;
-  Properties libraryNode;
+  Info libraryNode;
 };
 
-static void findDeviceBinary(LibraryInfo &info, Properties catalogInfo,
+static void findDeviceBinary(LibraryInfo &info, Info catalogInfo,
                              const std::string &libraryName,
                              const std::string &arch) {
   if (auto libs = catalogInfo.getNode({"Libraries"})) {
@@ -81,7 +81,7 @@ static void findDeviceBinary(LibraryInfo &info, Properties catalogInfo,
               info.arch = narchName.data();
               info.binaryData = binaryData.data();
               info.size = size;
-              info.libraryNode = Properties(Properties::Node(lib));
+              info.libraryNode = Info(Info::Node(lib));
               break;
             }
           }
@@ -93,7 +93,7 @@ static void findDeviceBinary(LibraryInfo &info, Properties catalogInfo,
   }
 }
 
-Library detail::DeviceImpl::loadLibrary(Properties catalog,
+Library detail::DeviceImpl::loadLibrary(Info catalog,
                                         const std::string &libraryName) {
   NEXUS_LOG(NEXUS_STATUS_NOTE, "  loadLibrary");
   auto arch = getProperty(NP_Architecture)->getValue<std::string>();
@@ -182,7 +182,7 @@ std::optional<Property> Device::getProperty(nxs_int prop) const {
   NEXUS_OBJ_MCALL(std::nullopt, getProperty, prop);
 }
 
-Properties Device::getInfo() const { NEXUS_OBJ_MCALL(Properties(), getInfo); }
+Info Device::getInfo() const { NEXUS_OBJ_MCALL(Info(), getInfo); }
 
 // Runtime functions
 Librarys Device::getLibraries() const { NEXUS_OBJ_MCALL(Librarys(), getLibraries); }
@@ -215,7 +215,7 @@ Buffer Device::copyBuffer(Buffer buf, nxs_uint settings) {
   NEXUS_OBJ_MCALL(Buffer(), copyBuffer, buf, settings);
 }
 
-Library Device::loadLibrary(Properties catalog, const std::string &libraryName) {
+Library Device::loadLibrary(Info catalog, const std::string &libraryName) {
   NEXUS_OBJ_MCALL(Library(), loadLibrary, catalog, libraryName);
 }
 

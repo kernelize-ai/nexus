@@ -4,7 +4,7 @@
 #include <nexus-api.h>
 #include <nexus/kernel.h>
 #include <nexus/object.h>
-#include <nexus/properties.h>
+#include <nexus/info.h>
 
 namespace nexus {
 
@@ -16,10 +16,10 @@ class LibraryImpl;
 class Library : public Object<detail::LibraryImpl> {
  public:
   Library(detail::Impl base);
-  Library(detail::Impl base, Properties info);
+  Library(detail::Impl base, Info info);
   using Object::Object;
 
-  Properties getInfo() const;
+  Info getInfo() const;
 
   std::optional<Property> getProperty(nxs_int prop) const override;
 

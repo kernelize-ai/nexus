@@ -19,7 +19,7 @@ class KernelImpl : public Impl {
               "  Kernel: " << kernelName << " - " << getId());
   }
 
-  KernelImpl(Impl base, const Properties &info) : Impl(base), info(info) {
+  KernelImpl(Impl base, const Info &info) : Impl(base), info(info) {
     // kernelName = info.getProperty(NP_Name).getValue<NP_Name>();
     NEXUS_LOG(NEXUS_STATUS_NOTE,
               "  Kernel: " << kernelName << " - " << getId());
@@ -35,7 +35,7 @@ class KernelImpl : public Impl {
     //nxs_int kid = rt->runAPIFunction<NF_nxsReleaseKernel>(getId());
   }
 
-  Properties getInfo() const { return info; }
+  Info getInfo() const { return info; }
 
   std::optional<Property> getProperty(nxs_int prop) const {
     auto *rt = getParentOfType<RuntimeImpl>();
@@ -44,7 +44,7 @@ class KernelImpl : public Impl {
 
  private:
   std::string kernelName;
-  Properties info;
+  Info info;
 };
 }  // namespace detail
 }  // namespace nexus
@@ -53,10 +53,10 @@ class KernelImpl : public Impl {
 Kernel::Kernel(detail::Impl base, const std::string &kernelName)
     : Object(base, kernelName) {}
 
-Kernel::Kernel(detail::Impl base, const Properties &info)
+Kernel::Kernel(detail::Impl base, const Info &info)
     : Object(base, info) {}
 
-Properties Kernel::getInfo() const { NEXUS_OBJ_MCALL(Properties(), getInfo); }
+Info Kernel::getInfo() const { NEXUS_OBJ_MCALL(Info(), getInfo); }
 
 std::optional<Property> Kernel::getProperty(nxs_int prop) const {
   NEXUS_OBJ_MCALL(std::nullopt, getProperty, prop);
