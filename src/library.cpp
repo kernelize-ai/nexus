@@ -2,6 +2,9 @@
 #include <nexus/log.h>
 
 #include "_library_impl.h"
+#include "_kernel_impl.h"
+#include "_info_impl.h"
+#include "_runtime_impl.h"
 
 #define NEXUS_LOG_MODULE "library"
 #undef NEXUS_LOG_DEPTH
@@ -15,10 +18,22 @@ LibraryImpl::LibraryImpl(Impl base) : Impl(base) {
   NEXUS_LOG(NEXUS_STATUS_NOTE, "CTOR: " << getId());
 }
 
-LibraryImpl::LibraryImpl(Impl base, const Info &info)
+LibraryImpl::LibraryImpl(Impl base, Info info)
     : Impl(base), info(info) {
   // auto name = info.get<std::string_view>("Name");
   NEXUS_LOG(NEXUS_STATUS_NOTE, "CTOR: " << getId());
+  // Iterate over all functions and kernels
+  try {
+    if (auto functions = info.getNode({"Functions"})) {
+      for (auto &kernel : *functions) {
+        auto name = kernel.at("Symbol").get<std::string>();
+        Info::Node node(kernel);
+        getKernel(name, Info(node));
+      }
+    }
+  } catch (...) {
+    NEXUS_LOG(NEXUS_STATUS_ERR, "  LibraryImpl: ERROR loading functions");
+  }
 }
 
 LibraryImpl::~LibraryImpl() {
@@ -37,14 +52,15 @@ std::optional<Property> detail::LibraryImpl::getProperty(nxs_int prop) const {
   return rt->getAPIProperty<NF_nxsGetLibraryProperty>(prop, getId());
 }
 
-Kernel LibraryImpl::getKernel(const std::string &kernelName) {
+Kernel LibraryImpl::getKernel(const std::string &kernelName, Info info) {
+  NEXUS_LOG(NEXUS_STATUS_NOTE, "  getKernel: " << kernelName);
   auto it = kernelMap.find(kernelName);
   if (it != kernelMap.end())
     return it->second;
   auto *rt = getParentOfType<RuntimeImpl>();
   nxs_int kid =
       rt->runAPIFunction<NF_nxsGetKernel>(getId(), kernelName.c_str());
-  Kernel kern(Impl(this, kid), kernelName);
+  Kernel kern(Impl(this, kid), kernelName, info);
   kernels.add(kern);
   kernelMap[kernelName] = kern;
   return kern;
@@ -63,6 +79,8 @@ std::optional<Property> Library::getProperty(nxs_int prop) const {
   NEXUS_OBJ_MCALL(std::nullopt, getProperty, prop);
 }
 
-Kernel Library::getKernel(const std::string &kernelName) {
-  NEXUS_OBJ_MCALL(Kernel(), getKernel, kernelName);
+Kernel Library::getKernel(const std::string &kernelName, Info info) {
+  NEXUS_OBJ_MCALL(Kernel(), getKernel, kernelName, info);
 }
+
+Kernels Library::getKernels() const { NEXUS_OBJ_MCALL(Kernels(), getKernels); }

@@ -5,6 +5,8 @@ set(METAL_TARGETS)
 set(HIP_TARGETS)
 set(PTX_TARGETS)
 
+set(KC_TARGETS)
+
 set(KERNEL_LIBS "${CMAKE_BINARY_DIR}/kernel_libs")
 file(MAKE_DIRECTORY ${KERNEL_LIBS})
 
@@ -117,6 +119,7 @@ if(LINUX)
     foreach(CU_FILE ${CU_FILES})
       get_filename_component(KERNEL_NAME ${CU_FILE} NAME_WE)
       set(PTX_FILE "${KERNEL_LIBS}/${KERNEL_NAME}.ptx")
+      set(KC_FILE "${KERNEL_LIBS}/${KERNEL_NAME}.kc")
 
       add_custom_command(
         OUTPUT "${PTX_FILE}"
@@ -124,6 +127,13 @@ if(LINUX)
         DEPENDS "${CU_FILE}")
 
       list(APPEND PTX_TARGETS "${PTX_FILE}")
+
+      add_custom_command(
+        OUTPUT "${KC_FILE}"
+        COMMAND python ${CMAKE_SOURCE_DIR}/tools/cuda_kc.py -a sm_${GPU_ARCH} -o "${KC_FILE}" "${CU_FILE}"
+        DEPENDS "${CU_FILE}")
+
+      list(APPEND KC_TARGETS "${KC_FILE}")
     endforeach()
 
     if(PTX_TARGETS)
@@ -132,4 +142,10 @@ if(LINUX)
         COMMENT "Building all CUDA libraries ${PTX_TARGETS}")
     endif()
   endif()
+endif()
+
+if(KC_TARGETS)
+  add_custom_target(kc_libraries ALL
+    DEPENDS ${KC_TARGETS}
+    COMMENT "Building all CUDA libraries ${KC_TARGETS}")
 endif()

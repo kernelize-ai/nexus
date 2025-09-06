@@ -26,6 +26,8 @@ class ScheduleImpl : public Impl {
 
   nxs_status run(Stream stream, nxs_uint settings);
 
+  Commands getCommands() const { return commands; }
+
  private:
   Commands commands;
 };

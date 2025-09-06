@@ -28,8 +28,9 @@ namespace detail {
 
 InfoImpl::InfoImpl(const std::string &filepath)
     : propertyFilePath(filepath) {}
-InfoImpl::InfoImpl(const Info::Node &node) : props(node) {
-  std::call_once(loaded, [&]() {});
+InfoImpl::InfoImpl(Info::Node &node) {
+  props = node.getJson();
+  NEXUS_LOG(NEXUS_STATUS_NOTE, "  JSON size: " << props.size());
 }
 
 std::optional<Property> InfoImpl::getProperty(
@@ -145,6 +146,7 @@ std::optional<Property> InfoImpl::getProp(
 }
 
 void InfoImpl::loadInfo() {
+  if (propertyFilePath.empty()) return;
   // Load json from file
   try {
     std::ifstream f(propertyFilePath);
@@ -165,7 +167,7 @@ void InfoImpl::loadInfo() {
 ///////////////////////////////////////////////////////////////////////////////
 Info::Info(const std::string &filepath) : Object(filepath) {}
 
-Info::Info(const Node &node) : Object(node) {}
+Info::Info(Node &node) : Object(node) {}
 
 // Get top level node
 std::optional<Property> Info::getProperty(const std::string_view &name) const {

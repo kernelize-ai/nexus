@@ -19,9 +19,8 @@ class Info : public Object<detail::InfoImpl> {
   class Node;
 
   Info(const std::string &filepath);
-  Info(const Node &node);
+  Info(Node &node);
   Info() = default;
-  // using Object::Object;
 
   // Query Device Properties
   //   from name

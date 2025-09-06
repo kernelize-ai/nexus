@@ -23,7 +23,9 @@ class Library : public Object<detail::LibraryImpl> {
 
   std::optional<Property> getProperty(nxs_int prop) const override;
 
-  Kernel getKernel(const std::string &kernelName);
+  Kernel getKernel(const std::string &kernelName, Info info = Info());
+
+  Kernels getKernels() const;
 };
 
 typedef Objects<Library> Librarys;

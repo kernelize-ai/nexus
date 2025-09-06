@@ -3,15 +3,17 @@
 CUDA Kernel Catalog Builder
 
 This tool compiles CUDA kernel source files and generates a JSON catalog
-with binary data encoded in Base64 format.
+with binary data encoded in Base64 format. Only kernels with symbols found
+by SymbolFinder are included in the catalog.
 
 Requirements:
 - CUDA Toolkit installed
 - nvcc compiler available in PATH
 - Python 3.6+
+- SymbolFinder (symbol_finder.py) must be available
 
 Usage:
-    python cuda_catalog_builder.py <kernel_file.cu> [options]
+    python cuda_kc.py <kernel_file.cu> [options]
 """
 
 import os
@@ -35,7 +37,7 @@ try:
     SYMBOL_FINDER_AVAILABLE = True
 except ImportError:
     SYMBOL_FINDER_AVAILABLE = False
-    print("Warning: SymbolFinder not available, using fallback symbol extraction")
+    print("Error: SymbolFinder is required but not available. Please ensure symbol_finder.py is in the same directory.")
 
 class CUDAKernelParser:
     """Parser for extracting kernel information from CUDA source files using preprocessor."""
@@ -167,7 +169,7 @@ class CUDAKernelParser:
                 
                 kernel_info = {
                     "Name": kernel_name,
-                    "Symbol": self._mangle_cuda_symbol(kernel_name),
+                    "Symbol": kernel_name,  # Will be set by SymbolFinder extraction
                     "RawParams": params_str.strip(),
                     "LineNumber": line_num,
                     "Description": self._extract_description(match.start(), kernel_name),
@@ -670,12 +672,12 @@ class CUDAKernelParser:
                     param_type = re.sub(r'\b' + re.escape(template_param) + r'\b', arg_value, param_type)
                 param["Type"] = param_type
                 if "BaseType" in param:
-                    param["BaseType"] = self._clean_type_for_mangling(param_type)
+                    param["BaseType"] = param_type  # Use the type as-is since we're not mangling
                 param["Description"] = f"Parameter {param.get('Name', '')} of type {param_type}"
         
         kernel_info = {
             "Name": instantiated_name,
-            "Symbol": self._mangle_cuda_symbol(instantiated_name, parameters, template_instantiation.get("TemplateArguments")),
+            "Symbol": "",  # Will be set by SymbolFinder extraction
             "Description": f"{orig_kernel['Description']} (template instantiation)",
             "ReturnType": "void",
             "Parameters": parameters,
@@ -728,7 +730,7 @@ class CUDAKernelParser:
         
         kernel_info = {
             "Name": instantiated_name,
-            "Symbol": self._mangle_cuda_symbol(instantiated_name, parameters, template_args),
+            "Symbol": "",  # Will be set by SymbolFinder extraction
             "Description": f"{orig_kernel['Description']} (template instantiation)",
             "ReturnType": "void",
             "Parameters": parameters,
@@ -793,7 +795,7 @@ class CUDAKernelParser:
                     param_type = re.sub(r'\b' + re.escape(template_param) + r'\b', arg_value, param_type)
             
             param["Type"] = param_type
-            param["BaseType"] = self._clean_type_for_mangling(param_type)
+            param["BaseType"] = param_type  # Use the type as-is since we're not mangling
             param["Description"] = f"Parameter {param['Name']} of type {param_type}"
         
         return parameters
@@ -813,7 +815,7 @@ class CUDAKernelParser:
         
         kernel_info = {
             "Name": kernel_name,
-            "Symbol": self._mangle_cuda_symbol(kernel_name, parameters),
+            "Symbol": kernel_name,  # Will be set by SymbolFinder extraction
             "Description": orig_kernel["Description"],
             "ReturnType": "void",
             "Parameters": parameters,
@@ -861,149 +863,15 @@ class CUDAKernelParser:
         
         return parameters
     
-    def _mangle_cuda_symbol(self, kernel_name: str, parameters: List[Dict] = None, 
-                           template_args: List[Dict] = None) -> str:
-        """Generate mangled symbol name for CUDA kernel.
-        
-        CUDA uses a specific name mangling scheme based on the Itanium C++ ABI:
-        - For non-template kernels: _Z + length + name + parameter types
-        - For template kernels: _Z + length + name + template params + parameter types
-        
-        Note: This is a fallback implementation. The actual mangled symbols are extracted
-        from the compiled binary using the 'nm' tool when available.
-        """
-        if not parameters:
-            # Simple mangling for basic case - no parameters
-            return f"_Z{len(kernel_name)}{kernel_name}v"
-        
-        # Build parameter type string
-        param_types = []
-        for param in parameters:
-            param_type = param.get('Type', 'void')
-            # Clean up the type for mangling
-            clean_type = self._clean_type_for_mangling(param_type)
-            param_types.append(clean_type)
-        
-        # Handle template instantiations
-        if template_args:
-            # Extract base kernel name (remove template arguments)
-            base_name = kernel_name.split('<')[0]
-            
-            # Build template argument string
-            template_arg_types = []
-            for arg in template_args:
-                arg_value = arg.get('Value', '')
-                arg_type = arg.get('Type', 'unknown')
-                
-                # Mangle template argument based on its type
-                if arg_type == 'builtin_type':
-                    mangled_arg = self._clean_type_for_mangling(arg_value)
-                elif arg_type == 'integer_literal':
-                    mangled_arg = f"Li{arg_value}E"  # Integer literal
-                elif arg_type == 'float_literal':
-                    mangled_arg = f"Lf{arg_value}E"  # Float literal
-                elif arg_type == 'string_literal':
-                    mangled_arg = f"LA{len(arg_value)}{arg_value}E"  # String literal
-                else:
-                    # For user-defined types, use the type name
-                    mangled_arg = f"N{len(arg_value)}{arg_value}E"
-                
-                template_arg_types.append(mangled_arg)
-            
-            # Create template instantiation mangled name
-            template_str = ''.join(template_arg_types)
-            param_str = ''.join(param_types)
-            return f"_Z{len(base_name)}{base_name}I{template_str}E{param_str}"
-        else:
-            # Create mangled name with parameter types (non-template)
-            param_str = ''.join(param_types)
-            return f"_Z{len(kernel_name)}{kernel_name}{param_str}"
     
-    def _clean_type_for_mangling(self, type_str: str) -> str:
-        """Clean type string for CUDA name mangling."""
-        # Remove common CUDA qualifiers and spaces
-        type_str = re.sub(r'\b(const|volatile|restrict|__restrict__|__restrict)\b', '', type_str)
-        type_str = re.sub(r'\b(__shared__|__constant__|__device__|__host__|__global__|__managed__)\b', '', type_str)
-        type_str = re.sub(r'\s+', '', type_str)
-
-        # Handle pointer types
-        if '*' in type_str:
-            base_type = type_str.replace('*', '')
-            pointer_count = type_str.count('*')
-            clean_base = self._clean_type_for_mangling(base_type)
-            return f"P{clean_base}"
-        
-        # Handle reference types
-        if '&' in type_str:
-            base_type = type_str.replace('&', '')
-            clean_base = self._clean_type_for_mangling(base_type)
-            return f"R{clean_base}"
-        
-        # Handle array types
-        if '[' in type_str and ']' in type_str:
-            base_type = type_str.split('[')[0]
-            clean_base = self._clean_type_for_mangling(base_type)
-            return f"A{clean_base}"
-        
-        # Handle basic types
-        type_mapping = {
-            'void': 'v',
-            'char': 'c',
-            'short': 's',
-            'int': 'i',
-            'long': 'l',
-            'float': 'f',
-            'double': 'd',
-            'bool': 'b',
-            'unsigned': 'j',
-            'signed': 'i',
-            'unsignedchar': 'h',
-            'unsignedshort': 't',
-            'unsignedint': 'j',
-            'unsignedlong': 'm',
-            'signedchar': 'a',
-            'signedshort': 's',
-            'signedint': 'i',
-            'signedlong': 'l',
-            'longlong': 'x',
-            'unsignedlonglong': 'y',
-            'signedlonglong': 'x'
-        }
-        
-        # Check for exact matches first
-        for cpp_type, mangled in type_mapping.items():
-            if type_str == cpp_type:
-                return mangled
-        
-        # Check for type with size modifiers
-        for cpp_type, mangled in type_mapping.items():
-            if type_str.endswith(cpp_type):
-                return mangled
-        
-        # Handle CUDA-specific types
-        cuda_type_mapping = {
-            'dim3': 'N3dim3E',
-            'cudaStream_t': 'Pv',
-            'cudaEvent_t': 'Pv',
-            'cudaError_t': 'i',
-            'cudaMemcpyKind': 'i',
-            'cudaDeviceProp': 'N13cudaDevicePropE'
-        }
-        
-        for cuda_type, mangled in cuda_type_mapping.items():
-            if type_str == cuda_type:
-                return mangled
-        
-        # For unknown types, use the type name length + name
-        return f"{len(type_str)}{type_str}"
     
     def _extract_symbols_from_binary(self, binary_path: str) -> Dict[str, str]:
         """Extract actual mangled symbols from compiled binary using SymbolFinder."""
         symbols = {}
         
         if not SYMBOL_FINDER_AVAILABLE:
-            # Fallback to basic nm extraction
-            return self._extract_symbols_fallback(binary_path)
+            print("Error: SymbolFinder not available. Cannot extract symbols.")
+            return symbols
         
         try:
             # Use SymbolFinder for comprehensive symbol extraction
@@ -1015,7 +883,12 @@ class CUDAKernelParser:
                 if symbol['type'] in ['T', 't', 'W', 'w']:  # Text section symbols (functions)
                     demangled_name = symbol.get('name', finder.demangle_symbol(symbol['mangled_name']))
                     mangled_name = symbol['mangled_name']
-                    
+
+                    # Check for non-mangled symbols                    
+                    if demangled_name == mangled_name:
+                        symbols[demangled_name] = mangled_name
+                        continue
+
                     # Look for CUDA kernel patterns in demangled name
                     if self._is_cuda_kernel_symbol(demangled_name, mangled_name):
                         kernel_name = self._extract_kernel_name_from_symbol(demangled_name, mangled_name)
@@ -1023,58 +896,14 @@ class CUDAKernelParser:
                             symbols[kernel_name] = mangled_name
                             print(f"Found kernel symbol: {kernel_name} -> {mangled_name}")
             
-            print(f"Extracted {len(symbols)} kernel symbols from binary")
+            print(f"Extracted {len(symbols)} kernel symbols from binary using SymbolFinder")
             
         except Exception as e:
-            print(f"Warning: Could not extract symbols using SymbolFinder: {e}")
-            # Fallback to basic extraction
-            return self._extract_symbols_fallback(binary_path)
+            print(f"Error: Could not extract symbols using SymbolFinder: {e}")
+            # No fallback - only use SymbolFinder results
         
         return symbols
     
-    def _extract_symbols_fallback(self, binary_path: str) -> Dict[str, str]:
-        """Fallback symbol extraction using basic nm command."""
-        symbols = {}
-        try:
-            # Check if nm is available
-            nm_check = subprocess.run(['which', 'nm'], capture_output=True, text=True)
-            if nm_check.returncode != 0:
-                print("Warning: 'nm' tool not found, using calculated symbols")
-                return symbols
-            
-            # Use nm to extract symbols
-            result = subprocess.run(['nm', '-D', binary_path], capture_output=True, text=True)
-            if result.returncode == 0:
-                for line in result.stdout.split('\n'):
-                    if line.strip():
-                        parts = line.split()
-                        if len(parts) >= 3:
-                            address, symbol_type, symbol_name = parts[0], parts[1], parts[2]
-                            # Look for global symbols (T or D)
-                            if symbol_type in ['T', 'D'] and symbol_name.startswith('_Z'):
-                                # Try to extract the demangled name
-                                try:
-                                    demangled_result = subprocess.run(['c++filt', symbol_name], 
-                                                                    capture_output=True, text=True, timeout=5)
-                                    if demangled_result.returncode == 0:
-                                        demangled_name = demangled_result.stdout.strip()
-                                        # Extract kernel name from demangled name
-                                        kernel_match = re.search(r'(\w+)\s*\(', demangled_name)
-                                        if kernel_match:
-                                            kernel_name = kernel_match.group(1)
-                                            symbols[kernel_name] = symbol_name
-                                except (subprocess.TimeoutExpired, FileNotFoundError):
-                                    # If c++filt is not available, try to extract kernel name from mangled symbol
-                                    # This is a fallback for basic symbol extraction
-                                    kernel_match = re.search(r'_Z(\d+)(\w+)', symbol_name)
-                                    if kernel_match:
-                                        length_str, kernel_name = kernel_match.groups()
-                                        if kernel_name and kernel_name.isalpha():
-                                            symbols[kernel_name] = symbol_name
-        except Exception as e:
-            print(f"Warning: Could not extract symbols from binary: {e}")
-        
-        return symbols
     
     def _is_cuda_kernel_symbol(self, demangled_name: str, mangled_name: str) -> bool:
         """Check if a symbol represents a CUDA kernel."""
@@ -1423,7 +1252,6 @@ class CatalogBuilder:
                             "Algorithm": checksum_algo,
                             "Value": checksum_hash
                         },
-                        "Symbols": arch_symbols  # Store actual mangled symbols for this arch
                     }
                     
                     architectures.append(arch_entry)
@@ -1436,6 +1264,12 @@ class CatalogBuilder:
         # Update kernel symbols with actual mangled symbols if available
         self._update_kernel_symbols(kernels, actual_symbols)
         
+        # Filter out kernels that don't have symbols found by SymbolFinder
+        kernels_with_symbols = [k for k in kernels if k.get("Metadata", {}).get("ActualSymbol", False)]
+        
+        if len(kernels_with_symbols) < len(kernels):
+            print(f"Filtered out {len(kernels) - len(kernels_with_symbols)} kernels without SymbolFinder symbols")
+        
         # Build complete library entry
         library_entry = {
             "Id": f"cuda-{library_name.lower()}",
@@ -1446,7 +1280,7 @@ class CatalogBuilder:
             "License": "MIT",
             "Categories": ["compute", "graphics"],
             "Architectures": architectures,
-            "Functions": kernels,
+            "Functions": kernels_with_symbols,
             "Dependencies": [
                 {
                     "Name": "CUDA Runtime",
@@ -1465,11 +1299,11 @@ class CatalogBuilder:
                 "GpuArchitectures": target_archs,
                 "Framework": "CUDA",
                 "PreprocessorUsed": True,
-                "TotalKernels": len(kernels),
-                "KernelNames": [k["Name"] for k in kernels],
+                "TotalKernels": len(kernels_with_symbols),
+                "KernelNames": [k["Name"] for k in kernels_with_symbols],
                 "IncludesPtx": include_ptx,
                 "SymbolsExtracted": len(actual_symbols) > 0,
-                "SymbolExtractionMethod": "SymbolFinder" if SYMBOL_FINDER_AVAILABLE else "nm_fallback",
+                "SymbolExtractionMethod": "SymbolFinder_only",
                 "ActualSymbolsFound": len(actual_symbols)
             }
         }
@@ -1490,8 +1324,8 @@ class CatalogBuilder:
                 # Update with actual mangled symbol
                 kernel["Symbol"] = actual_symbols[kernel_name]
                 kernel["Metadata"]["ActualSymbol"] = True
-                kernel["Metadata"]["SymbolSource"] = "binary_extraction"
-                print(f"Updated kernel '{kernel_name}' with actual symbol: {actual_symbols[kernel_name]}")
+                kernel["Metadata"]["SymbolSource"] = "SymbolFinder"
+                print(f"Updated kernel '{kernel_name}' with SymbolFinder symbol: {actual_symbols[kernel_name]}")
             else:
                 # Try to find template instantiations for template kernels
                 found_symbol = False
@@ -1499,10 +1333,10 @@ class CatalogBuilder:
                     found_symbol = self._find_template_instantiations(kernel, actual_symbols)
                 
                 if not found_symbol:
-                    # Keep calculated symbol but mark as not verified
+                    # Remove kernel if no symbol found by SymbolFinder
                     kernel["Metadata"]["ActualSymbol"] = False
-                    kernel["Metadata"]["SymbolSource"] = "calculated"
-                    print(f"Kernel '{kernel_name}' not found in binary, using calculated symbol: {kernel.get('Symbol', 'N/A')}")
+                    kernel["Metadata"]["SymbolSource"] = "not_found"
+                    print(f"Warning: Kernel '{kernel_name}' not found by SymbolFinder - will be excluded from catalog")
     
     def _find_template_instantiations(self, kernel: Dict, actual_symbols: Dict[str, str]) -> bool:
         """Find template instantiations for a kernel in the actual symbols."""
@@ -1529,8 +1363,8 @@ class CatalogBuilder:
                 primary_instantiation = template_instantiations[0]
                 kernel["Symbol"] = primary_instantiation["MangledSymbol"]
                 kernel["Metadata"]["ActualSymbol"] = True
-                kernel["Metadata"]["SymbolSource"] = "template_instantiation"
-                print(f"Updated kernel '{kernel_name}' with template instantiation: {primary_instantiation['MangledSymbol']}")
+                kernel["Metadata"]["SymbolSource"] = "SymbolFinder_template_instantiation"
+                print(f"Updated kernel '{kernel_name}' with SymbolFinder template instantiation: {primary_instantiation['MangledSymbol']}")
         
         return found_symbol
     
@@ -1625,6 +1459,10 @@ def main():
         print(f"Error: Source file '{args.source}' not found")
         sys.exit(1)
     
+    if not SYMBOL_FINDER_AVAILABLE:
+        print("Error: SymbolFinder is required but not available. Cannot proceed.")
+        sys.exit(1)
+    
     try:
         builder = CatalogBuilder()
         
@@ -1675,9 +1513,9 @@ def main():
                     print(f"    __launch_bounds__({lb['MaxThreadsPerBlock']}" +
                           (f", {lb['MinBlocksPerMultiprocessor']}" if lb.get('MinBlocksPerMultiprocessor') else "") + ")")
                 if func.get('Metadata', {}).get('ActualSymbol'):
-                    print(f"    Symbol: {func['Symbol']} (extracted from binary)")
+                    print(f"    Symbol: {func['Symbol']} (found by SymbolFinder)")
                 else:
-                    print(f"    Symbol: {func['Symbol']} (calculated)")
+                    print(f"    Symbol: {func['Symbol']} (not found by SymbolFinder)")
             
             print(f"Built for {len(library_entry['Architectures'])} architectures")
             
@@ -1716,9 +1554,9 @@ def main():
             actual_symbols_count = sum(1 for func in library_entry['Functions'] 
                                      if func.get('Metadata', {}).get('ActualSymbol'))
             if actual_symbols_count > 0:
-                print(f"Actual mangled symbols extracted for {actual_symbols_count}/{len(library_entry['Functions'])} kernels")
+                print(f"SymbolFinder extracted symbols for {actual_symbols_count}/{len(library_entry['Functions'])} kernels")
             else:
-                print("Using calculated mangled symbols (could not extract from binary)")
+                print("No symbols found by SymbolFinder - no kernels included in catalog")
             
             # Show template instantiation information
             template_instantiations = [func for func in library_entry['Functions'] 

@@ -101,7 +101,7 @@ nxsGetDeviceProperty(nxs_int device_id, nxs_uint property_id,
     case NP_Type:
       return rt::getPropertyStr(property_value, property_value_size, "gpu");
     case NP_Architecture: {
-      std::string name = "sm_" + std::to_string(props.major * 10);
+      std::string name = "sm_" + std::to_string(props.major * 10 + props.minor);
       return rt::getPropertyStr(property_value, property_value_size, name);
     }
     case NP_MajorVersion:

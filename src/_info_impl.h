@@ -47,7 +47,7 @@ class InfoImpl {
 
  public:
   InfoImpl(const std::string &filepath);
-  InfoImpl(const Info::Node &node);
+  InfoImpl(Info::Node &node);
   std::optional<Property> getProperty(
       const std::vector<std::string_view> &propPath);
   Info::Node getNode(const std::vector<std::string_view> &path);

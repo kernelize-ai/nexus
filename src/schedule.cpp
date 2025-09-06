@@ -113,3 +113,7 @@ Command Schedule::createWaitCommand(Event event, nxs_int wait_value,
 nxs_status Schedule::run(Stream stream, nxs_uint settings) {
   NEXUS_OBJ_MCALL(NXS_InvalidSchedule, run, stream, settings);
 }
+
+Commands Schedule::getCommands() const {
+  NEXUS_OBJ_MCALL(Commands(), getCommands);
+}

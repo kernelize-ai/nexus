@@ -28,6 +28,8 @@ class Schedule : public Object<detail::ScheduleImpl> {
                             nxs_uint settings = 0);
 
   nxs_status run(Stream stream = Stream(), nxs_uint settings = 0);
+
+  Commands getCommands() const;
 };
 
 typedef Objects<Schedule> Schedules;

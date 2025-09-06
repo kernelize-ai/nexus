@@ -14,8 +14,7 @@ class KernelImpl;
 // System class
 class Kernel : public Object<detail::KernelImpl> {
  public:
-  Kernel(detail::Impl base, const std::string &kernelName);
-  Kernel(detail::Impl base, const Info &info);
+  Kernel(detail::Impl base, const std::string &kernelName, Info info = Info());
   using Object::Object;
 
   Info getInfo() const;

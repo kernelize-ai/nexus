@@ -81,7 +81,8 @@ static void findDeviceBinary(LibraryInfo &info, Info catalogInfo,
               info.arch = narchName.data();
               info.binaryData = binaryData.data();
               info.size = size;
-              info.libraryNode = Info(Info::Node(lib));
+              Info::Node node(lib);
+              info.libraryNode = Info(node);
               break;
             }
           }
