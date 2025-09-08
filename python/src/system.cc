@@ -313,16 +313,18 @@ void pynexus::init_system_bindings(py::module &m) {
         return NXS_InvalidDevice;
       });
   make_objects_class<Buffer>(m, "_buffers");
-    
-  make_object_class<Kernel>(m, "_kernel")
-      .def("get_info", [](Kernel &self) { return self.getInfo(); });
+
+  make_object_class<Kernel>(m, "_kernel").def("get_info", [](Kernel &self) {
+    return self.getInfo();
+  });
   make_objects_class<Kernel>(m, "_kernels");
 
   make_object_class<Library>(m, "_library")
       .def("get_info", [](Library &self) { return self.getInfo(); })
-      .def("get_kernel", [](Library &self, const std::string &name) {
-        return self.getKernel(name);
-      })
+      .def("get_kernel",
+           [](Library &self, const std::string &name) {
+             return self.getKernel(name);
+           })
       .def("get_kernels", [](Library &self) { return self.getKernels(); });
 
   make_object_class<Stream>(m, "_stream");
@@ -480,9 +482,9 @@ void pynexus::init_system_bindings(py::module &m) {
            [](Device &self, Buffer buf) { return self.copyBuffer(buf); })
       .def("get_buffers", [](Device &self) { return self.getBuffers(); })
       .def("load_library",
-        [](Device &self, const char *data, size_t size) {
-          return self.createLibrary((void *)data, size);
-        })
+           [](Device &self, const char *data, size_t size) {
+             return self.createLibrary((void *)data, size);
+           })
       .def("load_library",
            [](Device &self, Info catalog, const std::string &libraryName) {
              return self.loadLibrary(catalog, libraryName);

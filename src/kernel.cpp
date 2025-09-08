@@ -5,7 +5,6 @@
 #include "_kernel_impl.h"
 #include "_runtime_impl.h"
 
-
 #define NEXUS_LOG_MODULE "kernel"
 
 using namespace nexus;
@@ -16,8 +15,7 @@ namespace detail {
   /// @brief Construct a Platform for the current system
 KernelImpl::KernelImpl(Impl base, const std::string &kName, Info info)
     : Impl(base), kernelName(kName), info(info) {
-  NEXUS_LOG(NEXUS_STATUS_NOTE,
-            "  Kernel: " << kernelName << " - " << getId());
+  NEXUS_LOG(NEXUS_STATUS_NOTE, "  Kernel: " << kernelName << " - " << getId());
 }
 
 KernelImpl::~KernelImpl() {
@@ -27,7 +25,7 @@ KernelImpl::~KernelImpl() {
 
 void KernelImpl::release() {
   auto *rt = getParentOfType<RuntimeImpl>();
-  //nxs_int kid = rt->runAPIFunction<NF_nxsReleaseKernel>(getId());
+  // nxs_int kid = rt->runAPIFunction<NF_nxsReleaseKernel>(getId());
 }
 
 std::optional<Property> KernelImpl::getProperty(nxs_int prop) const {

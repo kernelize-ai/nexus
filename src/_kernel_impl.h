@@ -1,8 +1,8 @@
 #ifndef _NEXUS_KERNEL_IMPL_H
 #define _NEXUS_KERNEL_IMPL_H
 
-#include <nexus/kernel.h>
 #include <nexus/info.h>
+#include <nexus/kernel.h>
 
 namespace nexus {
 namespace detail {

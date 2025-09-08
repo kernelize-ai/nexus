@@ -1,9 +1,9 @@
 #ifndef _NEXUS_LIBRARY_IMPL_H
 #define _NEXUS_LIBRARY_IMPL_H
 
+#include <nexus/info.h>
 #include <nexus/kernel.h>
 #include <nexus/library.h>
-#include <nexus/info.h>
 
 #include <unordered_map>
 

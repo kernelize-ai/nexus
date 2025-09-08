@@ -1,9 +1,9 @@
 
 #include <nexus/log.h>
 
-#include "_library_impl.h"
-#include "_kernel_impl.h"
 #include "_info_impl.h"
+#include "_kernel_impl.h"
+#include "_library_impl.h"
 #include "_runtime_impl.h"
 
 #define NEXUS_LOG_MODULE "library"
@@ -18,8 +18,7 @@ LibraryImpl::LibraryImpl(Impl base) : Impl(base) {
   NEXUS_LOG(NEXUS_STATUS_NOTE, "CTOR: " << getId());
 }
 
-LibraryImpl::LibraryImpl(Impl base, Info info)
-    : Impl(base), info(info) {
+LibraryImpl::LibraryImpl(Impl base, Info info) : Impl(base), info(info) {
   // auto name = info.get<std::string_view>("Name");
   NEXUS_LOG(NEXUS_STATUS_NOTE, "CTOR: " << getId());
   // Iterate over all functions and kernels
