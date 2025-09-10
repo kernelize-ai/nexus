@@ -4,7 +4,6 @@ import re
 import subprocess
 import sys
 import sysconfig
-import json
 import shutil
 from pathlib import Path
 
@@ -80,6 +79,8 @@ class CMakeBuildPy(build_py):
 
     def run(self) -> None:
         self._copy_device_lib_to_package()
+        self._copy_headers_to_package()
+
         self.run_command('build_ext')
         return super().run()
 
@@ -95,6 +96,19 @@ class CMakeBuildPy(build_py):
             shutil.copytree(source_device_lib, target_device_lib)
         else:
            raise RuntimeError(f"Warning: {source_device_lib} not found in repo root")
+
+    def _copy_headers_to_package(self):
+        """Copy entire include directory to package"""
+        source_include = 'include'
+        nexus_package_dir = 'python/nexus'
+        target_include = os.path.join(nexus_package_dir, 'include')
+        
+        if os.path.exists(source_include):
+            if os.path.exists(target_include):
+                shutil.rmtree(target_include)
+            shutil.copytree(source_include, target_include)
+        else:
+            raise RuntimeError(f"Warning: {source_include} not found in repo root")
 
 class CMakeBuild(build_ext):
         
@@ -221,8 +235,6 @@ def get_entry_points():
     return entry_points
 
 
-
-
 # Dynamically define supported Python versions and classifiers
 MIN_PYTHON = (3, 9)
 MAX_PYTHON = (3, 13)
@@ -239,8 +251,6 @@ PYTHON_CLASSIFIERS = [
 ]
 CLASSIFIERS = BASE_CLASSIFIERS + PYTHON_CLASSIFIERS
 
-# The information here can also be placed in setup.cfg - better separation of
-# logic and declaration, and simpler if you include description/version in a file.
 setup(
     name=os.environ.get("NEXUS_WHEEL_NAME", "knexus"),
     version="0.0.1",
@@ -256,9 +266,11 @@ setup(
     package_dir=dict(get_package_dirs()),
     entry_points=get_entry_points(),
     include_package_data=True,
+    data_files=[],
     package_data={'nexus': [
         'device_lib/**/*',
-        'runtime_libs/**/*'
+        'runtime_libs/**/*',
+        'include/**/*',
     ]},
     ext_modules=[CMakeExtension("nexus", ".")],
     cmdclass={
