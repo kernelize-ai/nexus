@@ -7,6 +7,7 @@ import sysconfig
 import json
 import shutil
 from pathlib import Path
+import glob
 
 from setuptools import Extension, find_packages, setup
 from setuptools.command.build_ext import build_ext
@@ -217,10 +218,8 @@ def get_packages():
 
 def get_entry_points():
     entry_points = {}
-#    entry_points["openam.foo"] = [f"{b.name} = triton.backends.{b.name}" for b in backends]
+#   entry_points["openam.foo"] = [f"{b.name} = triton.backends.{b.name}" for b in backends]
     return entry_points
-
-
 
 
 # Dynamically define supported Python versions and classifiers
@@ -239,8 +238,9 @@ PYTHON_CLASSIFIERS = [
 ]
 CLASSIFIERS = BASE_CLASSIFIERS + PYTHON_CLASSIFIERS
 
-# The information here can also be placed in setup.cfg - better separation of
-# logic and declaration, and simpler if you include description/version in a file.
+inner_headers = glob.glob("include/nexus-api/*.h", recursive=True)
+toplevel_headers = glob.glob("include/nexus-api.h")
+
 setup(
     name=os.environ.get("NEXUS_WHEEL_NAME", "knexus"),
     version="0.0.1",
@@ -256,6 +256,10 @@ setup(
     package_dir=dict(get_package_dirs()),
     entry_points=get_entry_points(),
     include_package_data=True,
+    data_files=[
+        ('include', toplevel_headers),
+        ('include/nexus-api', inner_headers)
+    ],
     package_data={'nexus': [
         'device_lib/**/*',
         'runtime_libs/**/*'
