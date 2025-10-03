@@ -200,7 +200,7 @@ class HipCommand : public rt::Command<hipFunction_t, hipEvent_t, hipStream_t> {
       case NXS_CommandType_Dispatch: {
         int flags = 0;
         HIP_CHECK(NXS_InvalidCommand, hipModuleLaunchKernel, kernel, grid_size,
-                  1, 1, block_size, 1, 1, 0, stream, args_ref.data(), nullptr);
+                  1, 1, block_size, 1, 1, shmem_size, stream, args_ref.data(), nullptr);
         // hipModuleLaunchCooperativeKernel - for inter-block coordination
         // hipModuleLaunchCooperativeKernelMultiDevice
         // hipLaunchKernelGGL - simplified for non-module kernels
@@ -920,16 +920,18 @@ extern "C" nxs_status NXS_API_CALL nxsSetCommandScalar(nxs_int command_id,
  ***********************************************************************/
 extern "C" nxs_status NXS_API_CALL nxsFinalizeCommand(nxs_int command_id,
                                                       nxs_dim3 grid_size,
-                                                      nxs_dim3 group_size) {
+                                                      nxs_dim3 group_size,
+                                                      nxs_uint shmem_size) {
 
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "finalizeCommand " << command_id << " - "
     << "{ " << grid_size.x <<", " << grid_size.y << ", " << grid_size.z << " }" << " - "
-    << "{ " << group_size.x <<", " << group_size.y << ", " << group_size.z << " }");
+    << "{ " << group_size.x <<", " << group_size.y << ", " << group_size.z << " }" << " - "
+    << shmem_size);
   auto rt = getRuntime();
   auto cmd = rt->get<HipCommand>(command_id);
   if (!cmd) return NXS_InvalidCommand;
 
-  cmd->finalize(grid_size, group_size);
+  cmd->finalize(grid_size, group_size, shmem_size);
 
   return NXS_Success;
 }

@@ -1,8 +1,8 @@
 import numpy
 
 import sys
-import subprocess
-subprocess.check_call([sys.executable, "-m", "pip", "install", "torch"])
+#import subprocess
+#subprocess.check_call([sys.executable, "-m", "pip", "install", "torch"])
 
 import torch
 import nexus
@@ -22,8 +22,8 @@ nb0 = dev.create_buffer(buf0)
 nb1 = dev.create_buffer(buf1)
 nb2 = dev.create_buffer(res2)
 
-lib = dev.load_library_file("build.local/cuda_kernels/add_vectors.ptx")
-kern = lib.get_kernel('add_vectors')
+lib = dev.load_library("build.local/kernel_libs/add_vectors_shmem.ptx")
+kern = lib.get_kernel('add_vectors_shmem')
 
 sched = dev.create_schedule()
 
@@ -32,7 +32,7 @@ cmd.set_arg(0, nb0)
 cmd.set_arg(0, nb0)
 cmd.set_arg(1, nb1)
 cmd.set_arg(2, nb2)
-cmd.finalize([32,1,1], [32,1,1])
+cmd.finalize([32,1,1], [32,1,1], 2048)
 
 sched.run()
 

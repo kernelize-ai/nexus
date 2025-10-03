@@ -75,7 +75,7 @@ int test_graph(int argc, char** argv) {
     cmd.setArgument(1, buf1);
     cmd.setArgument(2, buf2);
 
-    cmd.finalize({32,1,1}, {32,1,1});
+    cmd.finalize({32,1,1}, {32,1,1}, 0);
   }
 
   sched.run(stream0,

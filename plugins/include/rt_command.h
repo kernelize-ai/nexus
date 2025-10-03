@@ -21,6 +21,7 @@ class Command {
   std::array<void *, RT_COMMAND_MAX_ARGS> args_ref;
   nxs_dim3 block_size;
   nxs_dim3 grid_size;
+  nxs_uint shmem_size;
 
  public:
   Command(Tkernel kernel, nxs_uint settings = 0)
@@ -59,11 +60,11 @@ class Command {
     return NXS_Success;
   }
 
-  nxs_status finalize(nxs_dim3 grid_size, nxs_dim3 block_size) {
+  nxs_status finalize(nxs_dim3 grid_size, nxs_dim3 block_size, nxs_uint shmem_size) {
     // TODO: check if all arguments are valid
     this->grid_size = grid_size;
     this->block_size = block_size;
-
+    this->shmem_size = shmem_size;
     return NXS_Success;
   }
 

@@ -370,18 +370,16 @@ void pynexus::init_system_bindings(py::module &m) {
                return self.setArgument(index, make_buffer(value));
              }
            })
-      .def("finalize", [](Command& self, py::list grid, py::list block) {
-         auto list_to_dim3 = [](const py::list& l) -> nxs_dim3 {
-             nxs_uint x = l.size() > 0 ? l[0].cast<nxs_uint>() : 1;
-             nxs_uint y = l.size() > 1 ? l[1].cast<nxs_uint>() : 1;
-             nxs_uint z = l.size() > 2 ? l[2].cast<nxs_uint>() : 1;
-             return nxs_dim3{ x, y, z };
-         };
-        return self.finalize(list_to_dim3(grid), list_to_dim3(block));
-      })
-      .def("finalize", [](Command& self, nxs_uint grid, nxs_uint block) {
-        return self.finalize({grid,1,1}, {block,1,1});
-      });
+      .def("finalize", [](Command& self, py::list grid, py::list block, size_t shmem_bytes) {
+          auto list_to_dim3 = [](const py::list& l) -> nxs_dim3 {
+              nxs_uint x = l.size() > 0 ? l[0].cast<nxs_uint>() : 1;
+              nxs_uint y = l.size() > 1 ? l[1].cast<nxs_uint>() : 1;
+              nxs_uint z = l.size() > 2 ? l[2].cast<nxs_uint>() : 1;
+              return nxs_dim3{ x, y, z };
+          };
+          return self.finalize(list_to_dim3(grid), list_to_dim3(block), shmem_bytes);
+        }, py::arg("grid"), py::arg("block"), py::arg("shmem_bytes") = 0);
+//      );
 
   make_objects_class<Command>(m, "_commands");
 
@@ -397,7 +395,7 @@ void pynexus::init_system_bindings(py::module &m) {
                 cmd.setArgument(idx++, buf);
               }
               if (dims.size() == 2 && dims[0].x > 0 && dims[1].x > 0) {
-                cmd.finalize(dims[0], dims[1]);
+                cmd.finalize(dims[0], dims[1], 0);
               }
             }
             return cmd;
@@ -427,7 +425,7 @@ void pynexus::init_system_bindings(py::module &m) {
                 }
               }
               if (dims.size() == 2 && dims[0].x > 0 && dims[1].x > 0) {
-                cmd.finalize(dims[0], dims[1]);
+                cmd.finalize(dims[0], dims[1], 0);
               }
             }
             return cmd;

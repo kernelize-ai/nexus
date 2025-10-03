@@ -204,6 +204,7 @@ class MetalCommand {
   nxs_int event_value;
   nxs_int group_size;
   nxs_int grid_size;
+  nxs_uint shmem_size;
  public:
   MetalCommand(nxs_int id, nxs_command_type type, nxs_int event_value = 0)
    : id(id), type(type), event_value(event_value), group_size(1), grid_size(1) {}
@@ -243,9 +244,10 @@ class MetalCommand {
         return NXS_InvalidCommand;
     }
   }
-  void setDimensions(nxs_int grid_size, nxs_int group_size) {
+  void setDimensions(nxs_int grid_size, nxs_int group_size, nxs_uint shmem_size) {
     this->grid_size = grid_size;
     this->group_size = group_size;
+    this->shmem_size = shmem_size;
   }
   void release() {
     // TODO: release the command buffer
@@ -931,12 +933,13 @@ extern "C" nxs_status NXS_API_CALL nxsSetCommandArgument(nxs_int command_id,
  ***********************************************************************/
 extern "C" nxs_status NXS_API_CALL nxsFinalizeCommand(nxs_int command_id,
                                                       nxs_dim3 grid_size,
-                                                      nxs_dim3 group_size) {
+                                                      nxs_dim3 group_size,
+                                                      nxs_uint shmem_size) {
   auto rt = getRuntime();
   auto cmd = rt->get<MetalCommand>(command_id);
   if (!cmd) return NXS_InvalidCommand;
 
-  cmd->setDimensions(grid_size.x, group_size.x);
+  cmd->setDimensions(grid_size.x, group_size.x, shmem_size);
 
   return NXS_Success;
 }

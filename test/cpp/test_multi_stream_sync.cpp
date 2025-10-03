@@ -90,7 +90,7 @@ int test_multi_stream_sync(int argc, char** argv) {
   cmd0.setArgument(1, buf1);
   cmd0.setArgument(2, buf2);
 
-  cmd0.finalize({32,1,1}, {32,1,1});
+  cmd0.finalize({32,1,1}, {32,1,1}, 0);
 
   sched0.createSignalCommand(ev0);
 
@@ -104,7 +104,7 @@ int test_multi_stream_sync(int argc, char** argv) {
   cmd1.setArgument(1, buf2);
   cmd1.setArgument(2, buf3);
 
-  cmd1.finalize({32,1,1}, {32,1,1});
+  cmd1.finalize({32,1,1}, {32,1,1}, 0);
 
   sched1.createSignalCommand(evFinal);
 
