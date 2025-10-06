@@ -376,7 +376,7 @@ NEXUS_API_FUNC(nxs_status, FinalizeCommand,
     nxs_int command_id,
     nxs_dim3 grid_size,
     nxs_dim3 block_size,
-    nxs_uint shared_mem_size
+    nxs_uint shared_memory_size
 )
 
 

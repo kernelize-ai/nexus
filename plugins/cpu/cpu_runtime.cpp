@@ -490,7 +490,7 @@ extern "C" nxs_status NXS_API_CALL nxsSetCommandArgument(nxs_int command_id,
 extern "C" nxs_status NXS_API_CALL nxsFinalizeCommand(nxs_int command_id,
                                                       nxs_dim3 grid_size,
                                                       nxs_dim3 group_size,
-                                                      nxs_uint shared_mem_size) {
+                                                      nxs_uint shared_memory_size) {
   auto rt = getRuntime();
   auto cmd = rt->getObject(command_id);
   if (!cmd) return NXS_InvalidCommand;

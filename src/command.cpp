@@ -59,11 +59,11 @@ class CommandImpl : public Impl {
         getId(), index, buffer.getId());
   }
 
-  nxs_status finalize(nxs_dim3 gridSize, nxs_dim3 groupSize, nxs_uint shmemSize) {
+  nxs_status finalize(nxs_dim3 gridSize, nxs_dim3 groupSize, nxs_uint sharedMemorySize) {
     if (event) return NXS_InvalidArgIndex;
     auto *rt = getParentOfType<RuntimeImpl>();
     return (nxs_status)rt->runAPIFunction<NF_nxsFinalizeCommand>(
-        getId(), gridSize, groupSize, shmemSize);
+        getId(), gridSize, groupSize, sharedMemorySize);
   }
 
  private:
@@ -128,6 +128,6 @@ nxs_status Command::setArgument(nxs_uint index, nxs_double value) {
   NEXUS_OBJ_MCALL(NXS_InvalidCommand, setScalar, index, value);
 }
 
-nxs_status Command::finalize(nxs_dim3 gridSize, nxs_dim3 groupSize, nxs_uint shmemSize) {
-  NEXUS_OBJ_MCALL(NXS_InvalidCommand, finalize, gridSize, groupSize, shmemSize);
+nxs_status Command::finalize(nxs_dim3 gridSize, nxs_dim3 groupSize, nxs_uint sharedMemorySize) {
+  NEXUS_OBJ_MCALL(NXS_InvalidCommand, finalize, gridSize, groupSize, sharedMemorySize);
 }

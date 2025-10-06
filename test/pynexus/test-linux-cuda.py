@@ -1,8 +1,7 @@
 import numpy
 
 import sys
-#import subprocess
-#subprocess.check_call([sys.executable, "-m", "pip", "install", "torch"])
+
 
 import torch
 import nexus
@@ -22,8 +21,8 @@ nb0 = dev.create_buffer(buf0)
 nb1 = dev.create_buffer(buf1)
 nb2 = dev.create_buffer(res2)
 
-lib = dev.load_library("build.local/kernel_libs/add_vectors_shmem.ptx")
-kern = lib.get_kernel('add_vectors_shmem')
+lib = dev.load_library("build.local/kernel_libs/add_vectors_shared_memory.ptx")
+kern = lib.get_kernel('add_vectors_shared_memory')
 
 sched = dev.create_schedule()
 

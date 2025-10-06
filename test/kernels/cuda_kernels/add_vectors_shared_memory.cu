@@ -1,4 +1,4 @@
-extern "C" __global__ void add_vectors_shmem(float* a, float* b, float* c) {
+extern "C" __global__ void add_vectors_shared_memory(float* a, float* b, float* c) {
     extern __shared__ float sh_mem[];
 
     float* s_a = sh_mem;

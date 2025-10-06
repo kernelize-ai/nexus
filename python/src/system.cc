@@ -370,16 +370,16 @@ void pynexus::init_system_bindings(py::module &m) {
                return self.setArgument(index, make_buffer(value));
              }
            })
-      .def("finalize", [](Command& self, py::list grid, py::list block, size_t shmem_bytes) {
+      .def("finalize", [](Command& self, py::list grid, py::list block, size_t shared_memory_size) {
           auto list_to_dim3 = [](const py::list& l) -> nxs_dim3 {
               nxs_uint x = l.size() > 0 ? l[0].cast<nxs_uint>() : 1;
               nxs_uint y = l.size() > 1 ? l[1].cast<nxs_uint>() : 1;
               nxs_uint z = l.size() > 2 ? l[2].cast<nxs_uint>() : 1;
               return nxs_dim3{ x, y, z };
           };
-          return self.finalize(list_to_dim3(grid), list_to_dim3(block), shmem_bytes);
-        }, py::arg("grid"), py::arg("block"), py::arg("shmem_bytes") = 0);
-//      );
+          return self.finalize(list_to_dim3(grid), list_to_dim3(block), shared_memory_size);
+        }, py::arg("grid"), py::arg("block"), py::arg("shared_memory_size") = 0
+      );
 
   make_objects_class<Command>(m, "_commands");
 
