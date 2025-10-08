@@ -1,38 +1,24 @@
 #define NXSAPI_LOGGING
 
+#include "cpu_runtime.h"
+
 #include <assert.h>
 #include <dlfcn.h>
+#include <nexus-api.h>
 #include <rt_buffer.h>
 #include <rt_object.h>
 #include <rt_runtime.h>
 #include <rt_utilities.h>
 #include <string.h>
 
-#include <optional>
 #include <functional>
+#include <magic_enum/magic_enum.hpp>
 #include <optional>
 #include <vector>
-
-#include <magic_enum/magic_enum.hpp>
-#include <cpuinfo.h>
-
-#include <nexus-api.h>
 
 #define NXSAPI_LOG_MODULE "cpu_runtime"
 
 using namespace nxs;
-
-class CpuRuntime : public rt::Runtime {
- public:
-  CpuRuntime() : rt::Runtime() {
-    cpuinfo_initialize();
-    for (size_t i = 0; i < cpuinfo_get_processors_count(); i++) {
-      auto *cpu = cpuinfo_get_processor(i);
-      addObject((void *)cpu);
-    }
-  }
-  ~CpuRuntime() {}
-};
 
 CpuRuntime *getRuntime() {
   static CpuRuntime s_runtime;
@@ -61,11 +47,15 @@ nxsGetRuntimeProperty(nxs_uint runtime_property_id, void *property_value,
   /* return value size */
   /* return value */
   switch (runtime_property_id) {
+    case NP_Keys: {
+      nxs_long keys[] = {NP_Name, NP_Type, NP_Vendor,
+                         NP_Size, NP_ID,   NP_Architecture};
+      return rt::getPropertyVec(property_value, property_value_size, keys, 7);
+    }
     case NP_Name:
       return rt::getPropertyStr(property_value, property_value_size, "cpu");
     case NP_Size:
-      return rt::getPropertyInt(property_value, property_value_size,
-                                cpuinfo_get_processors_count());
+      return rt::getPropertyInt(property_value, property_value_size, 1);
     case NP_Vendor: {
       auto name = cpuinfo_vendor_to_string(proc->core->vendor);
       assert(name);
@@ -100,7 +90,8 @@ nxsGetDeviceProperty(nxs_int device_id, nxs_uint device_property_id,
                      void *property_value, size_t *property_value_size) {
   auto dev = getRuntime()->getObject(device_id);
   if (!dev) return NXS_InvalidDevice;
-  auto device = (*dev)->get<cpuinfo_processor>();
+  auto *cpu = cpuinfo_get_processor(device_id);
+  auto *arch = cpuinfo_get_uarch(device_id);
   // auto isa = device->core->isa;
 
   switch (device_property_id) {
@@ -110,7 +101,7 @@ nxsGetDeviceProperty(nxs_int device_id, nxs_uint device_property_id,
     case NP_Type:
       return rt::getPropertyStr(property_value, property_value_size, "cpu");
     case NP_Architecture: {
-      auto archName = cpuinfo_uarch_to_string(device->core->uarch);
+      auto archName = cpuinfo_uarch_to_string(cpu->core->uarch);
       assert(archName);
       return rt::getPropertyStr(property_value, property_value_size,
                                 archName);
@@ -135,8 +126,10 @@ extern "C" nxs_int NXS_API_CALL nxsCreateBuffer(nxs_int device_id, size_t size,
   if (!dev) return NXS_InvalidDevice;
 
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createBuffer " << size);
-  rt::Buffer *buf = new rt::Buffer(size, host_ptr, true);
-  return rt->addObject(buf, true);
+  auto *buf = rt->getBuffer(size, host_ptr, true);
+  if (!buf) return NXS_InvalidBuffer;
+
+  return rt->addObject(buf);
 }
 
 /************************************************************************
@@ -162,9 +155,7 @@ extern "C" nxs_status NXS_API_CALL nxsCopyBuffer(nxs_int buffer_id,
  ***********************************************************************/
 extern "C" nxs_status NXS_API_CALL nxsReleaseBuffer(nxs_int buffer_id) {
   auto rt = getRuntime();
-  if (!rt->dropObject(buffer_id, rt::delete_fn<rt::Buffer>))
-    return NXS_InvalidBuffer;
-  return NXS_Success;
+  return rt->releaseBuffer(buffer_id);
 }
 
 /************************************************************************
@@ -345,7 +336,7 @@ extern "C" nxs_int NXS_API_CALL nxsCreateSchedule(nxs_int device_id,
   auto dev = rt->getObject(device_id);
   if (!dev) return NXS_InvalidDevice;
 
-  return rt->addObject(device_id);
+  return rt->getSchedule(device_id, schedule_settings);
 }
 
 /************************************************************************
@@ -357,74 +348,10 @@ extern "C" nxs_status NXS_API_CALL nxsRunSchedule(nxs_int schedule_id,
                                                   nxs_int stream_id,
                                                   nxs_uint run_settings) {
   auto rt = getRuntime();
-  auto sched = rt->getObject(schedule_id);
-  if (!sched) return NXS_InvalidDevice;
+  auto schedule = rt->get<CpuSchedule>(schedule_id);
+  if (!schedule) return NXS_InvalidSchedule;
 
-  for (auto cmdId : (*sched)->getChildren()) {
-    auto cmd = rt->getObject(cmdId);
-    if (!cmd) return NXS_InvalidCommand;
-    auto kernel = rt->get<rt::Object>(cmdId);
-    if (!kernel) return NXS_InvalidKernel;
-    auto func = kernel->get<void>();
-    if (!func) return NXS_InvalidKernel;
-    auto func_ptr = (void (*)(void *, void *, void *, void *, void *, void *,
-                              void *, void *, void *, void *, void *, void *,
-                              void *, void *, void *, void *, void *, void *,
-                              void *, void *, void *, void *, void *, void *,
-                              void *, void *, void *, void *, void *, void *,
-                              void *, void *))func;
-
-    auto &args = (*cmd)->getChildren();
-
-    if (args.size() >= 32) {
-      NXSAPI_LOG(NXSAPI_STATUS_ERR, "Too many arguments for kernel");
-      return NXS_InvalidCommand;
-    }
-    std::vector<char> exData(1024 * 1024);  // 1MB extra buffer for args
-    rt::Buffer exBuf(exData.size(), exData.data(),
-                     false);                     // extra buffer for args
-    std::vector<rt::Buffer *> bufs(32, &exBuf);  // max 32 args
-    for (size_t i = 0; i < args.size(); i++) {
-      auto buf = rt->getObject(args[i]);
-      if (!buf) return NXS_InvalidBuffer;
-      bufs[i] = (*buf)->get<rt::Buffer>();
-    }
-    std::vector<int64_t> coords{0, 0, 0};
-    rt::Buffer coordsBuf(sizeof(coords), coords.data());
-    bufs[args.size()] = &coordsBuf;
-
-    // call func with bufs + dims (int64[3], int64[3], int64[3])
-    int64_t *global_size = bufs[args.size() - 2]->get<int64_t>();
-    int64_t *local_size = bufs[args.size() - 1]->get<int64_t>();
-    for (int64_t i = 0; i < global_size[0]; i++) {
-      for (int64_t j = 0; j < global_size[1]; j++) {
-        for (int64_t k = 0; k < global_size[2]; k++) {
-          coords[0] = i * local_size[0];
-          coords[1] = j * local_size[1];
-          coords[2] = k * local_size[2];
-          try {
-            std::invoke(func_ptr, bufs[0]->data(), bufs[1]->data(),
-                        bufs[2]->data(), bufs[3]->data(), bufs[4]->data(),
-                        bufs[5]->data(), bufs[6]->data(), bufs[7]->data(),
-                        bufs[8]->data(), bufs[9]->data(), bufs[10]->data(),
-                        bufs[11]->data(), bufs[12]->data(), bufs[13]->data(),
-                        bufs[14]->data(), bufs[15]->data(), bufs[16]->data(),
-                        bufs[17]->data(), bufs[18]->data(), bufs[19]->data(),
-                        bufs[20]->data(), bufs[21]->data(), bufs[22]->data(),
-                        bufs[23]->data(), bufs[24]->data(), bufs[25]->data(),
-                        bufs[26]->data(), bufs[27]->data(), bufs[28]->data(),
-                        bufs[29]->data(), bufs[30]->data(), bufs[31]->data());
-          } catch (const std::exception &e) {
-            NXSAPI_LOG(NXSAPI_STATUS_ERR, "runSchedule: " << e.what());
-          }
-        }
-      }
-    }
-  }
-
-  // if (blocking) {
-  // }
-  return NXS_Success;
+  return schedule->run(stream_id, run_settings);
 }
 
 /************************************************************************
@@ -434,8 +361,7 @@ extern "C" nxs_status NXS_API_CALL nxsRunSchedule(nxs_int schedule_id,
  ***********************************************************************/
 extern "C" nxs_status NXS_API_CALL nxsReleaseSchedule(nxs_int schedule_id) {
   auto rt = getRuntime();
-  if (!rt->dropObject(schedule_id)) return NXS_InvalidBuildOptions;  // fix
-  return NXS_Success;
+  return rt->releaseSchedule(schedule_id);
 }
 
 /************************************************************************
@@ -448,58 +374,68 @@ extern "C" nxs_int NXS_API_CALL nxsCreateCommand(nxs_int schedule_id,
                                                  nxs_int kernel_id,
                                                  nxs_uint settings) {
   auto rt = getRuntime();
-  auto sched = rt->getObject(schedule_id);
-  if (!sched) return NXS_InvalidBuildOptions;  // fix
-  auto kernel = rt->getObject(kernel_id);
-  if (!kernel) return NXS_InvalidKernel;
+  auto schedule = rt->get<CpuSchedule>(schedule_id);
+  if (!schedule) return NXS_InvalidSchedule;
+  auto kernel_v = rt->get<void>(kernel_id);
+  if (!kernel_v) return NXS_InvalidKernel;
+  auto kernel = reinterpret_cast<cpuFunction_t>(kernel_v);
 
-  auto cmdId = rt->addObject(*kernel, false);
-  if (nxs_success(cmdId)) (*sched)->addChild(cmdId);
-  return cmdId;
+  auto command = rt->getCommand(kernel, settings);
+  schedule->addCommand(command);
+  return rt->addObject(command);
 }
 
 /************************************************************************
  * @def SetCommandArgument
  * @brief Set command argument on the device
- * @return Negative value is an error status.
- *         Non-negative is the bufferId.
+ * @return Error status or Succes.
  ***********************************************************************/
 extern "C" nxs_status NXS_API_CALL nxsSetCommandArgument(nxs_int command_id,
                                                          nxs_int argument_index,
                                                          nxs_int buffer_id) {
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "setCommandArg " << command_id << " - "
-                                                  << argument_index << " - "
-                                                  << buffer_id);
   auto rt = getRuntime();
-  auto cmd = rt->getObject(command_id);
-  if (!cmd) return NXS_InvalidCommand;
-  auto buf = rt->getObject(buffer_id);
-  if (!buf) return NXS_InvalidBuffer;
-  if (argument_index >= 32) return NXS_InvalidCommand;
 
-  (*cmd)->addChild(buffer_id, argument_index);
-  return NXS_Success;
+  auto command = rt->get<CpuCommand>(command_id);
+  if (!command) return NXS_InvalidCommand;
+
+  auto buffer = rt->get<rt::Buffer>(buffer_id);
+  if (!buffer) return NXS_InvalidBuffer;
+
+  return command->setArgument(argument_index, buffer);
+}
+
+/************************************************************************
+ * @def SetCommandScalar
+ * @brief Set command scalar on the device
+ * @return Error status or Succes.
+ ***********************************************************************/
+extern "C" nxs_status NXS_API_CALL nxsSetCommandScalar(nxs_int command_id,
+                                                       nxs_int argument_index,
+                                                       void *value) {
+  auto rt = getRuntime();
+  auto command = rt->get<CpuCommand>(command_id);
+  if (!command) return NXS_InvalidCommand;
+  return command->setScalar(argument_index, value);
 }
 
 /************************************************************************
  * @def FinalizeCommand
- * @brief Finalize command on the device
- * @return Negative value is an error status.
- *         Non-negative is the bufferId.
+ * @brief Finalize command setup
+ * @return Error status or Succes.
  ***********************************************************************/
 extern "C" nxs_status NXS_API_CALL nxsFinalizeCommand(nxs_int command_id,
                                                       nxs_dim3 grid_size,
                                                       nxs_dim3 group_size,
                                                       nxs_uint shared_memory_size) {
-  auto rt = getRuntime();
-  auto cmd = rt->getObject(command_id);
-  if (!cmd) return NXS_InvalidCommand;
 
-  int64_t global_size[3] = {grid_size.x, grid_size.y, grid_size.z};
-  auto global_buf = new rt::Buffer(sizeof(global_size), global_size, true);
-  int64_t local_size[3] = {group_size.x, group_size.y, group_size.z};
-  auto local_buf = new rt::Buffer(sizeof(local_size), local_size, true);
-  (*cmd)->addChild(rt->addObject(global_buf, true));
-  (*cmd)->addChild(rt->addObject(local_buf, true));
-  return NXS_Success;
+  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "finalizeCommand " << command_id << " - "
+  << "{ " << grid_size.x <<", " << grid_size.y << ", " << grid_size.z << " }" << " - "
+  << "{ " << group_size.x <<", " << group_size.y << ", " << group_size.z << " }");
+
+  auto rt = getRuntime();
+
+  auto command = rt->get<CpuCommand>(command_id);
+  if (!command) return NXS_InvalidCommand;
+
+  return command->finalize(grid_size, group_size, shared_memory_size);
 }

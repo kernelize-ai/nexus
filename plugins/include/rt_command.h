@@ -19,6 +19,7 @@ class Command {
   nxs_uint settings;
   std::array<void *, RT_COMMAND_MAX_ARGS> args;
   std::array<void *, RT_COMMAND_MAX_ARGS> args_ref;
+  int args_count;
   nxs_dim3 block_size;
   nxs_dim3 grid_size;
   nxs_uint shared_memory_size;
@@ -30,21 +31,29 @@ class Command {
         time_ms(0),
         settings(settings) {
           args_ref.fill(nullptr);
+          args_count = 0;
         }
 
-  Command(Tevent event, nxs_command_type type, nxs_int event_value = 1,
-          nxs_uint settings = 0)
-      : event(event),
-        type(type),
-        event_value(event_value),
-        settings(settings) {}
+        Command(Tevent event, nxs_command_type type, nxs_int event_value = 1,
+                nxs_uint settings = 0)
+            : event(event),
+              type(type),
+              event_value(event_value),
+              settings(settings) {
+          args_count = 0;
+        }
 
   virtual ~Command() = default;
 
+  nxs_command_type getType() const { return type; }
+
   float getTime() const { return time_ms; }
+
+  int getArgsCount() const { return args_count; }
 
   nxs_status setArgument(nxs_int argument_index, nxs::rt::Buffer *buffer) {
     if (argument_index >= RT_COMMAND_MAX_ARGS) return NXS_InvalidArgIndex;
+    args_count = std::max(args_count, argument_index + 1);
 
     args[argument_index] = buffer->get();
     args_ref[argument_index] = &args[argument_index];
@@ -53,6 +62,7 @@ class Command {
 
   nxs_status setScalar(nxs_int argument_index, void *value) {
     if (argument_index >= RT_COMMAND_MAX_ARGS) return NXS_InvalidArgIndex;
+    args_count = std::max(args_count, argument_index + 1);
 
     // Object owned by Core API
     args[argument_index] = value;
