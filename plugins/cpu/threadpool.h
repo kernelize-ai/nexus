@@ -1,6 +1,8 @@
 #ifndef THREADPOOL_H
 #define THREADPOOL_H
 
+#include <nexus/log.h>
+
 #include <atomic>
 #include <condition_variable>
 #include <functional>
@@ -19,6 +21,7 @@
 #include <pthread.h>
 #include <sched.h>
 #elif defined(__APPLE__)
+#include <mach/mach.h>
 #include <mach/thread_act.h>
 #include <mach/thread_policy.h>
 #include <pthread.h>
@@ -42,11 +45,42 @@ class ThreadPool {
     CPU_SET(core_id, &cpuset);
     pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
 #elif defined(__APPLE__)
-#if 0
-        thread_affinity_policy_data_t policy = { core_id };
-        thread_policy_set(mach_thread_get_main(), THREAD_AFFINITY_POLICY,
-                          (thread_policy_t)&policy, 1);
-#endif
+    // macOS uses affinity tags instead of specific core binding
+    thread_affinity_policy_data_t policy;
+    policy.affinity_tag = core_id;
+
+    kern_return_t ret = thread_policy_set(
+        mach_thread_self(), THREAD_AFFINITY_POLICY, (thread_policy_t)&policy,
+        THREAD_AFFINITY_POLICY_COUNT);
+
+    if (ret != KERN_SUCCESS) {
+      if (ret == 46) {  // KERN_POLICY_STATIC
+        // Policy is static/immutable - this is common on modern macOS
+        // Fall back to QoS (Quality of Service) approach
+        static bool warned = false;
+        if (!warned) {
+          NXSAPI_LOG(
+              NXSAPI_STATUS_NOTE,
+              "Note: Thread affinity not available (KERN_POLICY_STATIC). Using "
+              "QoS classes instead for thread scheduling hints.");
+          warned = true;
+        }
+      } else {
+        NXSAPI_LOG(NXSAPI_STATUS_ERR,
+                   "Warning: thread_policy_set failed with error: " << ret);
+      }
+    }
+    // Attempt 2: Use pthread QoS (Quality of Service) as alternative
+    // This provides scheduling hints to the system
+    pthread_set_qos_class_self_np(QOS_CLASS_USER_INITIATED, 0);
+
+    // Optional: Also set thread precedence for better scheduling
+    thread_precedence_policy_data_t precedence;
+    precedence.importance = 32;  // Normal importance
+
+    thread_policy_set(mach_thread_self(), THREAD_PRECEDENCE_POLICY,
+                      (thread_policy_t)&precedence,
+                      THREAD_PRECEDENCE_POLICY_COUNT);
 #endif
   }
 
@@ -58,8 +92,10 @@ class ThreadPool {
         set_thread_affinity(
             static_cast<int>(i % std::thread::hardware_concurrency()));
 
-        std::cout << "Worker thread " << i << " bound to CPU core "
-                  << (i % std::thread::hardware_concurrency()) << std::endl;
+        NXSAPI_LOG(NXSAPI_STATUS_NOTE,
+                   "Worker thread "
+                       << i << " bound to CPU core "
+                       << (i % std::thread::hardware_concurrency()));
 
         for (;;) {
           std::function<void()> task;

@@ -48,9 +48,10 @@ nxsGetRuntimeProperty(nxs_uint runtime_property_id, void *property_value,
   /* return value */
   switch (runtime_property_id) {
     case NP_Keys: {
-      nxs_long keys[] = {NP_Name, NP_Type, NP_Vendor,
-                         NP_Size, NP_ID,   NP_Architecture};
-      return rt::getPropertyVec(property_value, property_value_size, keys, 7);
+      nxs_long keys[] = {NP_Name, NP_Type, NP_Vendor, NP_Size, NP_ID};
+      int keys_count = sizeof(keys) / sizeof(keys[0]);
+      return rt::getPropertyVec(property_value, property_value_size, keys,
+                                keys_count);
     }
     case NP_Name:
       return rt::getPropertyStr(property_value, property_value_size, "cpu");
@@ -67,12 +68,6 @@ nxsGetRuntimeProperty(nxs_uint runtime_property_id, void *property_value,
     case NP_ID: {
       return rt::getPropertyInt(property_value, property_value_size,
                                 cpuinfo_has_arm_sme2() ? 1 : 0);
-    }
-    case NP_Architecture: {
-      auto name = cpuinfo_uarch_to_string(arch->uarch);
-      assert(name);
-      return rt::getPropertyStr(property_value, property_value_size,
-                                name);
     }
     default:
       return NXS_InvalidProperty;
@@ -95,6 +90,10 @@ nxsGetDeviceProperty(nxs_int device_id, nxs_uint device_property_id,
   // auto isa = device->core->isa;
 
   switch (device_property_id) {
+    case NP_Keys: {
+      nxs_long keys[] = {NP_Name, NP_Type, NP_Architecture, NP_Size};
+      return rt::getPropertyVec(property_value, property_value_size, keys, 4);
+    }
     case NP_Name: {
       // return getStr(property_value, property_value_size, device->core);
     }
@@ -106,6 +105,9 @@ nxsGetDeviceProperty(nxs_int device_id, nxs_uint device_property_id,
       return rt::getPropertyStr(property_value, property_value_size,
                                 archName);
     }
+    case NP_Size:
+      return rt::getPropertyInt(property_value, property_value_size,
+                                cpuinfo_get_processors_count());
 
     default:
       return NXS_InvalidProperty;
@@ -171,27 +173,16 @@ extern "C" nxs_int NXS_API_CALL nxsCreateLibrary(nxs_int device_id,
   auto dev = rt->getObject(device_id);
   if (!dev) return NXS_InvalidDevice;
 
-  // NS::Array *binArr = NS::Array::alloc();
-  // MTL::StitchedLibraryDescriptor *libDesc =
-  // MTL::StitchedLibraryDescriptor::alloc(); libDesc->init(); // IS THIS
-  // NECESSARY? libDesc->setBinaryArchives(binArr);
-  // dispatch_data_t data = (dispatch_data_t)library_data;
-  // NS::Error *pError = nullptr;
-  // MTL::Library *pLibrary = device->newLibrary(data, &pError);
-  // MTL::Library *pLibrary = (*dev)->newLibrary(
-  // NS::String::string("kernel.so", NS::UTF8StringEncoding), &pError);
-  // NXSAPI_LOG(NXSAPI_STATUS_NOTE,
-  //            "createLibrary " << (int64_t)pError << " - " <<
-  //            (int64_t)pLibrary);
-  //
-  // if (pError) {
-  //   NXSAPI_LOG(
-  //       NXSAPI_STATUS_ERR,
-  //       "createLibrary " << pError->localizedDescription()->utf8String());
-  //   return NXS_InvalidLibrary;
-  // }
-  // return rt->addObject(pLibrary);
-  return NXS_Success;
+  // #include <sys/mman.h>
+  // #include <dlfcn.h>
+  // #include <unistd.h>
+  // int fd = memfd_create("my_lib", MFD_CLOEXEC);
+  // write(fd, library_data, library_size);
+  // char fd_path[64];
+  // snprintf(fd_path, sizeof(fd_path), "/proc/self/fd/%d", fd);
+  // void *handle = dlopen(fd_path, RTLD_NOW);
+  // return rt->addObject(lib);
+  return NXS_InvalidLibrary;
 }
 
 /************************************************************************
@@ -222,11 +213,7 @@ extern "C" nxs_int NXS_API_CALL nxsCreateLibraryFromFile(
 extern "C" nxs_status NXS_API_CALL
 nxsGetLibraryProperty(nxs_int library_id, nxs_uint library_property_id,
                       void *property_value, size_t *property_value_size) {
-  // NS::String*      label() const;
-  // NS::Array*       functionNames() const;
-  // MTL::LibraryType type() const;
-  // NS::String*      installName() const;
-  return NXS_Success;
+  return NXS_InvalidProperty;
 }
 
 /************************************************************************
@@ -305,10 +292,7 @@ extern "C" nxs_int NXS_API_CALL nxsCreateStream(nxs_int device_id,
   auto dev = rt->getObject(device_id);
   if (!dev) return NXS_InvalidDevice;
 
-  // spin up a thread.. see processor affinity
-  // NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createStream");
-  // MTL::CommandQueue *stream = (*dev)->newCommandQueue();
-  // return rt->addObject(stream);
+  // 1 CPU, with many cores and 1 thread per core
   return NXS_Success;
 }
 
@@ -337,6 +321,34 @@ extern "C" nxs_int NXS_API_CALL nxsCreateSchedule(nxs_int device_id,
   if (!dev) return NXS_InvalidDevice;
 
   return rt->getSchedule(device_id, schedule_settings);
+}
+
+/************************************************************************
+ * @def GetScheduleProperty
+ * @brief Return Schedule properties
+ ***********************************************************************/
+extern "C" nxs_status NXS_API_CALL
+nxsGetScheduleProperty(nxs_int schedule_id, nxs_uint schedule_property_id,
+                       void *property_value, size_t *property_value_size) {
+  NXSAPI_LOG(NXSAPI_STATUS_NOTE,
+             "getScheduleProperty " << schedule_property_id);
+  auto rt = getRuntime();
+  auto schedule = rt->get<CpuSchedule>(schedule_id);
+  if (!schedule) return NXS_InvalidSchedule;
+
+  switch (schedule_property_id) {
+    case NP_Keys: {
+      constexpr nxs_long keys[] = {NP_ElapsedTime};
+      constexpr int keys_count = sizeof(keys) / sizeof(keys[0]);
+      return rt::getPropertyVec(property_value, property_value_size, keys,
+                                keys_count);
+    }
+    case NP_ElapsedTime: {
+      return rt::getPropertyFlt(property_value, property_value_size,
+                                schedule->getTime());
+    }
+  }
+  return NXS_Success;
 }
 
 /************************************************************************
