@@ -128,7 +128,7 @@ extern "C" nxs_int NXS_API_CALL nxsCreateBuffer(nxs_int device_id, size_t size,
   if (!dev) return NXS_InvalidDevice;
 
   NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createBuffer " << size);
-  auto *buf = rt->getBuffer(size, host_ptr, true);
+  auto *buf = rt->getBuffer(size, host_ptr, false);
   if (!buf) return NXS_InvalidBuffer;
 
   return rt->addObject(buf);

@@ -52,6 +52,8 @@ static DevPtr getPointer(PyObject *obj) {
       if (device_id_m && PyLong_Check(device_id_m)) {
         result.device_id = PyLong_AsLong(device_id_m);
         Py_DECREF(device_id_m);
+      } else if (!result.runtime_name.empty()) {
+        result.device_id = 0;
       }
       Py_DECREF(device_m);
     }
