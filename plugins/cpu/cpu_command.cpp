@@ -1,5 +1,3 @@
-#define NXSAPI_LOGGING
-
 #include <cpu_command.h>
 #include <cpu_runtime.h>
 #include <nexus/log.h>
@@ -21,10 +19,10 @@ extern "C" void NXS_API_CALL _cpu_barrier(void *barrier) {
 }
 
 nxs_status CpuCommand::runCommand(nxs_int stream) {
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "runCommand " << kernel << " - " << type);
+  NXSAPI_LOG(nexus::NXS_LOG_NOTE, "runCommand ", kernel, " - ", type);
 
   if (getArgsCount() >= 32) {
-    NXSAPI_LOG(NXSAPI_STATUS_ERR, "Too many arguments for kernel");
+    NXSAPI_LOG(nexus::NXS_LOG_ERROR, "Too many arguments for kernel");
     return NXS_InvalidCommand;
   }
   std::vector<char> exData(1024 * 1024);  // 1MB extra buffer for args
@@ -58,10 +56,10 @@ nxs_status CpuCommand::runCommand(nxs_int stream) {
     assert(shared_memory_ptr);
   }
 
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE,
-             "global_size: " << global_size
-                             << ", thread_count: " << thread_count
-                             << ", blocks_per_thread: " << blocks_per_thread);
+  NXSAPI_LOG(nexus::NXS_LOG_NOTE,
+             "global_size: ", global_size
+                             , ", thread_count: ", thread_count
+                             , ", blocks_per_thread: ", blocks_per_thread);
 
   boost::fibers::use_scheduling_algorithm<boost::fibers::algo::shared_work>();
 

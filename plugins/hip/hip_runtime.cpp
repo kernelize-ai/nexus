@@ -170,11 +170,11 @@ using namespace nxs;
 #define HIP_CHECK(err_code, hip_cmd, ...)                                     \
   do {                                                                        \
     NXSAPI_LOG(                                                               \
-        NXSAPI_STATUS_NOTE,                                                   \
-        "HIP_CHECK: " << #hip_cmd << nxs::rt::print_value(__VA_ARGS__));      \
+        nexus::NXS_LOG_NOTE,                                                   \
+        "HIP_CHECK: ", #hip_cmd, nxs::rt::print_value(__VA_ARGS__));      \
     hipError_t err = hip_cmd(__VA_ARGS__);                                    \
     if (err != hipSuccess) {                                                  \
-      NXSAPI_LOG(NXSAPI_STATUS_ERR, "HIP error: " << hipGetErrorString(err)); \
+      NXSAPI_LOG(nexus::NXS_LOG_ERROR, "HIP error: ", hipGetErrorString(err)); \
       return err_code;                                                        \
     }                                                                         \
   } while (0)
@@ -194,7 +194,7 @@ class HipCommand : public rt::Command<hipFunction_t, hipEvent_t, hipStream_t> {
       : Command(event, type, event_value, settings) {}
 
   nxs_status runCommand(hipStream_t stream) override {
-    NXSAPI_LOG(NXSAPI_STATUS_NOTE, "runCommand " << kernel << " - " << type);
+    NXSAPI_LOG(nexus::NXS_LOG_NOTE, "runCommand ", kernel, " - ", type);
 
     switch (type) {
       case NXS_CommandType_Dispatch: {
@@ -267,7 +267,7 @@ class HipRuntime : public rt::Runtime {
  public:
   HipRuntime() : rt::Runtime() {
     if (hipGetDeviceCount(&count) != hipSuccess) {
-      NXSAPI_LOG(NXSAPI_STATUS_ERR, "hipGetDeviceCount failed");
+      NXSAPI_LOG(nexus::NXS_LOG_ERROR, "hipGetDeviceCount failed");
       count = 0;
     }
     for (int i = 0; i < count; ++i) {
@@ -276,7 +276,7 @@ class HipRuntime : public rt::Runtime {
     if (count > 0) {
       current_device = 0;
       if (hipSetDevice(current_device) != hipSuccess)
-        NXSAPI_LOG(NXSAPI_STATUS_ERR, "hipSetDevice failed");
+        NXSAPI_LOG(nexus::NXS_LOG_ERROR, "hipSetDevice failed");
     }
   }
   ~HipRuntime() {}
@@ -356,7 +356,7 @@ nxsGetRuntimeProperty(nxs_uint runtime_property_id, void *property_value,
   int minor_version = (runtime_version % 10000000) / 100000;
   int patch_version = runtime_version % 100000;
 
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "getRuntimeProperty " << runtime_property_id);
+  NXSAPI_LOG(nexus::NXS_LOG_NOTE, "getRuntimeProperty ", runtime_property_id);
   /* return value size */
   /* return value */
   switch (runtime_property_id) {
@@ -484,13 +484,13 @@ extern "C" nxs_int NXS_API_CALL nxsCreateBuffer(nxs_int device_id, size_t size,
 
   hipDeviceptr_t buf;
   HIP_CHECK(NXS_InvalidBuffer, hipMalloc, &buf, size);
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "HIP_RESULT: " << nxs::rt::print_value(buf));
+  NXSAPI_LOG(nexus::NXS_LOG_NOTE, "HIP_RESULT: ", nxs::rt::print_value(buf));
   if (host_ptr != nullptr) {
     HIP_CHECK(NXS_InvalidBuffer, hipMemcpy, buf, host_ptr, size,
               hipMemcpyHostToDevice);
   }
 
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createBuffer " << nxs::rt::print_value(buf));
+  NXSAPI_LOG(nexus::NXS_LOG_NOTE, "createBuffer ", nxs::rt::print_value(buf));
 
   auto buffer = rt->getBuffer(size, buf);
   return rt->addObject(buffer);
@@ -543,8 +543,8 @@ extern "C" nxs_int NXS_API_CALL nxsCreateLibrary(nxs_int device_id,
 
   hipModule_t module;
   HIP_CHECK(NXS_InvalidLibrary, hipModuleLoadData, &module, library_data);
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE,
-             "createLibrary" << nxs::rt::print_value(module));
+  NXSAPI_LOG(nexus::NXS_LOG_NOTE,
+             "createLibrary", nxs::rt::print_value(module));
   return rt->addObject(module, false);
 }
 
@@ -555,15 +555,15 @@ extern "C" nxs_int NXS_API_CALL nxsCreateLibrary(nxs_int device_id,
  ***********************************************************************/
 extern "C" nxs_int NXS_API_CALL nxsCreateLibraryFromFile(
     nxs_int device_id, const char *library_path, nxs_uint settings) {
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE,
-             "createLibraryFromFile " << device_id << " - " << library_path);
+  NXSAPI_LOG(nexus::NXS_LOG_NOTE,
+             "createLibraryFromFile ", device_id, " - ", library_path);
   auto rt = getRuntime();
   auto dev = rt->getDevice(device_id);
   if (!dev) return NXS_InvalidDevice;
   hipModule_t module;
   HIP_CHECK(NXS_InvalidLibrary, hipModuleLoad, &module, library_path);
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE,
-             "createLibrary" << nxs::rt::print_value(module));
+  NXSAPI_LOG(nexus::NXS_LOG_NOTE,
+             "createLibrary", nxs::rt::print_value(module));
   return rt->addObject(module, false);
 }
 
@@ -597,14 +597,14 @@ extern "C" nxs_status NXS_API_CALL nxsReleaseLibrary(nxs_int library_id) {
  ***********************************************************************/
 extern "C" nxs_int NXS_API_CALL nxsGetKernel(nxs_int library_id,
                                              const char *kernel_name) {
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE,
-             "getKernel " << library_id << " - " << kernel_name);
+  NXSAPI_LOG(nexus::NXS_LOG_NOTE,
+             "getKernel ", library_id, " - ", kernel_name);
   auto rt = getRuntime();
   auto lib = rt->getPtr<hipModule_t>(library_id);
   if (!lib) return NXS_InvalidProgram;
   hipFunction_t func;
   HIP_CHECK(NXS_InvalidKernel, hipModuleGetFunction, &func, lib, kernel_name);
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "getKernel" << nxs::rt::print_value(func));
+  NXSAPI_LOG(nexus::NXS_LOG_NOTE, "getKernel", nxs::rt::print_value(func));
   return rt->addObject(func, false);
 }
 
@@ -714,7 +714,7 @@ extern "C" nxs_int NXS_API_CALL nxsCreateStream(nxs_int device_id,
   if (!dev) return NXS_InvalidDevice;
 
   // TODO: Get the default command queue for the first Stream
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createStream");
+  NXSAPI_LOG(nexus::NXS_LOG_NOTE, "createStream");
   hipStream_t stream;
   HIP_CHECK(NXS_InvalidStream, hipStreamCreate, &stream);
   return rt->addObject(stream, false);
@@ -764,9 +764,9 @@ extern "C" nxs_int NXS_API_CALL nxsCreateSchedule(nxs_int device_id,
 extern "C" nxs_status NXS_API_CALL nxsRunSchedule(nxs_int schedule_id,
                                                   nxs_int stream_id,
                                                   nxs_uint settings) {
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "runSchedule " << schedule_id << " - "
-                                                << stream_id << " - "
-                                                << settings);
+  NXSAPI_LOG(nexus::NXS_LOG_NOTE, "runSchedule ", schedule_id, " - "
+                                                , stream_id, " - "
+                                                , settings);
   auto rt = getRuntime();
   auto sched = rt->get<HipSchedule>(schedule_id);
   if (!sched) return NXS_InvalidSchedule;
@@ -791,7 +791,7 @@ extern "C" nxs_status NXS_API_CALL nxsRunSchedule(nxs_int schedule_id,
  * @return Error status or Succes.
  ***********************************************************************/
 extern "C" nxs_status NXS_API_CALL nxsReleaseSchedule(nxs_int schedule_id) {
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "releaseSchedule " << schedule_id);
+  NXSAPI_LOG(nexus::NXS_LOG_NOTE, "releaseSchedule ", schedule_id);
   auto rt = getRuntime();
   auto sched = rt->get<HipSchedule>(schedule_id);
   if (!sched) return NXS_InvalidSchedule;
@@ -809,8 +809,8 @@ extern "C" nxs_status NXS_API_CALL nxsReleaseSchedule(nxs_int schedule_id) {
 extern "C" nxs_int NXS_API_CALL nxsCreateCommand(nxs_int schedule_id,
                                                  nxs_int kernel_id,
                                                  nxs_uint settings) {
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE,
-             "createCommand " << schedule_id << " - " << kernel_id);
+  NXSAPI_LOG(nexus::NXS_LOG_NOTE,
+             "createCommand ", schedule_id, " - ", kernel_id);
   auto rt = getRuntime();
   auto sched = rt->get<HipSchedule>(schedule_id);
   if (!sched) return NXS_InvalidSchedule;
@@ -832,9 +832,9 @@ extern "C" nxs_int NXS_API_CALL nxsCreateSignalCommand(nxs_int schedule_id,
                                                        nxs_int event_id,
                                                        nxs_int signal_value,
                                                        nxs_uint settings) {
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createSignalCommand " << schedule_id << " - "
-                                                        << event_id << " - "
-                                                        << signal_value);
+  NXSAPI_LOG(nexus::NXS_LOG_NOTE, "createSignalCommand ", schedule_id, " - "
+                                                        , event_id, " - "
+                                                        , signal_value);
   auto rt = getRuntime();
   auto sched = rt->get<HipSchedule>(schedule_id);
   if (!sched) return NXS_InvalidSchedule;
@@ -859,16 +859,16 @@ extern "C" nxs_int NXS_API_CALL nxsCreateWaitCommand(nxs_int schedule_id,
                                                      nxs_int event_id,
                                                      nxs_int wait_value,
                                                      nxs_uint settings) {
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createWaitCommand " << schedule_id << " - "
-                                                      << event_id << " - "
-                                                      << wait_value);
+  NXSAPI_LOG(nexus::NXS_LOG_NOTE, "createWaitCommand ", schedule_id, " - "
+                                                      , event_id, " - "
+                                                      , wait_value);
   auto rt = getRuntime();
   auto sched = rt->get<HipSchedule>(schedule_id);
   if (!sched) return NXS_InvalidSchedule;
   auto event = rt->getPtr<hipEvent_t>(event_id);
   if (!event) return NXS_InvalidEvent;
 
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "EventQuery: " << hipEventQuery(event));
+  NXSAPI_LOG(nexus::NXS_LOG_NOTE, "EventQuery: ", hipEventQuery(event));
   auto *cmd = rt->getCommand(event, NXS_CommandType_Wait, wait_value);
   auto res = rt->addObject(cmd);
   sched->addCommand(cmd);
@@ -884,9 +884,9 @@ extern "C" nxs_int NXS_API_CALL nxsCreateWaitCommand(nxs_int schedule_id,
 extern "C" nxs_status NXS_API_CALL nxsSetCommandArgument(nxs_int command_id,
                                                          nxs_int argument_index,
                                                          nxs_int buffer_id) {
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "setCommandArg " << command_id << " - "
-                                                  << argument_index << " - "
-                                                  << buffer_id);
+  NXSAPI_LOG(nexus::NXS_LOG_NOTE, "setCommandArg ", command_id, " - "
+                                                  , argument_index, " - "
+                                                  , buffer_id);
   auto rt = getRuntime();
   auto cmd = rt->get<HipCommand>(command_id);
   if (!cmd) return NXS_InvalidCommand;
@@ -923,10 +923,10 @@ extern "C" nxs_status NXS_API_CALL nxsFinalizeCommand(nxs_int command_id,
                                                       nxs_dim3 group_size,
                                                       nxs_uint shared_memory_size) {
 
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "finalizeCommand " << command_id << " - "
-    << "{ " << grid_size.x <<", " << grid_size.y << ", " << grid_size.z << " }" << " - "
-    << "{ " << group_size.x <<", " << group_size.y << ", " << group_size.z << " }" << " - "
-    << shared_memory_size);
+  NXSAPI_LOG(nexus::NXS_LOG_NOTE, "finalizeCommand ", command_id, " - "
+    , "{ ", grid_size.x,", ", grid_size.y, ", ", grid_size.z, " }" << " - "
+    , "{ ", group_size.x,", ", group_size.y, ", ", group_size.z, " }" << " - "
+    , shared_memory_size);
   auto rt = getRuntime();
   auto cmd = rt->get<HipCommand>(command_id);
   if (!cmd) return NXS_InvalidCommand;

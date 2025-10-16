@@ -7,7 +7,6 @@
 #include <cpuinfo.h>
 #include <rt_runtime.h>
 
-#define NXSAPI_LOGGING
 #include <nexus/log.h>
 
 #define NXSAPI_LOG_MODULE "cpu_runtime"

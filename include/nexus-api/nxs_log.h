@@ -1,23 +1,14 @@
 #ifndef NEXUS_API_LOG_H
 #define NEXUS_API_LOG_H
 
-#define NXSAPI_STATUS_ERR " ERROR"
-#define NXSAPI_STATUS_NOTE ""
-#define NXSAPI_STATUS_WARN " WARN"
+#if defined(__cplusplus)
+#include <nexus/log.h>
 
-#if defined(NXSAPI_LOGGING) && defined(__cplusplus)
-#include <iomanip>
-#include <iostream>
-
-#define NXSAPI_LOG(STATUS, s)                                                 \
-  {                                                                           \
-    const char *_log_prefix =                                                 \
-        "[NEXUS-API][" NXSAPI_LOG_MODULE "]" STATUS ": ";                     \
-    std::cerr << std::left << std::setw(50) << _log_prefix << s << std::endl; \
-  }
+#define NXSAPI_LOG(SEVERITY, ...) \
+  ::nexus::LogManager::getInstance().log(SEVERITY, "NXSAPI:" NXSAPI_LOG_MODULE, __VA_ARGS__)
 
 #else
-#define NXSAPI_LOG(x, s)
+#define NXSAPI_LOG(SEVERITY, ...)
 #endif
 
 #endif  // NEXUS_API_LOG_H

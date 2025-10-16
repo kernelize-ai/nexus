@@ -18,17 +18,17 @@ class CommandImpl : public Impl {
  public:
   /// @brief Construct a Platform for the current system
   CommandImpl(Impl owner, Kernel kern) : Impl(owner), kernel(kern) {
-    NEXUS_LOG(NEXUS_STATUS_NOTE, "    Command: " << getId());
+    NEXUS_LOG(NXS_LOG_NOTE, "    Command: ", getId());
     arguments.reserve(32);  // TODO: get from kernel
     // TODO: gather kernel argument details
   }
 
   CommandImpl(Impl owner, Event event) : Impl(owner), event(event) {
-    NEXUS_LOG(NEXUS_STATUS_NOTE, "    Command: " << getId());
+    NEXUS_LOG(NXS_LOG_NOTE, "    Command: ", getId());
   }
 
   ~CommandImpl() {
-    NEXUS_LOG(NEXUS_STATUS_NOTE, "    ~Command: " << getId());
+    NEXUS_LOG(NXS_LOG_NOTE, "    ~Command: ", getId());
     release();
   }
 

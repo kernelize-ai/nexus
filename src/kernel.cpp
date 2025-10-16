@@ -15,11 +15,11 @@ namespace detail {
   /// @brief Construct a Platform for the current system
 KernelImpl::KernelImpl(Impl base, const std::string &kName, Info info)
     : Impl(base), kernelName(kName), info(info) {
-  NEXUS_LOG(NEXUS_STATUS_NOTE, "  Kernel: " << kernelName << " - " << getId());
+  NEXUS_LOG(NXS_LOG_NOTE, "  Kernel: ", kernelName, " - ", getId());
 }
 
 KernelImpl::~KernelImpl() {
-  NEXUS_LOG(NEXUS_STATUS_NOTE, "  ~Kernel: " << getId());
+  NEXUS_LOG(NXS_LOG_NOTE, "  ~Kernel: ", getId());
   release();
 }
 

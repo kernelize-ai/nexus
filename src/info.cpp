@@ -30,7 +30,7 @@ InfoImpl::InfoImpl(const std::string &filepath)
     : propertyFilePath(filepath) {}
 InfoImpl::InfoImpl(Info::Node &node) {
   props = node.getJson();
-  NEXUS_LOG(NEXUS_STATUS_NOTE, "  JSON size: " << props.size());
+  NEXUS_LOG(NXS_LOG_NOTE, "  JSON size: ", props.size());
 }
 
 std::optional<Property> InfoImpl::getProperty(
@@ -139,7 +139,7 @@ std::optional<Property> InfoImpl::getProp(
       }
       return getValue(node.at(tail.data()), typeId);
     } catch (...) {
-      NEXUS_LOG(NEXUS_STATUS_ERR, "  Properties.getProp - " << path[0]);
+      NEXUS_LOG(NXS_LOG_ERROR, "  Properties.getProp - ", path[0]);
     }
   }
   return std::nullopt;
@@ -151,11 +151,11 @@ void InfoImpl::loadInfo() {
   try {
     std::ifstream f(propertyFilePath);
     props = json::parse(f);
-    NEXUS_LOG(NEXUS_STATUS_NOTE, "Loaded json from "
-                                     << propertyFilePath
-                                     << " - size: " << props.size());
+    NEXUS_LOG(NXS_LOG_NOTE, "Loaded json from "
+                                     , propertyFilePath
+                                     , " - size: ", props.size());
   } catch (...) {
-    NEXUS_LOG(NEXUS_STATUS_ERR, "Failed to load " << propertyFilePath);
+    NEXUS_LOG(NXS_LOG_ERROR, "Failed to load ", propertyFilePath);
   }
 }
 

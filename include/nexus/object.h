@@ -74,7 +74,7 @@ class Object {
 
   operator bool() const { return nxs_valid_id(getId()); }
 
-  void release() { impl.clear(); }
+  void release() { impl.reset(); }
 
   nxs_int getId() const {
     if (auto *impl = getImpl()) return impl->getId();
@@ -135,6 +135,11 @@ class Objects {
     return obj->FUNC(__VA_ARGS__); \
   } \
   return RET
+
+#define NEXUS_OBJ_MCALL_VOID(FUNC, ...) \
+  if (auto obj = get()) { \
+    obj->FUNC(__VA_ARGS__); \
+  }
 
 }  // namespace nexus
 

@@ -4,6 +4,7 @@
 
 #include <nexus/buffer.h>
 #include <nexus/info.h>
+#include <nexus/log.h>
 #include <nexus/runtime.h>
 
 namespace nexus {
@@ -31,7 +32,7 @@ class SystemImpl : public detail::Impl {
   Runtimes getRuntimes() const { return runtimes; }
   Infos getCatalogs() const { return catalogs; }
   Buffers getBuffers() const { return buffers; }
-
+  
  private:
   // set of runtimes
   Runtimes runtimes;

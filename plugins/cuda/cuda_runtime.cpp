@@ -34,7 +34,7 @@ nxsGetRuntimeProperty(nxs_uint runtime_property_id, void *property_value,
   int minor_version = (runtime_version % 10000000) / 100000;
   int patch_version = runtime_version % 100000;
 
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "getRuntimeProperty " << runtime_property_id);
+  NXSAPI_LOG(nexus::NXS_LOG_NOTE, "getRuntimeProperty ", runtime_property_id);
   /* return value size */
   /* return value */
   switch (runtime_property_id) {
@@ -78,7 +78,9 @@ nxsGetDeviceProperty(nxs_int device_id, nxs_uint property_id,
   auto *rt = getRuntime();
   auto *device = rt->getDevice(device_id);
   if (!device) return NXS_InvalidDevice;
-
+  CUdevice cuda_device;
+  CU_CHECK(NXS_InvalidDevice, cuDeviceGet, &cuda_device, device_id);
+ 
   cudaDeviceProp &props = device->props;
   switch (property_id) {
     case NP_Keys: {
@@ -116,9 +118,13 @@ nxsGetDeviceProperty(nxs_int device_id, nxs_uint property_id,
     case NP_GlobalMemorySize:
       return rt::getPropertyInt(property_value, property_value_size,
                                 props.totalGlobalMem);
-    case NP_CoreMemorySize:
-      return rt::getPropertyInt(property_value, property_value_size,
-                                props.sharedMemPerBlock);
+    case NP_CoreMemorySize: {
+      int max_shared_mem = 0;
+      CU_CHECK(NXS_InvalidDevice, cuDeviceGetAttribute,
+          &max_shared_mem, CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK_OPTIN,
+          cuda_device);
+      return rt::getPropertyInt(property_value, property_value_size, max_shared_mem);
+    }
     case NP_CoreRegisterSize:
       return rt::getPropertyInt(property_value, property_value_size,
                                 props.regsPerBlock);
@@ -206,7 +212,7 @@ extern "C" nxs_int NXS_API_CALL nxsCreateBuffer(nxs_int device_id, size_t size,
   auto deviceObject = rt->get<CudaDevice>(device_id);
   if (!deviceObject) return NXS_InvalidDevice;
 
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createBuffer: " << size);
+  NXSAPI_LOG(nexus::NXS_LOG_NOTE, "createBuffer: ", size);
   if (!(buffer_settings & NXS_BufferSettings_OnDevice)) {
     void *cuda_ptr = nullptr;
     CUDA_CHECK(NXS_InvalidBuffer, cudaMalloc, &cuda_ptr, size);
@@ -302,7 +308,7 @@ extern "C" nxs_int NXS_API_CALL nxsCreateLibraryFromFile(
   auto library = rt->getPtr<CUmodule>(library_id);
   if (!library) return NXS_InvalidLibrary;
 
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "getLibraryProperty " << library_property_id);
+  NXSAPI_LOG(nexus::NXS_LOG_NOTE, "getLibraryProperty ", library_property_id);
 
   switch (library_property_id) {
     case NP_Keys: {
@@ -353,8 +359,8 @@ nxsGetKernel(nxs_int library_id, const char *kernel_name) {
   if (result != CUDA_SUCCESS) {
     const char *error_string;
     cuGetErrorString(result, &error_string);
-    NXSAPI_LOG(NXSAPI_STATUS_ERR,
-               "GetKernel " << kernel_name << " " << error_string);
+    NXSAPI_LOG(nexus::NXS_LOG_ERROR,
+               "GetKernel ", kernel_name, " ", error_string);
     return NXS_InvalidKernel;
   }
 
@@ -492,7 +498,7 @@ extern "C" nxs_int NXS_API_CALL nxsCreateStream(nxs_int device_id,
   if (!device) return NXS_InvalidDevice;
 
   // TODO: Get the default command queue for the first Stream
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createStream");
+  NXSAPI_LOG(nexus::NXS_LOG_NOTE, "createStream");
   cudaStream_t stream;
   CUDA_CHECK(NXS_InvalidStream, cudaStreamCreate, &stream);
   return rt->addObject(stream, false);
@@ -505,7 +511,7 @@ extern "C" nxs_int NXS_API_CALL nxsCreateStream(nxs_int device_id,
 extern "C" nxs_status NXS_API_CALL
 nxsGetStreamProperty(nxs_int stream_id, nxs_uint stream_property_id,
                      void *property_value, size_t *property_value_size) {
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "getStreamProperty " << stream_property_id);
+  NXSAPI_LOG(nexus::NXS_LOG_NOTE, "getStreamProperty ", stream_property_id);
   auto rt = getRuntime();
   auto stream = rt->getPtr<cudaStream_t>(stream_id);
   if (!stream) return NXS_InvalidStream;
@@ -529,7 +535,7 @@ nxsGetStreamProperty(nxs_int stream_id, nxs_uint stream_property_id,
  * @return Error status or Succes.
  ***********************************************************************/
 extern "C" nxs_status NXS_API_CALL nxsReleaseStream(nxs_int stream_id) {
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "releaseStream " << stream_id);
+  NXSAPI_LOG(nexus::NXS_LOG_NOTE, "releaseStream ", stream_id);
   auto rt = getRuntime();
   if (!rt->dropObject(stream_id)) return NXS_InvalidStream;
   return NXS_Success;
@@ -559,8 +565,8 @@ extern "C" nxs_int NXS_API_CALL nxsCreateSchedule(nxs_int device_id,
 extern "C" nxs_status NXS_API_CALL
 nxsGetScheduleProperty(nxs_int schedule_id, nxs_uint schedule_property_id,
                        void *property_value, size_t *property_value_size) {
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE,
-             "getScheduleProperty " << schedule_property_id);
+  NXSAPI_LOG(nexus::NXS_LOG_NOTE,
+             "getScheduleProperty ", schedule_property_id);
   auto rt = getRuntime();
   auto schedule = rt->get<CudaSchedule>(schedule_id);
   if (!schedule) return NXS_InvalidSchedule;
@@ -584,7 +590,7 @@ nxsGetScheduleProperty(nxs_int schedule_id, nxs_uint schedule_property_id,
  * @return Error status or Succes.
  ***********************************************************************/
 extern "C" nxs_status NXS_API_CALL nxsReleaseSchedule(nxs_int schedule_id) {
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "releaseSchedule " << schedule_id);
+  NXSAPI_LOG(nexus::NXS_LOG_NOTE, "releaseSchedule ", schedule_id);
   auto rt = getRuntime();
   auto sched = rt->get<CudaSchedule>(schedule_id);
   if (!sched) return NXS_InvalidSchedule;
@@ -601,9 +607,9 @@ extern "C" nxs_status NXS_API_CALL nxsReleaseSchedule(nxs_int schedule_id) {
 extern "C" nxs_status NXS_API_CALL nxsRunSchedule(nxs_int schedule_id,
                                                   nxs_int stream_id,
                                                   nxs_uint run_settings) {
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "runSchedule " << schedule_id << " - "
-                                                << stream_id << " - "
-                                                << run_settings);
+  NXSAPI_LOG(nexus::NXS_LOG_NOTE, "runSchedule ", schedule_id, " - "
+                                                , stream_id, " - "
+                                                , run_settings);
 
   auto rt = getRuntime();
 
@@ -654,9 +660,9 @@ extern "C" nxs_int NXS_API_CALL nxsCreateCommand(nxs_int schedule_id,
 extern "C" nxs_int NXS_API_CALL
 nxsCreateSignalCommand(nxs_int schedule_id, nxs_int event_id,
                        nxs_int signal_value, nxs_uint command_settings) {
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createSignalCommand " << schedule_id << " - "
-                                                        << event_id << " - "
-                                                        << signal_value);
+  NXSAPI_LOG(nexus::NXS_LOG_NOTE, "createSignalCommand ", schedule_id, " - "
+                                                        , event_id, " - "
+                                                        , signal_value);
   auto rt = getRuntime();
   auto sched = rt->get<CudaSchedule>(schedule_id);
   if (!sched) return NXS_InvalidSchedule;
@@ -682,9 +688,9 @@ nxsCreateSignalCommand(nxs_int schedule_id, nxs_int event_id,
 extern "C" nxs_int NXS_API_CALL
 nxsCreateWaitCommand(nxs_int schedule_id, nxs_int event_id, nxs_int wait_value,
                      nxs_uint command_settings) {
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "createWaitCommand " << schedule_id << " - "
-                                                      << event_id << " - "
-                                                      << wait_value);
+  NXSAPI_LOG(nexus::NXS_LOG_NOTE, "createWaitCommand ", schedule_id, " - "
+                                                      , event_id, " - "
+                                                      , wait_value);
   auto rt = getRuntime();
   auto sched = rt->get<CudaSchedule>(schedule_id);
   if (!sched) return NXS_InvalidSchedule;
@@ -764,10 +770,10 @@ extern "C" nxs_status NXS_API_CALL nxsFinalizeCommand(nxs_int command_id,
                                                       nxs_dim3 group_size,
                                                       nxs_uint shared_memory_size) {
 
-  NXSAPI_LOG(NXSAPI_STATUS_NOTE, "finalizeCommand " << command_id << " - "
-    << "{ " << grid_size.x <<", " << grid_size.y << ", " << grid_size.z << " }" << " - "
-    << "{ " << group_size.x <<", " << group_size.y << ", " << group_size.z << " } " << " - "
-    << shared_memory_size);
+  NXSAPI_LOG(nexus::NXS_LOG_NOTE, "finalizeCommand ", command_id, " - "
+    , "{ ", grid_size.x <<", " << grid_size.y << ", " << grid_size.z << " }" << " - "
+    , "{ ", group_size.x <<", " << group_size.y << ", " << group_size.z << " } " << " - "
+    , shared_memory_size);
 
   auto rt = getRuntime();
 

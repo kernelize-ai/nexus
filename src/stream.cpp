@@ -13,11 +13,11 @@ class StreamImpl : public Impl {
  public:
   /// @brief Construct a Platform for the current system
   StreamImpl(detail::Impl base) : detail::Impl(base) {
-    NEXUS_LOG(NEXUS_STATUS_NOTE, "  Stream: " << getId());
+    NEXUS_LOG(NXS_LOG_NOTE, "  Stream: ", getId());
   }
 
   ~StreamImpl() {
-    NEXUS_LOG(NEXUS_STATUS_NOTE, "  ~Stream: " << getId());
+    NEXUS_LOG(NXS_LOG_NOTE, "  ~Stream: ", getId());
     release();
   }
 

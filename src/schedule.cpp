@@ -14,11 +14,11 @@ using namespace nexus::detail;
 
 /// @brief Construct a Platform for the current system
 ScheduleImpl::ScheduleImpl(detail::Impl base) : detail::Impl(base) {
-  NEXUS_LOG(NEXUS_STATUS_NOTE, "  Schedule: " << getId());
+  NEXUS_LOG(NXS_LOG_NOTE, "  Schedule: ", getId());
 }
 
 ScheduleImpl::~ScheduleImpl() {
-  NEXUS_LOG(NEXUS_STATUS_NOTE, "  ~Schedule: " << getId());
+  NEXUS_LOG(NXS_LOG_NOTE, "  ~Schedule: ", getId());
   release();
 }
 

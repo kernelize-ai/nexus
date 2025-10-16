@@ -19,25 +19,25 @@
 ////////////////////////////////////////////////////////////////////////////
 #define CUDA_CHECK(err_code, call, ...)                                      \
   do {                                                                       \
-    NXSAPI_LOG(NXSAPI_STATUS_NOTE,                                           \
-               "CUDA_CHECK " << #call << nxs::rt::print_value(__VA_ARGS__)); \
+    NXSAPI_LOG(nexus::NXS_LOG_NOTE,                                           \
+               "CUDA_CHECK ", #call, nxs::rt::print_value(__VA_ARGS__)); \
     cudaError_t err = call(__VA_ARGS__);                                     \
     if (err != cudaSuccess) {                                                \
-      NXSAPI_LOG(NXSAPI_STATUS_ERR,                                          \
-                 "CUDA error: " << cudaGetErrorString(err));                 \
+      NXSAPI_LOG(nexus::NXS_LOG_ERROR,                                          \
+                 "CUDA error: ", cudaGetErrorString(err));                 \
       return err_code;                                                       \
     }                                                                        \
   } while (0)
 
 #define CU_CHECK(err_code, call, ...)                                      \
   do {                                                                     \
-    NXSAPI_LOG(NXSAPI_STATUS_NOTE,                                         \
-               "CU_CHECK " << #call << nxs::rt::print_value(__VA_ARGS__)); \
+    NXSAPI_LOG(nexus::NXS_LOG_NOTE,                                         \
+               "CU_CHECK ", #call, nxs::rt::print_value(__VA_ARGS__)); \
     CUresult err = call(__VA_ARGS__);                                      \
     if (err != CUDA_SUCCESS) {                                             \
       const char* errorStr;                                                \
       cuGetErrorString(err, &errorStr);                                    \
-      NXSAPI_LOG(NXSAPI_STATUS_ERR, "CU error: " << errorStr);             \
+      NXSAPI_LOG(nexus::NXS_LOG_ERROR, "CU error: ", errorStr);             \
       return err_code;                                                     \
     }                                                                      \
   } while (0)

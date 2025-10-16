@@ -1,4 +1,3 @@
-#define NXSAPI_LOGGING
 
 #include "cpu_schedule.h"
 
@@ -20,7 +19,7 @@ nxs_status CpuSchedule::run(nxs_int stream, nxs_uint run_settings) {
   }
 
   for (auto cmd : getCommands()) {
-    NXSAPI_LOG(NXSAPI_STATUS_NOTE, "runCommand " << " - " << cmd->getType());
+    NXSAPI_LOG(nexus::NXS_LOG_NOTE, "runCommand ", " - ", cmd->getType());
     auto status = cmd->runCommand(stream);
     if (!nxs_success(status)) return status;
   }

@@ -92,10 +92,6 @@ else()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4244 /wd4624 /wd4715 /wd4530")
 endif()
 
-if(NEXUS_ENABLE_LOGGING)
-  add_compile_definitions(NEXUS_LOGGING)
-endif()
-
 file(COPY ${CMAKE_SOURCE_DIR}/device_lib/
      DESTINATION ${CMAKE_BINARY_DIR}/device_lib
      FILES_MATCHING PATTERN "*")

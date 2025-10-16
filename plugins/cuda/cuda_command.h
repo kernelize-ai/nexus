@@ -16,7 +16,7 @@ class CudaCommand : public nxs::rt::Command<CUfunction, CUevent, CUstream> {
   ~CudaCommand() = default;
 
   nxs_status runCommand(CUstream stream) override {
-    NXSAPI_LOG(NXSAPI_STATUS_NOTE, "runCommand " << kernel << " - " << type);
+    NXSAPI_LOG(nexus::NXS_LOG_NOTE, "runCommand ", kernel, " - ", type);
     switch (type) {
       case NXS_CommandType_Dispatch: {
         CUevent start_event, end_event;

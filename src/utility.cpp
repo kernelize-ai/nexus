@@ -25,7 +25,7 @@ void nexus::iterateEnvPaths(const char* envVar, const char* envDefault,
   // Load Runtimes from NEXUS_DEVICE_PATH
   const char* env = std::getenv(envVar);
   if (!env) {
-    NEXUS_LOG(NEXUS_STATUS_WARN, envVar << " environment variable is not set.");
+    NEXUS_LOG(NXS_LOG_WARN, envVar, " environment variable is not set.");
     env = envDefault;
   }
 
@@ -34,18 +34,18 @@ void nexus::iterateEnvPaths(const char* envVar, const char* envDefault,
     try {
       std::filesystem::path directory(dirname);
 
-      NEXUS_LOG(NEXUS_STATUS_NOTE, "Reading directory: " << directory);
+      NEXUS_LOG(NXS_LOG_NOTE, "Reading directory: ", directory);
       for (auto const& dir_entry :
           std::filesystem::directory_iterator{directory}) {
         if (dir_entry.is_regular_file()) {
           auto filepath = dir_entry.path();
-          NEXUS_LOG(NEXUS_STATUS_NOTE, "  Adding file: " << filepath);
+          NEXUS_LOG(NXS_LOG_NOTE, "  Adding file: ", filepath);
 
           func(filepath, filepath.filename());
           }
         }
     } catch (std::filesystem::filesystem_error const& ex) {
-      NEXUS_LOG(NEXUS_STATUS_ERR, "Error iterating environment paths: " << ex.what());
+      NEXUS_LOG(NXS_LOG_ERROR, "Error iterating environment paths: ", ex.what());
     }
   }
 }

@@ -14,11 +14,11 @@ class EventImpl : public Impl {
  public:
   /// @brief Construct a Platform for the current system
   EventImpl(Impl owner, nxs_int value) : Impl(owner), value(value) {
-    NEXUS_LOG(NEXUS_STATUS_NOTE, "    Event: " << getId());
+    NEXUS_LOG(NXS_LOG_NOTE, "    Event: ", getId());
   }
 
   ~EventImpl() {
-    NEXUS_LOG(NEXUS_STATUS_NOTE, "    ~Event: " << getId());
+    NEXUS_LOG(NXS_LOG_NOTE, "    ~Event: ", getId());
     release();
   }
 

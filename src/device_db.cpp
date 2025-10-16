@@ -14,7 +14,7 @@ using namespace nexus;
 static bool initDeviceInfoDB(DeviceInfoMap &devs) {
   iterateEnvPaths("NEXUS_DEVICE_PATH", "./device_lib",
                   [&](const std::string &path, const std::string &name) {
-                    NEXUS_LOG(NEXUS_STATUS_NOTE, "  File: " << name);
+                    NEXUS_LOG(NXS_LOG_NOTE, "  File: ", name);
                     std::string::size_type const p(name.find_last_of('.'));
                     std::string basename = name.substr(0, p);
                     devs.emplace(basename, path);

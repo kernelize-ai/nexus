@@ -27,20 +27,20 @@ detail::DeviceImpl::DeviceImpl(detail::Impl base) : detail::Impl(base) {
   auto devTag = vendor->getValue<NP_Vendor>() + "-" +
                 type->getValue<NP_Type>() + "-" +
                 arch->getValue<NP_Architecture>();
-  NEXUS_LOG(NEXUS_STATUS_NOTE, "    DeviceTag: " << devTag);
+  NEXUS_LOG(NXS_LOG_NOTE, "    DeviceTag: ", devTag);
   if (auto info = nexus::lookupDeviceInfo(devTag))
     deviceInfo = info;
   else  // load defaults
-    NEXUS_LOG(NEXUS_STATUS_ERR, "    Device Properties not found");
+    NEXUS_LOG(NXS_LOG_ERROR, "    Device Properties not found");
 }
 
 detail::DeviceImpl::~DeviceImpl() {
-  NEXUS_LOG(NEXUS_STATUS_NOTE, "    ~Device: " << getId());
+  NEXUS_LOG(NXS_LOG_NOTE, "    ~Device: ", getId());
   release();
 }
 
 void detail::DeviceImpl::release() {
-  NEXUS_LOG(NEXUS_STATUS_NOTE, "    release: " << getId());
+  NEXUS_LOG(NXS_LOG_NOTE, "    release: ", getId());
   // Tear down order is important for backend plugins
   buffers.clear();
 
@@ -88,7 +88,7 @@ static void findDeviceBinary(LibraryInfo &info, Info catalogInfo,
           }
         }
       } catch (...) {
-        NEXUS_LOG(NEXUS_STATUS_ERR, "  binary not found");
+        NEXUS_LOG(NXS_LOG_ERROR, "  binary not found");
       }
     }
   }
@@ -96,12 +96,12 @@ static void findDeviceBinary(LibraryInfo &info, Info catalogInfo,
 
 Library detail::DeviceImpl::loadLibrary(Info catalog,
                                         const std::string &libraryName) {
-  NEXUS_LOG(NEXUS_STATUS_NOTE, "  loadLibrary");
+  NEXUS_LOG(NXS_LOG_NOTE, "  loadLibrary");
   auto arch = getProperty(NP_Architecture)->getValue<std::string>();
   LibraryInfo libInfo;
   findDeviceBinary(libInfo, catalog, libraryName, arch);
   if (libInfo.arch.empty()) {
-    NEXUS_LOG(NEXUS_STATUS_ERR, "  library not found");
+    NEXUS_LOG(NXS_LOG_ERROR, "  library not found");
     return Library();
   }
   // std::vector<uint8_t> data = base64Decode(libInfo.binaryData, libInfo.size);
@@ -114,7 +114,7 @@ Library detail::DeviceImpl::loadLibrary(Info catalog,
 
 Library detail::DeviceImpl::createLibrary(void *data, size_t size,
                                           nxs_uint settings) {
-  NEXUS_LOG(NEXUS_STATUS_NOTE, "  createLibrary - Size: " << size);
+  NEXUS_LOG(NXS_LOG_NOTE, "  createLibrary - Size: ", size);
   APICALL(nxsCreateLibrary, getId(), data, size, settings);
   Library lib(detail::Impl(this, apiResult, settings));
   libraries.add(lib);
@@ -123,7 +123,7 @@ Library detail::DeviceImpl::createLibrary(void *data, size_t size,
 
 Library detail::DeviceImpl::createLibrary(const std::string &path,
                                           nxs_uint settings) {
-  NEXUS_LOG(NEXUS_STATUS_NOTE, "  createLibrary - Path: " << path);
+  NEXUS_LOG(NXS_LOG_NOTE, "  createLibrary - Path: ", path);
   APICALL(nxsCreateLibraryFromFile, getId(), path.c_str(), settings);
   Library lib(detail::Impl(this, apiResult, settings));
   libraries.add(lib);
@@ -131,7 +131,7 @@ Library detail::DeviceImpl::createLibrary(const std::string &path,
 }
 
 Schedule detail::DeviceImpl::createSchedule(nxs_uint settings) {
-  NEXUS_LOG(NEXUS_STATUS_NOTE, "  createSchedule");
+  NEXUS_LOG(NXS_LOG_NOTE, "  createSchedule");
   APICALL(nxsCreateSchedule, getId(), settings);
   Schedule sched(detail::Impl(this, apiResult, settings));
   schedules.add(sched);
@@ -139,7 +139,7 @@ Schedule detail::DeviceImpl::createSchedule(nxs_uint settings) {
 }
 
 Stream detail::DeviceImpl::createStream(nxs_uint settings) {
-  NEXUS_LOG(NEXUS_STATUS_NOTE, "  createStream");
+  NEXUS_LOG(NXS_LOG_NOTE, "  createStream");
   APICALL(nxsCreateStream, getId(), 0);
   Stream stream(detail::Impl(this, apiResult, settings));
   streams.add(stream);
@@ -148,7 +148,7 @@ Stream detail::DeviceImpl::createStream(nxs_uint settings) {
 
 Event detail::DeviceImpl::createEvent(nxs_event_type event_type,
                                       nxs_uint settings) {
-  NEXUS_LOG(NEXUS_STATUS_NOTE, "  createEvent");
+  NEXUS_LOG(NXS_LOG_NOTE, "  createEvent");
   APICALL(nxsCreateEvent, getId(), event_type, settings);
   Event event(detail::Impl(this, apiResult, settings));
   events.add(event);
@@ -157,7 +157,7 @@ Event detail::DeviceImpl::createEvent(nxs_event_type event_type,
 
 Buffer detail::DeviceImpl::createBuffer(size_t size, const void *data,
                                         nxs_uint settings) {
-  NEXUS_LOG(NEXUS_STATUS_NOTE, "  createBuffer");
+  NEXUS_LOG(NXS_LOG_NOTE, "  createBuffer");
   APICALL(nxsCreateBuffer, getId(), size, (void *)data, settings);
   Buffer nbuf(Impl(this, apiResult, settings), getId(), size);
   buffers.add(nbuf);
@@ -165,7 +165,7 @@ Buffer detail::DeviceImpl::createBuffer(size_t size, const void *data,
 }
 
 Buffer detail::DeviceImpl::copyBuffer(Buffer buf, nxs_uint settings) {
-  NEXUS_LOG(NEXUS_STATUS_NOTE, "  copyBuffer");
+  NEXUS_LOG(NXS_LOG_NOTE, "  copyBuffer");
   APICALL(nxsCreateBuffer, getId(), buf.getSize(), (void *)buf.getData(),
           settings);
   Buffer nbuf(Impl(this, apiResult, settings), getId(), buf.getSize());

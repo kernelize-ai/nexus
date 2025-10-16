@@ -39,12 +39,12 @@ class RuntimeImpl : public Impl {
     if (auto *fn = getFunction<Tfn>()) {
       apiResult = (*fn)(args...);
       if (nxs_failed(apiResult))
-        NEXUS_LOG(NEXUS_STATUS_ERR, nxsGetFuncName(Tfn)
-                                        << ": " << nxsGetStatusName(apiResult));
+        NEXUS_LOG(NXS_LOG_ERROR, nxsGetFuncName(Tfn)
+                                        , ": ", nxsGetStatusName(apiResult));
       else
-        NEXUS_LOG(NEXUS_STATUS_NOTE, nxsGetFuncName(Tfn) << ": " << apiResult);
+        NEXUS_LOG(NXS_LOG_NOTE, nxsGetFuncName(Tfn), ": ", apiResult);
     } else {
-      NEXUS_LOG(NEXUS_STATUS_ERR, nxsGetFuncName(Tfn) << ": API not present");
+      NEXUS_LOG(NXS_LOG_ERROR, nxsGetFuncName(Tfn), ": API not present");
     }
     return apiResult;
   }
@@ -58,9 +58,9 @@ class RuntimeImpl : public Impl {
           nxs_long val = 0;
           size_t size = sizeof(val);
           if (nxs_success((*fn)(args..., prop, &val, &size))) {
-            NEXUS_LOG(NEXUS_STATUS_NOTE, nxsGetFuncName(Tfn)
-                                             << ": " << nxsGetPropName(prop)
-                                             << " = " << val);
+            NEXUS_LOG(NXS_LOG_NOTE, nxsGetFuncName(Tfn)
+                                             , ": ", nxsGetPropName(prop)
+                                             , " = ", val);
             return Property(val);
           }
           break;
@@ -69,9 +69,9 @@ class RuntimeImpl : public Impl {
           nxs_double val = 0.;
           size_t size = sizeof(val);
           if (nxs_success((*fn)(args..., prop, &val, &size))) {
-            NEXUS_LOG(NEXUS_STATUS_NOTE, nxsGetFuncName(Tfn)
-                                             << ": " << nxsGetPropName(prop)
-                                             << " = " << val);
+            NEXUS_LOG(NXS_LOG_NOTE, nxsGetFuncName(Tfn)
+                                             , ": ", nxsGetPropName(prop)
+                                             , " = ", val);
             return Property(val);
           }
           break;
@@ -81,9 +81,9 @@ class RuntimeImpl : public Impl {
           char name[size];
           name[0] = '\0';
           if (nxs_success((*fn)(args..., prop, &name, &size))) {
-            NEXUS_LOG(NEXUS_STATUS_NOTE, nxsGetFuncName(Tfn)
-                                             << ": " << nxsGetPropName(prop)
-                                             << " = " << name);
+            NEXUS_LOG(NXS_LOG_NOTE, nxsGetFuncName(Tfn)
+                                             , ": ", nxsGetPropName(prop)
+                                             , " = ", (char*)name);
             return std::string(name);
           }
           break;
@@ -92,9 +92,9 @@ class RuntimeImpl : public Impl {
           nxs_long vals[1024];
           size_t size = sizeof(vals);
           if (nxs_success((*fn)(args..., prop, vals, &size))) {
-            NEXUS_LOG(NEXUS_STATUS_NOTE, nxsGetFuncName(Tfn)
-                                             << ": " << nxsGetPropName(prop)
-                                             << " = " << vals);
+            NEXUS_LOG(NXS_LOG_NOTE, nxsGetFuncName(Tfn)
+                                             , ": ", nxsGetPropName(prop)
+                                             , " = ", vals);
             std::vector<nxs_long> vec(size / sizeof(nxs_long));
             std::memcpy(vec.data(), vals, size);
             return Property(vec);
@@ -102,9 +102,9 @@ class RuntimeImpl : public Impl {
           break;
         }
         default: {
-          NEXUS_LOG(NEXUS_STATUS_ERR, nxsGetFuncName(Tfn)
-                                          << ": Unknown property type for - "
-                                          << nxsGetPropName(prop));
+          NEXUS_LOG(NXS_LOG_ERROR, nxsGetFuncName(Tfn)
+                                          , ": Unknown property type for - "
+                                          , nxsGetPropName(prop));
           break;
         }
       }
