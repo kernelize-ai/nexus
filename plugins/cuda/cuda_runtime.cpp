@@ -771,8 +771,8 @@ extern "C" nxs_status NXS_API_CALL nxsFinalizeCommand(nxs_int command_id,
                                                       nxs_uint shared_memory_size) {
 
   NXSAPI_LOG(nexus::NXS_LOG_NOTE, "finalizeCommand ", command_id, " - "
-    , "{ ", grid_size.x <<", " << grid_size.y << ", " << grid_size.z << " }" << " - "
-    , "{ ", group_size.x <<", " << group_size.y << ", " << group_size.z << " } " << " - "
+    , "{ ", grid_size.x, ", ", grid_size.y, ", ", grid_size.z, " }", " - "
+    , "{ ", group_size.x, ", ", group_size.y, ", ", group_size.z, " } ", " - "
     , shared_memory_size);
 
   auto rt = getRuntime();
