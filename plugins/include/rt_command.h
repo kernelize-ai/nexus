@@ -1,6 +1,8 @@
 #ifndef RT_COMMAND_H
 #define RT_COMMAND_H
 
+#include <array>
+
 #include <rt_buffer.h>
 
 #define RT_COMMAND_MAX_ARGS 64
