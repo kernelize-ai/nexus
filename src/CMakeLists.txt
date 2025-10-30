@@ -20,3 +20,4 @@ add_library(nexus-api SHARED
 )
 
 target_link_libraries(nexus-api PRIVATE nlohmann_json::nlohmann_json)
+target_link_libraries(nexus-api PRIVATE ${CMAKE_DL_LIBS})
