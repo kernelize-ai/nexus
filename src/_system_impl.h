@@ -27,6 +27,7 @@ class SystemImpl : public detail::Impl {
   Buffer createBuffer(size_t sz, const void *hostData = nullptr,
                       nxs_uint options = 0);
   Buffer copyBuffer(Buffer buf, Device dev, nxs_uint options = 0);
+  void releaseBuffer(Buffer buf, Device dev);
   Info loadCatalog(const std::string &catalogPath);
 
   Runtimes getRuntimes() const { return runtimes; }

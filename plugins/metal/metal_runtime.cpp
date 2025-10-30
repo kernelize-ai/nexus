@@ -471,7 +471,8 @@ extern "C" nxs_status NXS_API_CALL nxsCopyBuffer(nxs_int buffer_id,
  * @brief Release a buffer on the device
  * @return Error status or Succes.
  ***********************************************************************/
-extern "C" nxs_status NXS_API_CALL nxsReleaseBuffer(nxs_int buffer_id) {
+extern "C" nxs_status NXS_API_CALL nxsReleaseBuffer(nxs_int buffer_id,
+                                                  nxs_int device_id) {
   auto rt = getRuntime();
   if (!rt->dropObject(buffer_id, release_fn<MTL::Buffer>))
     return NXS_InvalidBuffer;

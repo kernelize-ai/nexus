@@ -46,6 +46,7 @@ __pycache__/
 *.py[cod]
 .pytest_cache
 python/nexus/device_lib
+python/nexus/include
 
 *.egg-info
 

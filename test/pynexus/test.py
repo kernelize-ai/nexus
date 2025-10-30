@@ -15,7 +15,7 @@ nb0 = dev.create_buffer(buf0)
 nb1 = dev.create_buffer(buf1)
 nb2 = dev.create_buffer(res2)
 
-lib = dev.load_library_file("kernel.so")
+lib = dev.load_library("kernel.so")
 kern = lib.get_kernel('add_vectors')
 
 sched = dev.create_schedule()
@@ -33,3 +33,7 @@ sched.run()
 nb2.copy(res2)
 
 print(res2)
+
+dev.release_buffer(nb0)
+dev.release_buffer(nb1)
+dev.release_buffer(nb2)

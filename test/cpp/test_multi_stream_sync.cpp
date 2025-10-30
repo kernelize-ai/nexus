@@ -124,6 +124,12 @@ int test_multi_stream_sync(int argc, char** argv) {
     }
     ++i;
   }
+
+  dev0.releaseBuffer(buf0);
+  dev0.releaseBuffer(buf1);
+  dev0.releaseBuffer(buf2);
+  dev0.releaseBuffer(buf3);
+
   std::cout << "\n\n Test PASSED \n\n" << std::endl;
 
   return SUCCESS;
