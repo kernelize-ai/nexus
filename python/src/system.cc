@@ -199,6 +199,34 @@ static py::class_<Objects<T>> make_objects_class(py::module &m, const std::strin
       .def("size", [](Objects<T> &self) { return self.size(); });
 }
 
+static Command create_command(Schedule &schedule, Kernel kernel, std::vector<py::object> params,
+             nxs_dim3 global_size, nxs_dim3 local_size, size_t shared_memory_size, nxs_uint settings) {
+  auto cmd = schedule.createCommand(kernel);
+  if (cmd) {
+    int idx = 0;
+    for (auto buf : params) {
+      if (buf.is_none()) {
+        auto none_buf = nexus::getSystem().createBuffer(0, nullptr, NXS_BufferSettings_OnDevice);
+        cmd.setArgument(idx++, none_buf);
+      } else if (PyLong_Check(buf.ptr())) {
+        nxs_long value = PyLong_AsLong(buf.ptr());
+        cmd.setArgument(idx++, value);
+      } else if (PyFloat_Check(buf.ptr())) {
+        nxs_double value = PyFloat_AsDouble(buf.ptr());
+        cmd.setArgument(idx++, value);
+      } else {
+        auto buf_obj = make_buffer(buf);
+        cmd.setArgument(idx++, buf_obj);
+      }
+    }
+    if (global_size.x > 0 && local_size.x > 0) {
+      cmd.finalize(global_size, local_size, shared_memory_size);
+    }
+  }
+  return cmd;
+}
+
+
 //////////////////////////////////////////////////////////////////////////
 // pynexus::init_system_bindings -- add bindings for system objects
 // - this is the main entry point for the system module
@@ -407,28 +435,11 @@ void pynexus::init_system_bindings(py::module &m) {
           "create_command",
           [](Schedule &self, Kernel kernel, std::vector<py::object> buffers,
              std::vector<nxs_dim3> dims) {
-            auto cmd = self.createCommand(kernel);
-            if (cmd) {
-              int idx = 0;
-              for (auto buf : buffers) {
-                if (buf.is_none()) {
-                  auto none_buf = nexus::getSystem().createBuffer(0, nullptr, NXS_BufferSettings_OnDevice);
-                  cmd.setArgument(idx++, none_buf);
-                } else if (PyLong_Check(buf.ptr())) {
-                  nxs_long value = PyLong_AsLong(buf.ptr());
-                  cmd.setArgument(idx++, value);
-                } else if (PyFloat_Check(buf.ptr())) {
-                  nxs_double value = PyFloat_AsDouble(buf.ptr());
-                  cmd.setArgument(idx++, value);
-                } else {
-                  auto buf_obj = make_buffer(buf);
-                  cmd.setArgument(idx++, buf_obj);
-                }
-              }
-              if (dims.size() == 2 && dims[0].x > 0 && dims[1].x > 0) {
-                cmd.finalize(dims[0], dims[1], 0);
-              }
-            }
+              nxs_dim3 global_size = dims.size() > 0 ? dims[0] : nxs_dim3{1, 1, 1};
+              nxs_dim3 local_size = dims.size() > 1 ? dims[1] : nxs_dim3{1, 1, 1};
+              size_t shared_memory_size = 0;
+              nxs_uint settings = 0;
+            auto cmd = create_command(self, kernel, buffers, global_size, local_size, shared_memory_size, settings);
             return cmd;
           },
           py::arg("kernel"), py::arg("buffers") = std::vector<py::object>(),
@@ -504,7 +515,21 @@ void pynexus::init_system_bindings(py::module &m) {
       .def("get_streams", [](Device &self) { return self.getStreams(); })
       .def("create_schedule",
            [](Device &self) { return self.createSchedule(); })
-      .def("get_schedules", [](Device &self) { return self.getSchedules(); });
+      .def("get_schedules", [](Device &self) { return self.getSchedules(); })
+      .def(
+        "create_command",
+        [](Device &self, Kernel kernel, std::vector<py::object> buffers,
+           std::vector<nxs_dim3> dims) {
+            auto schedule = self.createSchedule();
+            nxs_dim3 global_size = dims.size() > 0 ? dims[0] : nxs_dim3{1, 1, 1};
+            nxs_dim3 local_size = dims.size() > 1 ? dims[1] : nxs_dim3{1, 1, 1};
+            size_t shared_memory_size = 0;
+            nxs_uint settings = 0;
+            auto cmd = create_command(schedule, kernel, buffers, global_size, local_size, shared_memory_size, settings);
+            return schedule.run();
+        },
+        py::arg("kernel"), py::arg("buffers") = std::vector<py::object>(),
+        py::arg("dims") = std::vector<int>());
 
   make_objects_class<Device>(m, "_devices");
   make_objects_class<Runtime>(m, "_runtimes");
