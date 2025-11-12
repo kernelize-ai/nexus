@@ -336,41 +336,28 @@ void pynexus::init_system_bindings(py::module &m) {
   make_object_class<Command>(m, "_command")
       .def("get_event", [](Command &self) { return self.getEvent(); })
       .def("get_kernel", [](Command &self) { return self.getKernel(); })
-      .def("set_arg", [](Command &self, int index,
-                         Buffer buf) { return self.setArgument(index, buf); })
-      .def("set_arg",
-           [](Command &self, int index, nxs_int value) {
-             return self.setArgument(index, value);
-           })
-      .def("set_arg",
-           [](Command &self, int index, nxs_uint value) {
-             return self.setArgument(index, value);
-           })
-      .def("set_arg",
-           [](Command &self, int index, nxs_long value) {
-             return self.setArgument(index, value);
-           })
-      .def("set_arg",
-           [](Command &self, int index, nxs_ulong value) {
-             return self.setArgument(index, value);
-           })
-      .def("set_arg",
-           [](Command &self, int index, nxs_float value) {
-             return self.setArgument(index, value);
-           })
-      .def("set_arg",
-           [](Command &self, int index, nxs_double value) {
-             return self.setArgument(index, value);
-           })
-      .def("set_arg",
-           [](Command &self, int index, py::object value) {
-             if (value.is_none()) {
-               auto none_buf = nexus::getSystem().createBuffer(0, nullptr, NXS_BufferSettings_OnDevice);
-               return self.setArgument(index, none_buf);
-             } else {
-               return self.setArgument(index, make_buffer(value));
-             }
-           })
+      .def("set_arg", [](Command &self, int index, py::object value) -> nxs_status {
+        if (py::isinstance<Buffer>(value)) {
+          auto buf = value.cast<Buffer>();
+          return self.setArgument(index, buf);
+        }
+        // Test for bool (check before int, since bool is subclass of int in Python)
+        else if (py::isinstance<py::bool_>(value)) {
+          bool val = value.cast<bool>();
+          return self.setArgument(index, val);
+        }
+        // Test for int
+        else if (py::isinstance<py::int_>(value)) {
+          nxs_int val = value.cast<nxs_int>();
+          return self.setArgument(index, val);
+        }
+        // Test for float
+        else if (py::isinstance<py::float_>(value)) {
+          nxs_float val = value.cast<nxs_float>();
+          return self.setArgument(index, val);
+        }
+        return NXS_Success;
+      })
       .def("finalize", [](Command& self, py::list grid, py::list block, size_t shared_memory_size) {
           auto list_to_dim3 = [](const py::list& l) -> nxs_dim3 {
               nxs_uint x = l.size() > 0 ? l[0].cast<nxs_uint>() : 1;

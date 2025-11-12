@@ -11,16 +11,9 @@ using namespace nexus;
 namespace nexus {
 namespace detail {
 class CommandImpl : public Impl {
-  typedef std::variant<Buffer, nxs_int, nxs_uint, nxs_long, nxs_ulong,
-                       nxs_float, nxs_double>
-      Arg;
-
  public:
-  /// @brief Construct a Platform for the current system
   CommandImpl(Impl owner, Kernel kern) : Impl(owner), kernel(kern) {
     NEXUS_LOG(NXS_LOG_NOTE, "    Command: ", getId());
-    arguments.reserve(32);  // TODO: get from kernel
-    // TODO: gather kernel argument details
   }
 
   CommandImpl(Impl owner, Event event) : Impl(owner), event(event) {
@@ -29,10 +22,9 @@ class CommandImpl : public Impl {
 
   ~CommandImpl() {
     NEXUS_LOG(NXS_LOG_NOTE, "    ~Command: ", getId());
-    release();
   }
 
-  void release() { arguments.clear(); }
+  void release() {}
 
   std::optional<Property> getProperty(nxs_int prop) const {
     auto *rt = getParentOfType<RuntimeImpl>();
@@ -45,15 +37,14 @@ class CommandImpl : public Impl {
   template <typename T>
   nxs_status setScalar(nxs_uint index, T value) {
     if (event) return NXS_InvalidArgIndex;
-    void *val_ptr = putArgument(index, value);
     auto *rt = getParentOfType<RuntimeImpl>();
+    void *value_ptr = new T(value);
     return (nxs_status)rt->runAPIFunction<NF_nxsSetCommandScalar>(
-        getId(), index, val_ptr);
+        getId(), index, value_ptr);
   }
 
   nxs_status setArgument(nxs_uint index, Buffer buffer) {
     if (event) return NXS_InvalidArgIndex;
-    putArgument(index, buffer);
     auto *rt = getParentOfType<RuntimeImpl>();
     return (nxs_status)rt->runAPIFunction<NF_nxsSetCommandArgument>(
         getId(), index, buffer.getId());
@@ -69,16 +60,6 @@ class CommandImpl : public Impl {
  private:
   Kernel kernel;
   Event event;
-
-  template <typename T>
-  T *putArgument(nxs_uint index, T value) {
-    if (index >= arguments.size())
-      arguments.resize(index + 1);
-    arguments[index] = value;
-    return &std::get<T>(arguments[index]);
-  }
-
-  std::vector<Arg> arguments;
 };
 }  // namespace detail
 }  // namespace nexus
