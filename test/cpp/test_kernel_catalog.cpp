@@ -93,6 +93,10 @@ int test_kernel_catalog(int argc, char** argv) {
     ++i;
   }
 
+  dev0.releaseBuffer(buf0);
+  dev0.releaseBuffer(buf1);
+  dev0.releaseBuffer(buf2);
+
   std::cout << std::endl << "Test PASSED" << std::endl << std::endl;
 
   return SUCCESS;

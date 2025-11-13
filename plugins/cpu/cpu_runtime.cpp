@@ -153,7 +153,7 @@ extern "C" nxs_status NXS_API_CALL nxsCopyBuffer(nxs_int buffer_id,
  * @brief Release a buffer on the device
  * @return Error status or Succes.
  ***********************************************************************/
-extern "C" nxs_status NXS_API_CALL nxsReleaseBuffer(nxs_int buffer_id) {
+extern "C" nxs_status NXS_API_CALL nxsReleaseBuffer(nxs_int buffer_id, nxs_int device_id) {
   auto rt = getRuntime();
   NXSAPI_LOG(nexus::NXS_LOG_NOTE, "releaseBuffer ", buffer_id);
   return rt->releaseBuffer(buffer_id);

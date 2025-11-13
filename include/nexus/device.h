@@ -49,6 +49,7 @@ class Device : public Object<detail::DeviceImpl> {
   Buffer createBuffer(size_t size, const void *data = nullptr,
                       nxs_uint settings = 0);
   Buffer copyBuffer(Buffer buf, nxs_uint settings = 0);
+  void releaseBuffer(Buffer buf);
 };
 
 typedef Objects<Device> Devices;

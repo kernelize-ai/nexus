@@ -31,6 +31,7 @@ class System : Object<detail::SystemImpl> {
   Buffer createBuffer(size_t sz, const void *hostData = nullptr,
                       nxs_uint settings = 0);
   Buffer copyBuffer(Buffer buf, Device dev, nxs_uint settings = 0);
+  void releaseBuffer(Buffer buf, Device dev);
   Info loadCatalog(const std::string &catalogPath);
 };
 

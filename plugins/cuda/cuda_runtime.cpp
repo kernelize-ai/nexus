@@ -245,21 +245,26 @@ extern "C" nxs_status NXS_API_CALL nxsCopyBuffer(nxs_int buffer_id,
 /*
  * Release a buffer on the device.
  */
-/*
-extern "C" nxs_status NXS_API_CALL
-nxsReleaseBuffer(
-  nxs_int buffer_id
-)
-{
+extern "C" nxs_status NXS_API_CALL nxsReleaseBuffer(nxs_int buffer_id, 
+                                                  nxs_int device_id) {
   auto rt = getRuntime();
-  auto buf = rt->dropObject<MTL::Buffer>(buffer_id);
-  if (!buf)
-    return NXS_InvalidBuildOptions; // fix
+  auto deviceObject = rt->get<CudaDevice>(device_id);
+  if (!deviceObject) return NXS_InvalidDevice;
 
-  (*buf)->release();
+  auto *buf = rt->get<rt::Buffer>(buffer_id);
+  if (!buf) return NXS_InvalidBuffer;
+
+  NXSAPI_LOG(nexus::NXS_LOG_NOTE, "releaseBuffer: ", buffer_id);
+
+  void *data_ptr = (void*)buf->data();
+
+  CUDA_CHECK(NXS_InvalidBuffer, cudaFree, data_ptr);
+
+  if(!rt->dropObject(buffer_id))
+    return NXS_InvalidBuffer;
   return NXS_Success;
 }
-*/
+
 
 /*
  * Allocate a buffer on the device.

@@ -173,6 +173,11 @@ Buffer detail::DeviceImpl::copyBuffer(Buffer buf, nxs_uint settings) {
   return nbuf;
 }
 
+void detail::DeviceImpl::releaseBuffer(Buffer buf) {
+  NEXUS_LOG(NXS_LOG_NOTE, "  releaseBuffer");
+  APICALL(nxsReleaseBuffer, buf.getId(), getId());
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 /// Object wrapper - Device
 ///////////////////////////////////////////////////////////////////////////////
@@ -214,6 +219,10 @@ Buffer Device::createBuffer(size_t size, const void *data, nxs_uint settings) {
 
 Buffer Device::copyBuffer(Buffer buf, nxs_uint settings) {
   NEXUS_OBJ_MCALL(Buffer(), copyBuffer, buf, settings);
+}
+
+void Device::releaseBuffer(Buffer buf) {
+  NEXUS_OBJ_MCALL_VOID(releaseBuffer, buf);
 }
 
 Library Device::loadLibrary(Info catalog, const std::string &libraryName) {
