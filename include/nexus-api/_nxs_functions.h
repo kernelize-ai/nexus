@@ -353,7 +353,9 @@ NEXUS_API_FUNC(nxs_status, GetCommandProperty,
  NEXUS_API_FUNC(nxs_status, SetCommandArgument,
     nxs_int command_id,
     nxs_int argument_index,
-    nxs_int buffer_id
+    nxs_int buffer_id,
+    const char *name,
+    nxs_uint argument_settings
 )
 /************************************************************************
  * @def SetCommandArgument
@@ -364,7 +366,9 @@ NEXUS_API_FUNC(nxs_status, GetCommandProperty,
  NEXUS_API_FUNC(nxs_status, SetCommandScalar,
     nxs_int command_id,
     nxs_int argument_index,
-    void *value
+    void *value,
+    const char *name,
+    nxs_uint argument_settings
 )
 /************************************************************************
  * @def FinalizeCommand

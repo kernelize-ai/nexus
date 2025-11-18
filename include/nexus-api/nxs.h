@@ -169,6 +169,47 @@ enum _nxs_command_type {
 };
 typedef enum _nxs_command_type nxs_command_type;
 
+/* ENUM nxs_command_arg_type */
+/*
+ * NXS_CommandArgType_User:
+ *   - Argument specified by User from the original kernel source
+ * NXS_CommandArgType_Launch:
+ *   - Launch argument specified by runtime
+ * NXS_CommandArgType_ProgramId:
+ *   - Program ID passed by runtime
+ * NXS_CommandArgType_CompileTime:
+ *   - Compile time argument, needed for runtime launch setup
+ */
+enum _nxs_command_arg_type {
+    NXS_CommandArgType_User = 0,
+    NXS_CommandArgType_Launch = 1,
+    NXS_CommandArgType_Constant = 3,
+    NXS_CommandArgType_Mask = 3,
+    NXS_CommandArgType_NextBitOffset = 3
+};
+typedef enum _nxs_command_arg_type nxs_command_arg_type;
+
+enum _nxs_command_arg_data_type {
+    NXS_CommandArgDataType_F32 = 1 << NXS_CommandArgType_NextBitOffset,
+    NXS_CommandArgDataType_F16 = 2 << NXS_CommandArgType_NextBitOffset,
+    NXS_CommandArgDataType_BF16 = 3 << NXS_CommandArgType_NextBitOffset,
+    NXS_CommandArgDataType_F8 = 4 << NXS_CommandArgType_NextBitOffset,
+    NXS_CommandArgDataType_BF8 = 5 << NXS_CommandArgType_NextBitOffset,
+    NXS_CommandArgDataType_F4 = 6 << NXS_CommandArgType_NextBitOffset,
+    NXS_CommandArgDataType_BF4 = 7 << NXS_CommandArgType_NextBitOffset,
+    NXS_CommandArgDataType_I32 = 8 << NXS_CommandArgType_NextBitOffset,
+    NXS_CommandArgDataType_U32 = 9 << NXS_CommandArgType_NextBitOffset,
+    NXS_CommandArgDataType_I16 = 10 << NXS_CommandArgType_NextBitOffset,
+    NXS_CommandArgDataType_U16 = 11 << NXS_CommandArgType_NextBitOffset,
+    NXS_CommandArgDataType_I8 = 12 << NXS_CommandArgType_NextBitOffset,
+    NXS_CommandArgDataType_U8 = 13 << NXS_CommandArgType_NextBitOffset,
+    NXS_CommandArgDataType_I4 = 14 << NXS_CommandArgType_NextBitOffset,
+    NXS_CommandArgDataType_U4 = 15 << NXS_CommandArgType_NextBitOffset,
+    NXS_CommandArgDataType_Mask = 15 << NXS_CommandArgType_NextBitOffset,
+    NXS_CommandArgDataType_NextBitOffset = NXS_CommandArgType_NextBitOffset + 4
+};
+typedef enum _nxs_command_arg_data_type nxs_command_arg_data_type;
+
 /* ENUM nxs_command_queue_properties
  *
  * NXS_CommandQueueProperty_OutOfOrderExecution:
@@ -185,9 +226,14 @@ typedef enum _nxs_stream_settings nxs_stream_settings;
 enum _nxs_buffer_settings {
     NXS_BufferSettings_OnHost = 1 << 0,
     NXS_BufferSettings_OnDevice = 1 << 1,
-    NXS_BufferSettings_Maintained = 1 << 2,
+    NXS_BufferSettings_Maintain = 1 << 2,
 };
 typedef enum _nxs_buffer_settings nxs_buffer_settings;
+
+
+#define NXS_KERNEL_MAX_CONSTS                         64
+#define NXS_KERNEL_MAX_ARGS                           64
+
 
 /* nxs_bool */
 #define NXS_FALSE                                    0

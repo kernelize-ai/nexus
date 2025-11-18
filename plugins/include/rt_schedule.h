@@ -6,22 +6,22 @@
 namespace nxs {
 namespace rt {
 
-template <typename Tcommand, typename Tstream>
+template <typename Tcommand, typename Tdevice, typename Tstream>
 class Schedule {
   typedef std::vector<Tcommand *> Commands;
 
-  nxs_int device_id;
+  Tdevice device;
   nxs_uint settings;
   Commands commands;
 
  public:
-  Schedule(nxs_int dev_id = -1, nxs_uint settings = 0)
-      : device_id(dev_id), settings(settings) {
+  Schedule(Tdevice dev = Tdevice(), nxs_uint settings = 0)
+      : device(dev), settings(settings) {
     commands.reserve(8);
   }
   virtual ~Schedule() = default;
 
-  nxs_int getDeviceId() const { return device_id; }
+  Tdevice getDevice() const { return device; }
 
   nxs_uint getSettings() const { return settings; }
 
@@ -32,6 +32,7 @@ class Schedule {
   virtual nxs_status run(Tstream stream, nxs_uint run_settings) = 0;
 
   virtual nxs_status release() {
+    device = Tdevice();
     commands.clear();
     return NXS_Success;
   }

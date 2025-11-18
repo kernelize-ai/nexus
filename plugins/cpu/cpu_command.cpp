@@ -25,12 +25,9 @@ nxs_status CpuCommand::runCommand(nxs_int stream) {
     NXSAPI_LOG(nexus::NXS_LOG_ERROR, "Too many arguments for kernel");
     return NXS_InvalidCommand;
   }
-  std::vector<char> exData(1024 * 1024);  // 1MB extra buffer for args
-  rt::Buffer exBuf(exData.size(), exData.data(),
-                   false);                     // extra buffer for args
-  std::vector<void *> bufs(32, exBuf.data());  // max 32 args
+  std::array<void *, NXS_KERNEL_MAX_ARGS> bufs;  // max 32 args
   for (size_t i = 0; i < getArgsCount(); i++) {
-    bufs[i] = args[i];
+    bufs[i] = args[i].value;
   }
 
   int32_t launch_size[] = {

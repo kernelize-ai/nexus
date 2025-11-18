@@ -67,8 +67,8 @@ public:
   }
 
   rt::Buffer *getBuffer(size_t size, void *data_ptr = nullptr,
-                        bool copy_data = false) {
-    return buffer_pool.get_new(size, data_ptr, copy_data);
+                        nxs_uint settings = 0) {
+    return buffer_pool.get_new(size, data_ptr, settings);
   }
   void release(rt::Buffer *buffer) { buffer_pool.release(buffer); }
 

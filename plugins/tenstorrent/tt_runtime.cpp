@@ -1,4 +1,4 @@
-#include "cpu_runtime.h"
+#include "tt_runtime.h"
 
 #include <assert.h>
 #include <dlfcn.h>
@@ -9,17 +9,12 @@
 #include <rt_utilities.h>
 #include <string.h>
 
-#include <functional>
-#include <magic_enum/magic_enum.hpp>
-#include <optional>
-#include <vector>
-
-#define NXSAPI_LOG_MODULE "cpu_runtime"
+#include <tt-metalium/tt_backend_api_types.hpp>
 
 using namespace nxs;
 
-CpuRuntime *getRuntime() {
-  static CpuRuntime s_runtime;
+TTRuntime *getRuntime() {
+  static TTRuntime s_runtime;
   return &s_runtime;
 }
 
@@ -35,9 +30,6 @@ extern "C" nxs_status NXS_API_CALL
 nxsGetRuntimeProperty(nxs_uint runtime_property_id, void *property_value,
                       size_t *property_value_size) {
   auto rt = getRuntime();
-  auto proc = cpuinfo_get_processor(0);
-  auto *arch = cpuinfo_get_uarch(0);
-  auto aid = cpuinfo_get_current_uarch_index();
 
   NXSAPI_LOG(nexus::NXS_LOG_NOTE, "getRuntimeProperty ", runtime_property_id);
 
@@ -52,20 +44,19 @@ nxsGetRuntimeProperty(nxs_uint runtime_property_id, void *property_value,
                                 keys_count);
     }
     case NP_Name:
-      return rt::getPropertyStr(property_value, property_value_size, "cpu");
+      return rt::getPropertyStr(property_value, property_value_size, "tt-metal");
     case NP_Size:
-      return rt::getPropertyInt(property_value, property_value_size, 1);
+      return rt::getPropertyInt(property_value, property_value_size, rt->getNumDevices());
     case NP_Vendor: {
-      auto name = cpuinfo_vendor_to_string(proc->core->vendor);
-      assert(name);
+      std::string name = "Tenstorrent";
       return rt::getPropertyStr(property_value, property_value_size,
                                 name);
     }
     case NP_Type:
-      return rt::getPropertyStr(property_value, property_value_size, "cpu");
+      return rt::getPropertyStr(property_value, property_value_size, "npu");
     case NP_ID: {
-      return rt::getPropertyInt(property_value, property_value_size,
-                                cpuinfo_has_arm_sme2() ? 1 : 0);
+      //return rt::getPropertyInt(property_value, property_value_size,
+      //                          cpuinfo_has_arm_sme2() ? 1 : 0);
     }
     default:
       return NXS_InvalidProperty;
@@ -81,11 +72,8 @@ nxsGetRuntimeProperty(nxs_uint runtime_property_id, void *property_value,
 extern "C" nxs_status NXS_API_CALL
 nxsGetDeviceProperty(nxs_int device_id, nxs_uint device_property_id,
                      void *property_value, size_t *property_value_size) {
-  auto dev = getRuntime()->getObject(device_id);
+  auto dev = getRuntime()->getDevice(device_id);
   if (!dev) return NXS_InvalidDevice;
-  auto *cpu = cpuinfo_get_processor(device_id);
-  auto *arch = cpuinfo_get_uarch(device_id);
-  // auto isa = device->core->isa;
 
   switch (device_property_id) {
     case NP_Keys: {
@@ -96,20 +84,23 @@ nxsGetDeviceProperty(nxs_int device_id, nxs_uint device_property_id,
       // return getStr(property_value, property_value_size, device->core);
     }
     case NP_Type:
-      return rt::getPropertyStr(property_value, property_value_size, "cpu");
+      return rt::getPropertyStr(property_value, property_value_size, "npu");
     case NP_Architecture: {
-      auto archName = cpuinfo_uarch_to_string(cpu->core->uarch);
-      assert(archName);
+      auto arch = dev->arch();
+      auto archName = tt::get_string(arch);
       return rt::getPropertyStr(property_value, property_value_size,
                                 archName);
     }
-    case NP_Size:
+    case NP_Size: {
+      auto grid = dev->logical_grid_size();
+      nxs_long numCores = grid.x * grid.y;
       return rt::getPropertyInt(property_value, property_value_size,
-                                cpuinfo_get_processors_count());
-
+                                numCores);
+    }
     default:
       return NXS_InvalidProperty;
   }
+
   return NXS_Success;
 }
 
@@ -122,11 +113,11 @@ extern "C" nxs_int NXS_API_CALL nxsCreateBuffer(nxs_int device_id, size_t size,
                                                 void *host_ptr,
                                                 nxs_uint settings) {
   auto rt = getRuntime();
-  auto dev = rt->getObject(device_id);
+  auto dev = rt->getDevice(device_id);
   if (!dev) return NXS_InvalidDevice;
 
   NXSAPI_LOG(nexus::NXS_LOG_NOTE, "createBuffer ", size);
-  auto *buf = rt->getBuffer(size, host_ptr, settings);
+  auto *buf = rt->getBuffer(dev, size, host_ptr, settings);
   if (!buf) return NXS_InvalidBuffer;
 
   return rt->addObject(buf);
@@ -143,8 +134,11 @@ extern "C" nxs_status NXS_API_CALL nxsCopyBuffer(nxs_int buffer_id,
   auto rt = getRuntime();
   auto buf = rt->getObject(buffer_id);
   if (!buf) return NXS_InvalidBuffer;
+  NXSAPI_LOG(nexus::NXS_LOG_ERROR, "CopyBuffer not implemented");
+  #if 0
   auto bufObj = (*buf)->get<rt::Buffer>();
   std::memcpy(host_ptr, bufObj->data(), bufObj->size());
+  #endif
   return NXS_Success;
 }
 
@@ -172,15 +166,7 @@ extern "C" nxs_int NXS_API_CALL nxsCreateLibrary(nxs_int device_id,
   auto dev = rt->getObject(device_id);
   if (!dev) return NXS_InvalidDevice;
 
-  // #include <sys/mman.h>
-  // #include <dlfcn.h>
-  // #include <unistd.h>
-  // int fd = memfd_create("my_lib", MFD_CLOEXEC);
-  // write(fd, library_data, library_size);
-  // char fd_path[64];
-  // snprintf(fd_path, sizeof(fd_path), "/proc/self/fd/%d", fd);
-  // void *handle = dlopen(fd_path, RTLD_NOW);
-  // return rt->addObject(lib);
+  // load in memory source
   return NXS_InvalidLibrary;
 }
 
@@ -191,17 +177,11 @@ extern "C" nxs_int NXS_API_CALL nxsCreateLibrary(nxs_int device_id,
  ***********************************************************************/
 extern "C" nxs_int NXS_API_CALL nxsCreateLibraryFromFile(
     nxs_int device_id, const char *library_path, nxs_uint settings) {
-  NXSAPI_LOG(nexus::NXS_LOG_NOTE,
-             "createLibraryFromFile ", device_id, " - ", library_path);
   auto rt = getRuntime();
   auto dev = rt->getObject(device_id);
   if (!dev) return NXS_InvalidDevice;
 
-  void *lib = dlopen(library_path, RTLD_NOW);
-  if (!lib) {
-    NXSAPI_LOG(nexus::NXS_LOG_ERROR, "createLibraryFromFile ", dlerror());
-    return NXS_InvalidLibrary;
-  }
+  auto lib = rt->getLibrary(library_path, settings);
   return rt->addObject(lib);
 }
 
@@ -224,7 +204,6 @@ extern "C" nxs_status NXS_API_CALL nxsReleaseLibrary(nxs_int library_id) {
   auto rt = getRuntime();
   auto lib = rt->getObject(library_id);
   if (!lib) return NXS_InvalidLibrary;
-  dlclose((*lib)->get<void>());
   rt->dropObject(library_id);
   return NXS_Success;
 }
@@ -239,14 +218,11 @@ extern "C" nxs_int NXS_API_CALL nxsGetKernel(nxs_int library_id,
   NXSAPI_LOG(nexus::NXS_LOG_NOTE,
              "getKernel ", library_id, " - ", kernel_name);
   auto rt = getRuntime();
-  auto lib = rt->getObject(library_id);
+  auto lib = rt->get<TTLibrary>(library_id);
   if (!lib) return NXS_InvalidProgram;
-  void *func = dlsym((*lib)->get<void>(), kernel_name);
-  if (!func) {
-    NXSAPI_LOG(nexus::NXS_LOG_ERROR, "getKernel ", dlerror());
-    return NXS_InvalidKernel;
-  }
-  return rt->addObject(func);
+
+  auto *kern = lib->getKernel();
+  return rt->addObject(kern);
 }
 
 /************************************************************************
@@ -257,8 +233,8 @@ extern "C" nxs_status NXS_API_CALL
 nxsGetKernelProperty(nxs_int kernel_id, nxs_uint kernel_property_id,
                      void *property_value, size_t *property_value_size) {
   auto rt = getRuntime();
-  auto func = rt->getObject(kernel_id);
-  if (!func) return NXS_InvalidKernel;
+  auto kern = rt->getObject(kernel_id);
+  if (!kern) return NXS_InvalidKernel;
 
   switch (kernel_property_id) {
     default:
@@ -291,7 +267,6 @@ extern "C" nxs_int NXS_API_CALL nxsCreateStream(nxs_int device_id,
   auto dev = rt->getObject(device_id);
   if (!dev) return NXS_InvalidDevice;
 
-  // 1 CPU, with many cores and 1 thread per core
   return NXS_Success;
 }
 
@@ -316,10 +291,10 @@ extern "C" nxs_status NXS_API_CALL nxsReleaseStream(nxs_int stream_id) {
 extern "C" nxs_int NXS_API_CALL nxsCreateSchedule(nxs_int device_id,
                                                   nxs_uint schedule_settings) {
   auto rt = getRuntime();
-  auto dev = rt->getObject(device_id);
+  auto dev = rt->getDevice(device_id);
   if (!dev) return NXS_InvalidDevice;
 
-  return rt->getSchedule(device_id, schedule_settings);
+  return rt->getSchedule(dev, schedule_settings);
 }
 
 /************************************************************************
@@ -332,7 +307,7 @@ nxsGetScheduleProperty(nxs_int schedule_id, nxs_uint schedule_property_id,
   NXSAPI_LOG(nexus::NXS_LOG_NOTE,
              "getScheduleProperty ", schedule_property_id);
   auto rt = getRuntime();
-  auto schedule = rt->get<CpuSchedule>(schedule_id);
+  auto schedule = rt->get<TTSchedule>(schedule_id);
   if (!schedule) return NXS_InvalidSchedule;
 
   switch (schedule_property_id) {
@@ -359,7 +334,7 @@ extern "C" nxs_status NXS_API_CALL nxsRunSchedule(nxs_int schedule_id,
                                                   nxs_int stream_id,
                                                   nxs_uint run_settings) {
   auto rt = getRuntime();
-  auto schedule = rt->get<CpuSchedule>(schedule_id);
+  auto schedule = rt->get<TTSchedule>(schedule_id);
   if (!schedule) return NXS_InvalidSchedule;
 
   return schedule->run(stream_id, run_settings);
@@ -385,11 +360,10 @@ extern "C" nxs_int NXS_API_CALL nxsCreateCommand(nxs_int schedule_id,
                                                  nxs_int kernel_id,
                                                  nxs_uint settings) {
   auto rt = getRuntime();
-  auto schedule = rt->get<CpuSchedule>(schedule_id);
+  auto schedule = rt->get<TTSchedule>(schedule_id);
   if (!schedule) return NXS_InvalidSchedule;
-  auto kernel_v = rt->get<void>(kernel_id);
-  if (!kernel_v) return NXS_InvalidKernel;
-  auto kernel = reinterpret_cast<cpuFunction_t>(kernel_v);
+  auto kernel = rt->get<TTKernel>(kernel_id);
+  if (!kernel) return NXS_InvalidKernel;
 
   auto command = rt->getCommand(kernel, settings);
   schedule->addCommand(command);
@@ -405,16 +379,17 @@ extern "C" nxs_status NXS_API_CALL nxsSetCommandArgument(nxs_int command_id,
                                                          nxs_int argument_index,
                                                          nxs_int buffer_id,
                                                          const char *name,
-                                                         nxs_uint arg_settings) {
+                                                         nxs_uint argument_settings
+) {
   auto rt = getRuntime();
 
-  auto command = rt->get<CpuCommand>(command_id);
+  auto command = rt->get<TTCommand>(command_id);
   if (!command) return NXS_InvalidCommand;
 
-  auto buffer = rt->get<rt::Buffer>(buffer_id);
+  auto buffer = rt->get<TTBuffer>(buffer_id);
   if (!buffer) return NXS_InvalidBuffer;
 
-  return command->setArgument(argument_index, buffer, name, arg_settings);
+  return command->setScalar(argument_index, buffer->getAddress(), "Buffer", argument_settings);
 }
 
 /************************************************************************
@@ -426,11 +401,12 @@ extern "C" nxs_status NXS_API_CALL nxsSetCommandScalar(nxs_int command_id,
                                                        nxs_int argument_index,
                                                        void *value,
                                                        const char *name,
-                                                       nxs_uint arg_settings) {
+                                                       nxs_uint argument_settings
+) {
   auto rt = getRuntime();
-  auto command = rt->get<CpuCommand>(command_id);
+  auto command = rt->get<TTCommand>(command_id);
   if (!command) return NXS_InvalidCommand;
-  return command->setScalar(argument_index, value, name, arg_settings);
+  return command->setScalar(argument_index, value, name, argument_settings);
 }
 
 /************************************************************************
@@ -449,7 +425,7 @@ extern "C" nxs_status NXS_API_CALL nxsFinalizeCommand(nxs_int command_id,
 
   auto rt = getRuntime();
 
-  auto command = rt->get<CpuCommand>(command_id);
+  auto command = rt->get<TTCommand>(command_id);
   if (!command) return NXS_InvalidCommand;
 
   return command->finalize(grid_size, group_size, shared_memory_size);

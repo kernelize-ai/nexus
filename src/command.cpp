@@ -12,14 +12,13 @@ namespace nexus {
 namespace detail {
 class CommandImpl : public Impl {
   typedef std::variant<Buffer, nxs_int, nxs_uint, nxs_long, nxs_ulong,
-                       nxs_float, nxs_double>
+                       nxs_float, nxs_double, nxs_half, nxs_short, nxs_char>
       Arg;
 
  public:
   /// @brief Construct a Platform for the current system
   CommandImpl(Impl owner, Kernel kern) : Impl(owner), kernel(kern) {
     NEXUS_LOG(NXS_LOG_NOTE, "    Command: ", getId());
-    arguments.reserve(32);  // TODO: get from kernel
     // TODO: gather kernel argument details
   }
 
@@ -32,7 +31,7 @@ class CommandImpl : public Impl {
     release();
   }
 
-  void release() { arguments.clear(); }
+  void release() {}
 
   std::optional<Property> getProperty(nxs_int prop) const {
     auto *rt = getParentOfType<RuntimeImpl>();
@@ -43,20 +42,24 @@ class CommandImpl : public Impl {
   Event getEvent() const { return event; }
 
   template <typename T>
-  nxs_status setScalar(nxs_uint index, T value) {
+  nxs_status setScalar(nxs_uint index, T value, const char *name, nxs_uint settings) {
     if (event) return NXS_InvalidArgIndex;
-    void *val_ptr = putArgument(index, value);
+    void *val_ptr;
+    if (settings & NXS_CommandArgType_Constant)
+      val_ptr = putConstant(index, value);
+    else
+      val_ptr = putArgument(index, value);
     auto *rt = getParentOfType<RuntimeImpl>();
     return (nxs_status)rt->runAPIFunction<NF_nxsSetCommandScalar>(
-        getId(), index, val_ptr);
+        getId(), index, val_ptr, name, settings);
   }
 
-  nxs_status setArgument(nxs_uint index, Buffer buffer) {
+  nxs_status setArgument(nxs_uint index, Buffer buffer, const char *name, nxs_uint settings) {
     if (event) return NXS_InvalidArgIndex;
     putArgument(index, buffer);
     auto *rt = getParentOfType<RuntimeImpl>();
     return (nxs_status)rt->runAPIFunction<NF_nxsSetCommandArgument>(
-        getId(), index, buffer.getId());
+        getId(), index, buffer.getId(), name, settings);
   }
 
   nxs_status finalize(nxs_dim3 gridSize, nxs_dim3 groupSize, nxs_uint sharedMemorySize) {
@@ -73,12 +76,21 @@ class CommandImpl : public Impl {
   template <typename T>
   T *putArgument(nxs_uint index, T value) {
     if (index >= arguments.size())
-      arguments.resize(index + 1);
+      return nullptr;
     arguments[index] = value;
     return &std::get<T>(arguments[index]);
   }
 
-  std::vector<Arg> arguments;
+  template <typename T>
+  T *putConstant(nxs_uint index, T value) {
+    if (index >= NXS_KERNEL_MAX_CONSTS)
+      return nullptr;
+    arguments[index] = value;
+    return &std::get<T>(arguments[index]);
+  }
+
+  std::array<Arg, NXS_KERNEL_MAX_ARGS> arguments;
+  std::array<Arg, NXS_KERNEL_MAX_CONSTS> constants;
 };
 }  // namespace detail
 }  // namespace nexus
@@ -100,32 +112,32 @@ Event Command::getEvent() const {
   NEXUS_OBJ_MCALL(Event(), getEvent);
 }
 
-nxs_status Command::setArgument(nxs_uint index, Buffer buffer) {
-  NEXUS_OBJ_MCALL(NXS_InvalidCommand, setArgument, index, buffer);
+nxs_status Command::setArgument(nxs_uint index, Buffer buffer, const char *name, nxs_uint settings) {
+  NEXUS_OBJ_MCALL(NXS_InvalidCommand, setArgument, index, buffer, name, settings);
 }
 
-nxs_status Command::setArgument(nxs_uint index, nxs_int value) {
-  NEXUS_OBJ_MCALL(NXS_InvalidCommand, setScalar, index, value);
+nxs_status Command::setArgument(nxs_uint index, nxs_int value, const char *name, nxs_uint settings) {
+  NEXUS_OBJ_MCALL(NXS_InvalidCommand, setScalar, index, value, name, settings);
 }
 
-nxs_status Command::setArgument(nxs_uint index, nxs_uint value) {
-  NEXUS_OBJ_MCALL(NXS_InvalidCommand, setScalar, index, value);
+nxs_status Command::setArgument(nxs_uint index, nxs_uint value, const char *name, nxs_uint settings) {
+  NEXUS_OBJ_MCALL(NXS_InvalidCommand, setScalar, index, value, name, settings);
 }
 
-nxs_status Command::setArgument(nxs_uint index, nxs_long value) {
-  NEXUS_OBJ_MCALL(NXS_InvalidCommand, setScalar, index, value);
+nxs_status Command::setArgument(nxs_uint index, nxs_long value, const char *name, nxs_uint settings) {
+  NEXUS_OBJ_MCALL(NXS_InvalidCommand, setScalar, index, value, name, settings);
 }
 
-nxs_status Command::setArgument(nxs_uint index, nxs_ulong value) {
-  NEXUS_OBJ_MCALL(NXS_InvalidCommand, setScalar, index, value);
+nxs_status Command::setArgument(nxs_uint index, nxs_ulong value, const char *name, nxs_uint settings) {
+  NEXUS_OBJ_MCALL(NXS_InvalidCommand, setScalar, index, value, name, settings);
 }
 
-nxs_status Command::setArgument(nxs_uint index, nxs_float value) {
-  NEXUS_OBJ_MCALL(NXS_InvalidCommand, setScalar, index, value);
+nxs_status Command::setArgument(nxs_uint index, nxs_float value, const char *name, nxs_uint settings) {
+  NEXUS_OBJ_MCALL(NXS_InvalidCommand, setScalar, index, value, name, settings);
 }
 
-nxs_status Command::setArgument(nxs_uint index, nxs_double value) {
-  NEXUS_OBJ_MCALL(NXS_InvalidCommand, setScalar, index, value);
+nxs_status Command::setArgument(nxs_uint index, nxs_double value, const char *name, nxs_uint settings) {
+  NEXUS_OBJ_MCALL(NXS_InvalidCommand, setScalar, index, value, name, settings);
 }
 
 nxs_status Command::finalize(nxs_dim3 gridSize, nxs_dim3 groupSize, nxs_uint sharedMemorySize) {

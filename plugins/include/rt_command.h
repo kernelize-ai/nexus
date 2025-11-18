@@ -10,6 +10,12 @@
 namespace nxs {
 namespace rt {
 
+struct ArgValue {
+  void *value;
+  const char *name;
+  nxs_uint settings;
+};
+
 template <typename Tkernel, typename Tevent, typename Tstream>
 class Command {
  protected:
@@ -19,9 +25,11 @@ class Command {
   nxs_int event_value;
   float time_ms;
   nxs_uint settings;
-  std::array<void *, RT_COMMAND_MAX_ARGS> args;
-  std::array<void *, RT_COMMAND_MAX_ARGS> args_ref;
+  std::array<ArgValue, NXS_KERNEL_MAX_ARGS> args;
+  std::array<ArgValue, NXS_KERNEL_MAX_ARGS> consts;
+  std::array<void *, NXS_KERNEL_MAX_ARGS> args_ref;
   int args_count;
+  int consts_count;
   nxs_dim3 block_size;
   nxs_dim3 grid_size;
   nxs_uint shared_memory_size;
@@ -33,17 +41,19 @@ class Command {
         time_ms(0),
         settings(settings) {
           args_ref.fill(nullptr);
-          args_count = 0;
-        }
+    args_count = 0;
+    consts_count = 0;
+  }
 
-        Command(Tevent event, nxs_command_type type, nxs_int event_value = 1,
-                nxs_uint settings = 0)
-            : event(event),
-              type(type),
-              event_value(event_value),
-              settings(settings) {
-          args_count = 0;
-        }
+  Command(Tevent event, nxs_command_type type, nxs_int event_value = 1,
+          nxs_uint settings = 0)
+      : event(event),
+        type(type),
+        event_value(event_value),
+        settings(settings) {
+    args_count = 0;
+    consts_count = 0;
+  }
 
   virtual ~Command() = default;
 
@@ -52,23 +62,33 @@ class Command {
   float getTime() const { return time_ms; }
 
   int getArgsCount() const { return args_count; }
+  int getNumConstants() const { return consts_count; }
 
-  nxs_status setArgument(nxs_int argument_index, nxs::rt::Buffer *buffer) {
-    if (argument_index >= RT_COMMAND_MAX_ARGS) return NXS_InvalidArgIndex;
+  nxs_uint getGridSize() const { return grid_size.x * grid_size.y * grid_size.z; }
+
+  nxs_status setArgument(nxs_int argument_index, nxs::rt::Buffer *buffer,
+                         const char *name = "", nxs_uint argument_settings = 0) {
+    if (argument_index >= NXS_KERNEL_MAX_ARGS) return NXS_InvalidArgIndex;
     args_count = std::max(args_count, argument_index + 1);
 
-    args[argument_index] = buffer->get();
+    args[argument_index] = {buffer->get(), name, argument_settings};
     args_ref[argument_index] = &args[argument_index];
     return NXS_Success;
   }
 
-  nxs_status setScalar(nxs_int argument_index, void *value) {
+  nxs_status setScalar(nxs_int argument_index, void *value,
+                       const char *name = "", nxs_uint argument_settings = 0) {
     if (argument_index >= RT_COMMAND_MAX_ARGS) return NXS_InvalidArgIndex;
-    args_count = std::max(args_count, argument_index + 1);
 
     // Object owned by Core API
-    args[argument_index] = value;
-    args_ref[argument_index] = value;
+    if (argument_settings & NXS_CommandArgType_Constant) {
+      consts_count = std::max(consts_count, argument_index + 1);
+      consts[argument_index] = {value, name, argument_settings};
+    } else {
+      args_count = std::max(args_count, argument_index + 1);
+      args[argument_index] = {value, name, argument_settings};
+      args_ref[argument_index] = value;
+    }
     return NXS_Success;
   }
 
