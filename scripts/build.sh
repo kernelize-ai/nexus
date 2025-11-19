@@ -35,6 +35,7 @@ main() {
     ./test/cpp/test_smi cuda kernel_libs/add_vectors.ptx add_vectors
     ./test/cpp/test_multi_stream_sync cuda kernel_libs/add_vectors.ptx add_vectors
     ./test/cpp/test_graph cuda kernel_libs/add_vectors.ptx add_vectors
+    ./test/cpp/test_datatypes cuda kernel_libs/add_all_datatypes.ptx add_all_datatypes
   else
     printf "Unsupported OS: $os_type"
     exit 1
