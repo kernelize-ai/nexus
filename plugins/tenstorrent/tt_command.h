@@ -1,10 +1,10 @@
 #ifndef RT_TT_COMMAND_H
 #define RT_TT_COMMAND_H
 
+#include "tenstorrent.h"
+
 #include <rt_command.h>
 #include <tt_library.h>
-
-#include "tenstorrent.h"
 
 class TTRuntime;
 

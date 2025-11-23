@@ -1,6 +1,9 @@
 #ifndef RT_CPU_COMMAND_H
 #define RT_CPU_COMMAND_H
 
+#include <nexus-api/nxs_log.h>
+#define NXSAPI_LOG_MODULE "cpu_runtime"
+
 #include <rt_command.h>
 
 class CpuRuntime;

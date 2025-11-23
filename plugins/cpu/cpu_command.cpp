@@ -1,11 +1,10 @@
+
 #include <cpu_command.h>
 #include <cpu_runtime.h>
 #include <nexus/log.h>
 #include <rt_buffer.h>
 
 #include <boost/fiber/all.hpp>
-
-#define NXSAPI_LOG_MODULE "cpu_runtime"
 
 /************************************************************************
  * @def _cpu_barrier

@@ -1,10 +1,6 @@
 #ifndef RT_TT_RUNTIME_H
 #define RT_TT_RUNTIME_H
 
-#include <nexus-api/nxs_log.h>
-
-#define NXSAPI_LOG_MODULE "tt_runtime"
-
 #include "tenstorrent.h"
 
 #include <tt_command.h>
@@ -25,8 +21,10 @@ class TTRuntime : public rt::Runtime {
 
  public:
   TTRuntime() : rt::Runtime() {
-    for (size_t i = 0; i < ttm::GetNumAvailableDevices(); ++i) {
-      NXSAPI_LOG(nexus::NXS_LOG_NOTE, "Create TT Device ", i);
+    TT_NOBJ_CHECK(numDevs, ttm::GetNumAvailableDevices);
+    NXSAPI_LOG(nexus::NXS_LOG_NOTE, "Create TTDevice count: ", numDevs);
+    for (size_t i = 0; i < numDevs; ++i) {
+      NXSAPI_LOG(nexus::NXS_LOG_NOTE, "Create TTDevice: ", i);
         //   static std::shared_ptr<MeshDevice> create_unit_mesh(
         //     int device_id,
         //     size_t l1_small_size = DEFAULT_L1_SMALL_SIZE,
@@ -35,7 +33,8 @@ class TTRuntime : public rt::Runtime {
         //     const DispatchCoreConfig& dispatch_core_config = DispatchCoreConfig{},
         //     tt::stl::Span<const std::uint32_t> l1_bank_remap = {}, 
         //     size_t worker_l1_size = DEFAULT_WORKER_L1_SIZE);
-      auto device = ttmd::MeshDevice::create_unit_mesh(i);
+      TT_NOBJ_CHECK(device, ttmd::MeshDevice::create_unit_mesh, i);
+      TT_NOBJ_CHECK(&cq, device->mesh_command_queue);
       devices.push_back(device);
       addObject(i);
     }

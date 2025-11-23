@@ -1,12 +1,12 @@
 #ifndef RT_TT_SCHEDULE_H
 #define RT_TT_SCHEDULE_H
 
+#include "tenstorrent.h"
+
 #include <tt_command.h>
 #include <rt_schedule.h>
 
 #include <chrono>
-
-#include "tenstorrent.h"
 
 class TTSchedule : public nxs::rt::Schedule<TTCommand, TTDevice, nxs_int> {
   std::chrono::steady_clock::time_point start_time;

@@ -86,13 +86,13 @@ nxsGetDeviceProperty(nxs_int device_id, nxs_uint device_property_id,
     case NP_Type:
       return rt::getPropertyStr(property_value, property_value_size, "npu");
     case NP_Architecture: {
-      auto arch = dev->arch();
+      TT_NOBJ_CHECK(arch, dev->arch);
       auto archName = tt::get_string(arch);
       return rt::getPropertyStr(property_value, property_value_size,
                                 archName);
     }
     case NP_Size: {
-      auto grid = dev->logical_grid_size();
+      TT_NOBJ_CHECK(grid, dev->logical_grid_size);
       nxs_long numCores = grid.x * grid.y;
       return rt::getPropertyInt(property_value, property_value_size,
                                 numCores);

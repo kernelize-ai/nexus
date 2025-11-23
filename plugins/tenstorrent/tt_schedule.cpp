@@ -20,7 +20,11 @@ bool placeCommand(nxs_uint cmdSize, CoreRangeSet &coreRangeSet, CoreRange &cmdRa
 
   }
   // MUST BE A RECTANGLE
-  auto nextRow = coreRangeSet.bounding_box().end_coord.y + 1;
+  size_t nextRow = 0;
+  if (!coreRangeSet.empty())
+    nextRow = coreRangeSet.bounding_box().end_coord.y + 1;
+
+  NXSAPI_LOG(nexus::NXS_LOG_NOTE, "placeCommand: nextRow=", nextRow, ", numRows=", numRows);
   if (nextRow + numRows > devSize.y)
     return false;
 
@@ -44,26 +48,27 @@ nxs_status TTSchedule::run(nxs_int stream, nxs_uint run_settings) {
 
   // map commands across cores
   auto device = getDevice();
-  ttmd::MeshCoordinateRange device_range = ttmd::MeshCoordinateRange(device->shape());
+  TT_NOBJ_CHECK(device_range, ttmd::MeshCoordinateRange, device->shape());
   ttmd::MeshCommandQueue& cq = device->mesh_command_queue();
   ttmd::MeshWorkload workload;
 
   // get current device size
   // TODO: use CoreRangeSet to collect runs
   auto devGrid = device->logical_grid_size();
+  NXSAPI_LOG(nexus::NXS_LOG_NOTE, "Device grid: ", devGrid.x, ",", devGrid.y);
 
   CoreRangeSet coreRangeSet;
 
   for (auto cmd : getCommands()) {
     CoreRange cmdCores {{0,0}, {0,0}};
     if (!placeCommand(cmd->getGridSize(), coreRangeSet, cmdCores, devGrid)) {
-      assert(0); // enqueue and start another workload
+      //assert(0); // enqueue and start another workload
     }
     auto status = cmd->runCommand(stream, workload, device_range, cmdCores);
     if (!nxs_success(status)) return status;
   }
-  ttmd::EnqueueMeshWorkload(cq, workload, false);
-  ttmd::Finish(cq);
+  TT_CHECK(ttmd::EnqueueMeshWorkload, cq, workload, false);
+  TT_CHECK(ttmd::Finish, cq);
 
 
   if (settings & NXS_ExecutionSettings_Timing) {

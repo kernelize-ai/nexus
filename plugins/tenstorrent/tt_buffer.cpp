@@ -23,13 +23,15 @@ TTBuffer::Buffer_sp TTBuffer::makeDeviceBuffer(TTDevice device) {
         .size = getSize()  // Size of the buffer in bytes
     };  
     // Create 3 buffers in DRAM to hold the 2 input tiles and 1 output tile.
-    buffer = ttmd::MeshBuffer::create(distributed_buffer_config, dram_config, device.get());
+    TT_OBJ_CHECK(buffer, ttmd::MeshBuffer::create, distributed_buffer_config, dram_config, device.get());
     std::vector<nxs_uchar> buf_v(data(), data() + size());
-    ttmd::MeshCommandQueue& cq = device->mesh_command_queue();
-    ttmd::EnqueueWriteMeshBuffer(cq, buffer, buf_v, true);
-    ttmd::Finish(cq);
+    //ttmd::MeshCommandQueue& cq = device->mesh_command_queue();
+    TT_NOBJ_CHECK(&cq, device->mesh_command_queue);
+    TT_CHECK(ttmd::EnqueueWriteMeshBuffer, cq, buffer, buf_v, true);
+    TT_CHECK(ttmd::Finish, cq);
 
     address = buffer->address();
+    NXSAPI_LOG(nexus::NXS_LOG_NOTE, "TTBuffer: address=", address);
   }
   return buffer;
 }

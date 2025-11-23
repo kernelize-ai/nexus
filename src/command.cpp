@@ -15,6 +15,11 @@ class CommandImpl : public Impl {
                        nxs_float, nxs_double, nxs_half, nxs_short, nxs_char>
       Arg;
 
+  struct ArgValue {
+    Arg value;
+    std::string name;
+  };
+
  public:
   /// @brief Construct a Platform for the current system
   CommandImpl(Impl owner, Kernel kern) : Impl(owner), kernel(kern) {
@@ -44,22 +49,25 @@ class CommandImpl : public Impl {
   template <typename T>
   nxs_status setScalar(nxs_uint index, T value, const char *name, nxs_uint settings) {
     if (event) return NXS_InvalidArgIndex;
-    void *val_ptr;
-    if (settings & NXS_CommandArgType_Constant)
-      val_ptr = putConstant(index, value);
-    else
-      val_ptr = putArgument(index, value);
     auto *rt = getParentOfType<RuntimeImpl>();
+    if (settings & NXS_CommandArgType_Constant) {
+      void *val_ptr = putConstant(index, value, name);
+      const char *name_ptr = constants[index].name.c_str();
+      return (nxs_status)rt->runAPIFunction<NF_nxsSetCommandScalar>(
+          getId(), index, val_ptr, name_ptr, settings);
+    }
+    void *val_ptr = putArgument(index, value, name);
+    const char *name_ptr = arguments[index].name.c_str();
     return (nxs_status)rt->runAPIFunction<NF_nxsSetCommandScalar>(
-        getId(), index, val_ptr, name, settings);
+        getId(), index, val_ptr, name_ptr, settings);
   }
 
   nxs_status setArgument(nxs_uint index, Buffer buffer, const char *name, nxs_uint settings) {
     if (event) return NXS_InvalidArgIndex;
-    putArgument(index, buffer);
+    putArgument(index, buffer, name);
     auto *rt = getParentOfType<RuntimeImpl>();
     return (nxs_status)rt->runAPIFunction<NF_nxsSetCommandArgument>(
-        getId(), index, buffer.getId(), name, settings);
+        getId(), index, buffer.getId(), arguments[index].name.c_str(), settings);
   }
 
   nxs_status finalize(nxs_dim3 gridSize, nxs_dim3 groupSize, nxs_uint sharedMemorySize) {
@@ -74,23 +82,23 @@ class CommandImpl : public Impl {
   Event event;
 
   template <typename T>
-  T *putArgument(nxs_uint index, T value) {
+  T *putArgument(nxs_uint index, T value, const char *name) {
     if (index >= arguments.size())
       return nullptr;
-    arguments[index] = value;
-    return &std::get<T>(arguments[index]);
+    arguments[index] = {value, name};
+    return &std::get<T>(arguments[index].value);
   }
 
   template <typename T>
-  T *putConstant(nxs_uint index, T value) {
+  T *putConstant(nxs_uint index, T value, const char *name) {
     if (index >= NXS_KERNEL_MAX_CONSTS)
       return nullptr;
-    arguments[index] = value;
-    return &std::get<T>(arguments[index]);
+    constants[index] = {value, name};
+    return &std::get<T>(constants[index].value);
   }
 
-  std::array<Arg, NXS_KERNEL_MAX_ARGS> arguments;
-  std::array<Arg, NXS_KERNEL_MAX_CONSTS> constants;
+  std::array<ArgValue, NXS_KERNEL_MAX_ARGS> arguments;
+  std::array<ArgValue, NXS_KERNEL_MAX_CONSTS> constants;
 };
 }  // namespace detail
 }  // namespace nexus

@@ -1,13 +1,11 @@
 #ifndef RT_TT_LIBRARY_H
 #define RT_TT_LIBRARY_H
 
+#include "tenstorrent.h"
+
 #include <array>
 #include <string>
 #include <vector>
-
-#include <nexus-api.h>
-
-#include "tenstorrent.h"
 
 class TTRuntime;
 class TTLibrary;

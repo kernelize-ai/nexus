@@ -72,7 +72,7 @@ class Command {
     args_count = std::max(args_count, argument_index + 1);
 
     args[argument_index] = {buffer->get(), name, argument_settings};
-    args_ref[argument_index] = &args[argument_index];
+    args_ref[argument_index] = &args[argument_index].value;
     return NXS_Success;
   }
 
@@ -82,9 +82,11 @@ class Command {
 
     // Object owned by Core API
     if (argument_settings & NXS_CommandArgType_Constant) {
+      NXSAPI_LOG(nexus::NXS_LOG_NOTE, "Set scalar constant: ", argument_index, " = ", *(int*)value);
       consts_count = std::max(consts_count, argument_index + 1);
       consts[argument_index] = {value, name, argument_settings};
     } else {
+      NXSAPI_LOG(nexus::NXS_LOG_NOTE, "Set scalar value: ", argument_index, " = ", *(int*)value);
       args_count = std::max(args_count, argument_index + 1);
       args[argument_index] = {value, name, argument_settings};
       args_ref[argument_index] = value;

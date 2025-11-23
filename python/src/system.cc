@@ -199,6 +199,39 @@ static py::class_<Objects<T>> make_objects_class(py::module &m, const std::strin
       .def("size", [](Objects<T> &self) { return self.size(); });
 }
 
+static nxs_status set_argument(Command &self, int index, py::object value,
+                               const char *name, nxs_data_type data_type, bool is_const) {
+  nxs_uint settings = data_type | (is_const ? NXS_CommandArgType_Constant : 0);
+  if (py::isinstance<Buffer>(value)) {
+    auto buf = value.cast<Buffer>();
+    return self.setArgument(index, buf, name, settings);
+  }
+  // Test for bool (check before int, since bool is subclass of int in Python)
+  else if (py::isinstance<py::bool_>(value)) {
+    bool val = value.cast<bool>();
+    return self.setArgument(index, val, name, settings);
+  }
+  // Test for int
+  else if (py::isinstance<py::int_>(value)) {
+    nxs_int val = value.cast<nxs_int>();
+    if (data_type == NXS_DataType_Undefined)
+      settings |= NXS_DataType_I32;
+    return self.setArgument(index, val, name, settings);
+  }
+  // Test for float
+  else if (py::isinstance<py::float_>(value)) {
+    nxs_float val = value.cast<nxs_float>();
+    if (data_type == NXS_DataType_Undefined)
+      settings |= NXS_DataType_F32;
+    return self.setArgument(index, val, name, settings);
+  }
+  else if (value.is_none()) {
+    auto none_buf = nexus::getSystem().createBuffer(0, nullptr, NXS_BufferSettings_OnDevice);
+    return self.setArgument(index, none_buf, name, settings);
+  }
+  return NXS_InvalidArgValue;
+}
+
 //////////////////////////////////////////////////////////////////////////
 // pynexus::init_system_bindings -- add bindings for system objects
 // - this is the main entry point for the system module
@@ -281,6 +314,28 @@ void pynexus::init_system_bindings(py::module &m) {
   eventTypeEnum.export_values();
 
   //////////////////////////////////////////////////////////////////////////
+  // Generate python enum for nxs_event_type
+  // - added to `event_type` submodule for scoping
+  auto mdataType = m.def_submodule("data_type");
+  auto dataTypeEnum = py::enum_<nxs_data_type>(mdataType, "nxs_data_type", py::module_local());
+  dataTypeEnum.value("undefined", NXS_DataType_Undefined);
+  dataTypeEnum.value("F32", NXS_DataType_F32);
+  dataTypeEnum.value("F16", NXS_DataType_F16);
+  dataTypeEnum.value("BF16", NXS_DataType_BF16);
+  dataTypeEnum.value("F8", NXS_DataType_F8);
+  dataTypeEnum.value("BF8", NXS_DataType_BF8);
+  dataTypeEnum.value("F4", NXS_DataType_F4);
+  dataTypeEnum.value("BF4", NXS_DataType_BF4);
+  dataTypeEnum.value("I32", NXS_DataType_I32);
+  dataTypeEnum.value("U32", NXS_DataType_U32);
+  dataTypeEnum.value("I16", NXS_DataType_I16);
+  dataTypeEnum.value("I8", NXS_DataType_I8);
+  dataTypeEnum.value("U8", NXS_DataType_U8);
+  dataTypeEnum.value("I4", NXS_DataType_I4);
+  dataTypeEnum.value("U4", NXS_DataType_U4);
+  dataTypeEnum.export_values();
+
+  //////////////////////////////////////////////////////////////////////////
   // Add Nexus Object types and methods
   //////////////////////////////////////////////////////////////////////////
 
@@ -336,41 +391,12 @@ void pynexus::init_system_bindings(py::module &m) {
   make_object_class<Command>(m, "_command")
       .def("get_event", [](Command &self) { return self.getEvent(); })
       .def("get_kernel", [](Command &self) { return self.getKernel(); })
-      .def("set_arg", [](Command &self, int index,
-                         Buffer buf) { return self.setArgument(index, buf); })
-      .def("set_arg",
-           [](Command &self, int index, nxs_int value) {
-             return self.setArgument(index, value);
-           })
-      .def("set_arg",
-           [](Command &self, int index, nxs_uint value) {
-             return self.setArgument(index, value);
-           })
-      .def("set_arg",
-           [](Command &self, int index, nxs_long value) {
-             return self.setArgument(index, value);
-           })
-      .def("set_arg",
-           [](Command &self, int index, nxs_ulong value) {
-             return self.setArgument(index, value);
-           })
-      .def("set_arg",
-           [](Command &self, int index, nxs_float value) {
-             return self.setArgument(index, value);
-           })
-      .def("set_arg",
-           [](Command &self, int index, nxs_double value) {
-             return self.setArgument(index, value);
-           })
-      .def("set_arg",
-           [](Command &self, int index, py::object value) {
-             if (value.is_none()) {
-               auto none_buf = nexus::getSystem().createBuffer(0, nullptr, NXS_BufferSettings_OnDevice);
-               return self.setArgument(index, none_buf);
-             } else {
-               return self.setArgument(index, make_buffer(value));
-             }
-           })
+      .def("set_arg", [](Command &self, int index, py::object value, const char *name, nxs_data_type data_type) -> nxs_status {
+          return set_argument(self, index, value, name, data_type, false);
+        }, py::arg("index"), py::arg("value"), py::arg("name") = "", py::arg("data_type") = NXS_DataType_Undefined)
+      .def("set_const", [](Command &self, int index, py::object value, const char *name, nxs_data_type data_type) -> nxs_status {
+          return set_argument(self, index, value, name, data_type, true);
+        }, py::arg("index"), py::arg("value"), py::arg("name") = "", py::arg("data_type") = NXS_DataType_Undefined)
       .def("finalize", [](Command& self, py::list grid, py::list block, size_t shared_memory_size) {
           auto list_to_dim3 = [](const py::list& l) -> nxs_dim3 {
               nxs_uint x = l.size() > 0 ? l[0].cast<nxs_uint>() : 1;
@@ -463,17 +489,7 @@ void pynexus::init_system_bindings(py::module &m) {
       .def("get_info", [](Device &self) { return self.getInfo(); })
       .def("create_buffer",
            [](Device &self, py::object tensor) {
-             auto devp = getPointer(tensor.ptr());
-             bool on_device = false;
-             if (devp.runtime_name.empty() || devp.device_id == -1) {
-               // if it is this device, then on_device is true
-               if (self.getId() == devp.device_id) {
-                 on_device = true;
-               } else {
-                 // make copy
-               }
-             }
-             return self.createBuffer(devp.size, devp.ptr, on_device);
+             return make_buffer(tensor, self);
            })
       .def("create_buffer",
            [](Device &self, size_t size) { return self.createBuffer(size); })

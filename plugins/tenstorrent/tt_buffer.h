@@ -1,9 +1,9 @@
 #ifndef RT_TT_BUFFER_H
 #define RT_TT_BUFFER_H
 
-#include <rt_buffer.h>
-
 #include "tenstorrent.h"
+
+#include <rt_buffer.h>
 
 class TTBuffer : public nxs::rt::Buffer {
   typedef std::shared_ptr<ttmd::MeshBuffer> Buffer_sp;
