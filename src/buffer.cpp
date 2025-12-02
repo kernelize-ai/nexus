@@ -41,6 +41,7 @@ std::optional<Property> detail::BufferImpl::getProperty(nxs_int prop) const {
 }
 
 void detail::BufferImpl::setData(size_t sz, const char *hostData) {
+  // TODO: don't copy
   if (hostData != nullptr) {
     data = std::make_shared<std::vector<char>>();
     data->reserve(sz);

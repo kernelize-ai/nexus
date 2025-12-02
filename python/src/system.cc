@@ -18,10 +18,11 @@ struct DevPtr {
   size_t size;
   std::string runtime_name;
   nxs_int device_id;
+  nxs_data_type dtype;
 };
 
 static DevPtr getPointer(PyObject *obj) {
-  DevPtr result{nullptr, 0, "", -1};
+  DevPtr result{nullptr, 0, "", -1, NXS_DataType_Undefined};
   if (obj == Py_None) {
     return result;
   }
@@ -57,34 +58,60 @@ static DevPtr getPointer(PyObject *obj) {
       }
       Py_DECREF(device_m);
     }
+    // get element type
+    PyObject *dtype_tuple = PyTuple_New(1);
+    PyTuple_SetItem(dtype_tuple, 0, obj);
+    Py_INCREF(obj); // is this necessary? crashes without it
+    PyObject *nexus_module = PyImport_ImportModule("nexus");
+    PyObject *get_data_type_func = PyObject_GetAttrString(nexus_module, "get_data_type");
+    PyObject *dtype_ret = PyObject_CallObject(get_data_type_func, dtype_tuple);
+    Py_DECREF(nexus_module);
+    Py_DECREF(get_data_type_func);
+    Py_DECREF(dtype_tuple);
+    if (dtype_ret) {
+      result.dtype = (nxs_data_type)PyLong_AsLong(dtype_ret);
+      Py_DECREF(dtype_ret);
+    } else {
+      PyErr_Print();
+      throw std::runtime_error("Failed to get data type");
+    }
+
     result.ptr = (char *)PyLong_AsUnsignedLongLong(data_ret);
     result.size = PyLong_AsUnsignedLongLong(nbytes_ret);
-    //Py_DECREF(data_ret);
+    Py_DECREF(data_ret);
     Py_DECREF(nbytes_ret);
   }
   return result;
 }
 
-static Buffer make_buffer(py::object tensor) {
+static Buffer make_buffer(py::object tensor, Device device = Device()) {
   // TODO: track ownership of the py::object tensor (release on destruction of
   // Buffer)
   auto data_ptr = getPointer(tensor.ptr());
+  nxs_uint settings = data_ptr.dtype;
   if (data_ptr.size == 0) {
     throw std::runtime_error("Invalid buffer");
   }
-  if (!data_ptr.runtime_name.empty() && data_ptr.device_id != -1) {
-    auto runtime = nexus::getSystem().getRuntime(data_ptr.runtime_name);
-    if (runtime) {
-      auto device = runtime.getDevice(data_ptr.device_id);
-      if (device) {
-        return device.createBuffer(data_ptr.size, data_ptr.ptr, NXS_BufferSettings_OnDevice);
+  Buffer buffer;
+  Device dp_device;
+  if (!data_ptr.runtime_name.empty() && data_ptr.runtime_name != "cpu" && data_ptr.device_id != -1) {
+    auto buffer_runtime = nexus::getSystem().getRuntime(data_ptr.runtime_name);
+    if (buffer_runtime) {
+      dp_device = buffer_runtime.getDevice(data_ptr.device_id);
+      if (!dp_device) {
+        throw std::runtime_error("Device not found: " + std::string(data_ptr.runtime_name) + " " + std::to_string(data_ptr.device_id));
       }
+      buffer = dp_device.createBuffer(data_ptr.size, data_ptr.ptr, settings | NXS_BufferSettings_OnDevice);
     } else {
       throw std::runtime_error("Runtime not found: " +
                                std::string(data_ptr.runtime_name));
     }
+  } else if (device) {
+    buffer = device.createBuffer(data_ptr.size, data_ptr.ptr, settings);
+  } else {
+    buffer = nexus::getSystem().createBuffer(data_ptr.size, data_ptr.ptr);
   }
-  return nexus::getSystem().createBuffer(data_ptr.size, data_ptr.ptr);
+  return buffer;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -200,7 +227,8 @@ static py::class_<Objects<T>> make_objects_class(py::module &m, const std::strin
 }
 
 static nxs_status set_argument(Command &self, int index, py::object value,
-                               const char *name, nxs_data_type data_type, bool is_const) {
+                               const char *name = "", nxs_data_type data_type = NXS_DataType_Undefined,
+                               bool is_const = false) {
   nxs_uint settings = data_type | (is_const ? NXS_CommandArgType_Constant : 0);
   if (py::isinstance<Buffer>(value)) {
     auto buf = value.cast<Buffer>();
@@ -405,7 +433,7 @@ void pynexus::init_system_bindings(py::module &m) {
               return nxs_dim3{ x, y, z };
           };
           return self.finalize(list_to_dim3(grid), list_to_dim3(block), shared_memory_size);
-        }, py::arg("grid"), py::arg("block"), py::arg("shared_memory_size") = 0
+        }, py::arg("grid"), py::arg("block") = py::list{}, py::arg("shared_memory_size") = 0
       );
 
   make_objects_class<Command>(m, "_commands");
@@ -437,19 +465,7 @@ void pynexus::init_system_bindings(py::module &m) {
             if (cmd) {
               int idx = 0;
               for (auto buf : buffers) {
-                if (buf.is_none()) {
-                  auto none_buf = nexus::getSystem().createBuffer(0, nullptr, NXS_BufferSettings_OnDevice);
-                  cmd.setArgument(idx++, none_buf);
-                } else if (PyLong_Check(buf.ptr())) {
-                  nxs_long value = PyLong_AsLong(buf.ptr());
-                  cmd.setArgument(idx++, value);
-                } else if (PyFloat_Check(buf.ptr())) {
-                  nxs_double value = PyFloat_AsDouble(buf.ptr());
-                  cmd.setArgument(idx++, value);
-                } else {
-                  auto buf_obj = make_buffer(buf);
-                  cmd.setArgument(idx++, buf_obj);
-                }
+                set_argument(cmd, idx, buf);
               }
               if (dims.size() == 2 && dims[0].x > 0 && dims[1].x > 0) {
                 cmd.finalize(dims[0], dims[1], 0);

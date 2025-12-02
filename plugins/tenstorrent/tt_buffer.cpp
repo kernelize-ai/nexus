@@ -1,15 +1,15 @@
 #include <tt_buffer.h>
 #include <tt_runtime.h>
 
-TTBuffer::TTBuffer(TTDevice device, size_t size,
+TTBuffer::TTBuffer(TTDevice dev, size_t size,
                    void *data_ptr, nxs_uint settings)
-  : Buffer(size, data_ptr, settings) {
+  : Buffer(size, data_ptr, settings), device(dev) {
     if (device)
-      makeDeviceBuffer(device);
+      makeDeviceBuffer();
 }
 
 
-TTBuffer::Buffer_sp TTBuffer::makeDeviceBuffer(TTDevice device) {
+TTBuffer::Buffer_sp TTBuffer::makeDeviceBuffer() {
   if (!(getSettings() & NXS_BufferSettings_OnDevice)) {
     //setSetting(NXS_BufferSettings_OnDevice);
 
@@ -25,13 +25,22 @@ TTBuffer::Buffer_sp TTBuffer::makeDeviceBuffer(TTDevice device) {
     // Create 3 buffers in DRAM to hold the 2 input tiles and 1 output tile.
     TT_OBJ_CHECK(buffer, ttmd::MeshBuffer::create, distributed_buffer_config, dram_config, device.get());
     std::vector<nxs_uchar> buf_v(data(), data() + size());
-    //ttmd::MeshCommandQueue& cq = device->mesh_command_queue();
     TT_NOBJ_CHECK(&cq, device->mesh_command_queue);
-    TT_CHECK(ttmd::EnqueueWriteMeshBuffer, cq, buffer, buf_v, true);
+    TT_CHECK(ttmd::EnqueueWriteMeshBuffer, cq, buffer, buf_v, true); // TODO: change to non-blocking and remove the finish
     TT_CHECK(ttmd::Finish, cq);
 
     address = buffer->address();
-    NXSAPI_LOG(nexus::NXS_LOG_NOTE, "TTBuffer: address=", address);
+    NXSAPI_LOG(nexus::NXS_LOG_NOTE, "TTBuffer: tile_size=", tile_size, " address=", address);
   }
   return buffer;
+}
+
+nxs_status TTBuffer::copyToHost(void *host_buf) {
+  if (address != -1) {
+    getDataTypeSize(getSettings());
+    TT_NOBJ_CHECK(&cq, device->mesh_command_queue);
+    TT_CHECK(cq.enqueue_read_mesh_buffer, host_buf, buffer, true);
+    TT_CHECK(ttmd::Finish, cq);
+  }
+  return NXS_Success;
 }

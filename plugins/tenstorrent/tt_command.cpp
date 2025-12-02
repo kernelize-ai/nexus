@@ -10,7 +10,7 @@
  * @return void
  ***********************************************************************/
 nxs_status TTCommand::runCommand(nxs_int stream, ttmd::MeshWorkload &workload,
-                                 ttmd::MeshCoordinateRange &dev_range, CoreRange &cores) {
+                                 ttmd::MeshCoordinateRange &dev_range, ttm::CoreRange &cores) {
   NXSAPI_LOG(nexus::NXS_LOG_NOTE, "runCommand ", kernel, " - ", cores.start_coord.x, ",", cores.start_coord.y);
 
   if (getArgsCount() >= 32) {
@@ -37,9 +37,9 @@ nxs_status TTCommand::runCommand(nxs_int stream, ttmd::MeshWorkload &workload,
   };  
 
   for (nxs_uint i = 0; i < getNumConstants(); ++i) {
-    auto cst = consts[i];
+    auto &cst = consts[i];
     if (std::string("CB") == consts[i].name) {
-      size_t tile_size = *(nxs_int*)consts[i].value;
+      size_t tile_size = *(nxs_int*)consts[i].value * getDataTypeSize(cst.settings);
       auto data_format = getDataFormat(consts[i].settings);
       NXSAPI_LOG(nexus::NXS_LOG_NOTE, "CB size: ", tile_size, ", format=", data_format);
       auto cb_config = make_cb_config(static_cast<tt::CBIndex>(i), tile_size, data_format);

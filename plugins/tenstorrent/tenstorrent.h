@@ -74,13 +74,13 @@ inline size_t getDataTypeSize(nxs_uint settings) {
 
 #define TT_NOBJ_CHECK(obj, call, ...)                                      \
     NXSAPI_LOG(nexus::NXS_LOG_NOTE,                                           \
-               "TT_CHECK ", #call, #__VA_ARGS__); \
+               "TT_CHECK ", #call, "(", #__VA_ARGS__, ")"); \
     auto obj = call(__VA_ARGS__);                                    
 
 
 #define TT_OBJ_CHECK(obj, call, ...)                                      \
     NXSAPI_LOG(nexus::NXS_LOG_NOTE,                                           \
-               "TT_CHECK ", #call, #__VA_ARGS__); \
+               "TT_CHECK ", #call, "(", #__VA_ARGS__, ")"); \
     obj = call(__VA_ARGS__);                                     \
     if (!obj) {                                                \
       NXSAPI_LOG(nexus::NXS_LOG_ERROR,                                          \
@@ -89,7 +89,7 @@ inline size_t getDataTypeSize(nxs_uint settings) {
 
 #define TT_COND_CHECK(cond, call, ...)                                      \
     NXSAPI_LOG(nexus::NXS_LOG_NOTE,                                           \
-               "TT_CHECK ", #call, #__VA_ARGS__); \
+               "TT_CHECK ", #call, "(", #__VA_ARGS__, ")"); \
     call(__VA_ARGS__);                                     \
     if (cond) {                                                \
       NXSAPI_LOG(nexus::NXS_LOG_ERROR,                                          \
@@ -98,7 +98,7 @@ inline size_t getDataTypeSize(nxs_uint settings) {
 
 #define TT_CHECK(call, ...)                                      \
     NXSAPI_LOG(nexus::NXS_LOG_NOTE,                                           \
-               "TT_CHECK ", #call, #__VA_ARGS__); \
+               "TT_CHECK ", #call, "(", #__VA_ARGS__, ")"); \
     call(__VA_ARGS__);                                    
 
 #endif // RT_TT_H

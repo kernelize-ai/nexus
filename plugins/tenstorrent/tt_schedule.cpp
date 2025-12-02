@@ -9,7 +9,7 @@ float TTSchedule::getTime() const {
       .count();
 }
 
-bool placeCommand(nxs_uint cmdSize, CoreRangeSet &coreRangeSet, CoreRange &cmdRange, const CoreCoord &devSize) {
+bool placeCommand(nxs_uint cmdSize, ttm::CoreRangeSet &coreRangeSet, ttm::CoreRange &cmdRange, const ttm::CoreCoord &devSize) {
   auto numRows = (cmdSize / devSize.x) + !!(cmdSize % devSize.x);
   auto tail = cmdSize % devSize.x;
 
@@ -42,10 +42,6 @@ nxs_status TTSchedule::run(nxs_int stream, nxs_uint run_settings) {
 
   nxs_uint settings = getSettings() | run_settings;
 
-  if (settings & NXS_ExecutionSettings_Timing) {
-    start_time = std::chrono::steady_clock::now();
-  }
-
   // map commands across cores
   auto device = getDevice();
   TT_NOBJ_CHECK(device_range, ttmd::MeshCoordinateRange, device->shape());
@@ -57,16 +53,21 @@ nxs_status TTSchedule::run(nxs_int stream, nxs_uint run_settings) {
   auto devGrid = device->logical_grid_size();
   NXSAPI_LOG(nexus::NXS_LOG_NOTE, "Device grid: ", devGrid.x, ",", devGrid.y);
 
-  CoreRangeSet coreRangeSet;
+  ttm::CoreRangeSet coreRangeSet;
 
   for (auto cmd : getCommands()) {
-    CoreRange cmdCores {{0,0}, {0,0}};
+    ttm::CoreRange cmdCores {{0,0}, {0,0}};
     if (!placeCommand(cmd->getGridSize(), coreRangeSet, cmdCores, devGrid)) {
       //assert(0); // enqueue and start another workload
     }
     auto status = cmd->runCommand(stream, workload, device_range, cmdCores);
     if (!nxs_success(status)) return status;
   }
+
+  if (settings & NXS_ExecutionSettings_Timing) {
+    start_time = std::chrono::steady_clock::now();
+  }
+
   TT_CHECK(ttmd::EnqueueMeshWorkload, cq, workload, false);
   TT_CHECK(ttmd::Finish, cq);
 

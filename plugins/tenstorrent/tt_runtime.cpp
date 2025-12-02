@@ -132,14 +132,11 @@ extern "C" nxs_status NXS_API_CALL nxsCopyBuffer(nxs_int buffer_id,
                                                  void *host_ptr,
                                                  nxs_uint settings) {
   auto rt = getRuntime();
-  auto buf = rt->getObject(buffer_id);
+  auto buf = rt->get<TTBuffer>(buffer_id);
   if (!buf) return NXS_InvalidBuffer;
   NXSAPI_LOG(nexus::NXS_LOG_ERROR, "CopyBuffer not implemented");
-  #if 0
-  auto bufObj = (*buf)->get<rt::Buffer>();
-  std::memcpy(host_ptr, bufObj->data(), bufObj->size());
-  #endif
-  return NXS_Success;
+
+  return buf->copyToHost(host_ptr);
 }
 
 /************************************************************************

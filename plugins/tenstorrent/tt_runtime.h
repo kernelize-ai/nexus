@@ -34,9 +34,10 @@ class TTRuntime : public rt::Runtime {
         //     tt::stl::Span<const std::uint32_t> l1_bank_remap = {}, 
         //     size_t worker_l1_size = DEFAULT_WORKER_L1_SIZE);
       TT_NOBJ_CHECK(device, ttmd::MeshDevice::create_unit_mesh, i);
-      TT_NOBJ_CHECK(&cq, device->mesh_command_queue);
+      //TT_NOBJ_CHECK(&cq, device->mesh_command_queue);
       devices.push_back(device);
       addObject(i);
+      break;
     }
   }
   ~TTRuntime() {
@@ -56,8 +57,8 @@ class TTRuntime : public rt::Runtime {
   }
 
   TTBuffer *getBuffer(TTDevice device, size_t size, void *data_ptr = nullptr,
-                        bool copy_data = false) {
-    return buffer_pool.get_new(device, size, data_ptr, copy_data);
+                        nxs_uint settings = 0) {
+    return buffer_pool.get_new(device, size, data_ptr, settings);
   }
   nxs_status releaseBuffer(nxs_int buffer_id) {
     auto buf = get<TTBuffer>(buffer_id);
