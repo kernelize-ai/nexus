@@ -13,7 +13,18 @@ os.environ['NEXUS_DEVICE_PATH'] = os.path.join(_NEXUS_PACKAGE_DIR, 'device_lib')
 
 from ._C.libnexus import *
 
+# Import utility functions
+from . import utils
+from .utils import (
+    version_info,
+    format_device_info,
+    get_data_type,
+)
+
 __all__ = [
+    'version_info',
+    'format_device_info',
+    'get_data_type',
 ]
 
 

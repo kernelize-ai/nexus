@@ -28,13 +28,8 @@ class Command : public Object<detail::CommandImpl> {
   Kernel getKernel() const;
   Event getEvent() const;
 
-  nxs_status setArgument(nxs_uint index, Buffer buffer);
-  nxs_status setArgument(nxs_uint index, nxs_int value);
-  nxs_status setArgument(nxs_uint index, nxs_uint value);
-  nxs_status setArgument(nxs_uint index, nxs_long value);
-  nxs_status setArgument(nxs_uint index, nxs_ulong value);
-  nxs_status setArgument(nxs_uint index, nxs_float value);
-  nxs_status setArgument(nxs_uint index, nxs_double value);
+  template <typename T>
+  nxs_status setArgument(nxs_uint index, T value, const char *name = "", nxs_uint settings = 0);
 
   nxs_status finalize(nxs_dim3 gridSize, nxs_dim3 groupSize, nxs_uint sharedMemorySize);
 };
