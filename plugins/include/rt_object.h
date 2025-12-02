@@ -24,8 +24,6 @@ void delete_fn(void *obj) {
 class Object {
   std::variant<void *, nxs_long> obj;
   bool is_owned;
-  typedef std::vector<nxs_int> children_t;
-  children_t children;
 
  public:
   Object(void *_obj, bool _is_owned) {
@@ -47,23 +45,12 @@ class Object {
   nxs_long getValue() const { return std::get<nxs_long>(obj); }
 
   void release(release_fn_t fn) {
-    children.clear();
     if (is_owned && std::holds_alternative<void *>(obj)) {
       assert(fn);  // @@@
       fn(std::get<void *>(obj));
     }
     obj = nullptr;
     is_owned = false;
-  }
-
-  children_t &getChildren() { return children; }
-  void addChild(nxs_int child, nxs_int index = -1) {
-    if (index < 0)
-      children.push_back(child);
-    else {
-      if (index >= children.size()) children.resize(index + 1);
-      children[index] = child;
-    }
   }
 };
 

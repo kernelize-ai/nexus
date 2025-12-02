@@ -86,7 +86,7 @@ static nxs_status getPropertyVec(void *property_value,
 ///////////////////////////////////////////////////////////////////////////////
 //  Dump debug
 template <typename T>
-static std::string print_value(T value) {
+static std::string print_value(const T &value) {
   std::stringstream ss;
   ss << " - 0x" << std::hex << (nxs_ulong)value;
   return ss.str();

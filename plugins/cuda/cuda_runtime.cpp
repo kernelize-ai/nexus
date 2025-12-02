@@ -222,7 +222,7 @@ extern "C" nxs_int NXS_API_CALL nxsCreateBuffer(nxs_int device_id, size_t size,
     data_ptr = cuda_ptr;
   }
 
-  auto *buf = rt->getBuffer(size, data_ptr, false);
+  auto *buf = rt->getBuffer(size, data_ptr, NXS_BufferSettings_OnDevice);
   if (!buf) return NXS_InvalidBuffer;
 
   return rt->addObject(buf);

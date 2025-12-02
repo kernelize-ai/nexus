@@ -6,7 +6,7 @@
 
 #include <chrono>
 
-class CpuSchedule : public nxs::rt::Schedule<CpuCommand, nxs_int> {
+class CpuSchedule : public nxs::rt::Schedule<CpuCommand, nxs_int, nxs_int> {
   std::chrono::steady_clock::time_point start_time;
   std::chrono::steady_clock::time_point end_time;
 

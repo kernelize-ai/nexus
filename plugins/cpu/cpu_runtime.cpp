@@ -126,7 +126,7 @@ extern "C" nxs_int NXS_API_CALL nxsCreateBuffer(nxs_int device_id, size_t size,
   if (!dev) return NXS_InvalidDevice;
 
   NXSAPI_LOG(nexus::NXS_LOG_NOTE, "createBuffer ", size);
-  auto *buf = rt->getBuffer(size, host_ptr, false);
+  auto *buf = rt->getBuffer(size, host_ptr, settings);
   if (!buf) return NXS_InvalidBuffer;
 
   return rt->addObject(buf);
@@ -403,7 +403,9 @@ extern "C" nxs_int NXS_API_CALL nxsCreateCommand(nxs_int schedule_id,
  ***********************************************************************/
 extern "C" nxs_status NXS_API_CALL nxsSetCommandArgument(nxs_int command_id,
                                                          nxs_int argument_index,
-                                                         nxs_int buffer_id) {
+                                                         nxs_int buffer_id,
+                                                         const char *name,
+                                                         nxs_uint arg_settings) {
   auto rt = getRuntime();
 
   auto command = rt->get<CpuCommand>(command_id);
@@ -412,7 +414,7 @@ extern "C" nxs_status NXS_API_CALL nxsSetCommandArgument(nxs_int command_id,
   auto buffer = rt->get<rt::Buffer>(buffer_id);
   if (!buffer) return NXS_InvalidBuffer;
 
-  return command->setArgument(argument_index, buffer);
+  return command->setArgument(argument_index, buffer, name, arg_settings);
 }
 
 /************************************************************************
@@ -422,11 +424,13 @@ extern "C" nxs_status NXS_API_CALL nxsSetCommandArgument(nxs_int command_id,
  ***********************************************************************/
 extern "C" nxs_status NXS_API_CALL nxsSetCommandScalar(nxs_int command_id,
                                                        nxs_int argument_index,
-                                                       void *value) {
+                                                       void *value,
+                                                       const char *name,
+                                                       nxs_uint arg_settings) {
   auto rt = getRuntime();
   auto command = rt->get<CpuCommand>(command_id);
   if (!command) return NXS_InvalidCommand;
-  return command->setScalar(argument_index, value);
+  return command->setScalar(argument_index, value, name, arg_settings);
 }
 
 /************************************************************************
