@@ -24,6 +24,8 @@ class Impl {
 
   nxs_uint getSettings() const { return settings; }
 
+  void setSettings(nxs_uint _settings) { settings = _settings; }
+
  protected:
   // Only the derived class can access
   template <typename T = Impl>
@@ -84,6 +86,9 @@ class Object {
     if (auto *impl = getImpl()) return impl->getSettings();
     return 0;
   }
+
+  bool operator==(const Object& other) const { return get() == other.get(); }
+  bool operator!=(const Object& other) const { return get() != other.get(); }
 
   virtual std::optional<Property> getProperty(nxs_int prop) const = 0;
 

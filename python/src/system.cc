@@ -389,12 +389,7 @@ void pynexus::init_system_bindings(py::module &m) {
         if (!data_ptr.runtime_name.empty() && data_ptr.runtime_name != "cpu") {
           assert(0);
         }
-        auto local = self.getLocal();
-        if (data_ptr.ptr != nullptr && local.getData() != nullptr &&
-            data_ptr.size == self.getSize()) {
-          return local.copy(data_ptr.ptr);
-        }
-        return NXS_InvalidDevice;
+        return self.copy(data_ptr.ptr);
       });
   make_objects_class<Buffer>(m, "_buffers");
 

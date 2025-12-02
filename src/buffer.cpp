@@ -14,19 +14,36 @@
 using namespace nexus;
 
 detail::BufferImpl::BufferImpl(detail::Impl base, size_t _sz, const char *_hostData)
-    : Impl(base), deviceId(NXS_InvalidDevice) {
+    : Impl(base), deviceId(NXS_InvalidDevice), size(0), data(nullptr) {
       setData(_sz, _hostData);
     }
 
 detail::BufferImpl::BufferImpl(detail::Impl base, nxs_int _devId, size_t _sz,
                                const char *_hostData)
-    : Impl(base), deviceId(_devId) {
+    : Impl(base), deviceId(_devId), size(0), data(nullptr) {
       setData(_sz, _hostData);
     }
 
 detail::BufferImpl::~BufferImpl() { release(); }
 
-void detail::BufferImpl::release() {}
+void detail::BufferImpl::release() {
+  if (getSettings() & NXS_BufferSettings_Maintain) {
+    delete static_cast<DataBuf*>(data);
+  }
+  data = nullptr;
+  size = 0;
+}
+
+void *detail::BufferImpl::getVoidData() const {
+  if (getSettings() & NXS_BufferSettings_Maintain) {
+    return static_cast<void *>(static_cast<DataBuf*>(data)->data());
+  }
+  return data;
+}
+
+const char *detail::BufferImpl::getData() const {
+  return reinterpret_cast<const char *>(getVoidData());
+}
 
 std::optional<Property> detail::BufferImpl::getProperty(nxs_int prop) const {
   if (getDeviceId()) {
@@ -35,29 +52,41 @@ std::optional<Property> detail::BufferImpl::getProperty(nxs_int prop) const {
   }
   switch (prop) {
     case NP_Type: return Property("buffer");
-    case NP_Size: return Property((nxs_long)data->size());
+    case NP_Size: return Property((nxs_long)size);
   }
   return std::nullopt;
 }
 
 void detail::BufferImpl::setData(size_t sz, const char *hostData) {
-  // TODO: don't copy
-  if (hostData != nullptr) {
-    data = std::make_shared<std::vector<char>>();
-    data->reserve(sz);
-    data->insert(data->end(), &hostData[0], &hostData[sz]);
+  size = sz;
+  if (getSettings() & NXS_BufferSettings_Maintain) {
+    NEXUS_LOG(NXS_LOG_NOTE, "setData: maintain: ", sz);
+    // SHOULD BE RARE
+    if (hostData != nullptr) {
+      data = new DataBuf();
+      static_cast<DataBuf*>(data)->assign(hostData, hostData + sz);
+    } else {
+      data = new DataBuf(sz);
+    }
   } else {
-    data = std::make_shared<std::vector<char>>(sz);
+    NEXUS_LOG(NXS_LOG_NOTE, "setData: not maintain: ", sz);
+    data = const_cast<void *>(reinterpret_cast<const void *>(hostData));
   }
 }
 
-Buffer detail::BufferImpl::getLocal() const {
-  if (data) {
-    void *lbuf = data->data();
+Buffer detail::BufferImpl::getLocal() {
+  NEXUS_LOG(NXS_LOG_NOTE, "getLocal: ", getVoidData());
+  void *lbuf = getVoidData();
+  if (!lbuf) {
+    setSettings(getSettings() | NXS_BufferSettings_Maintain);
+    setData(size, nullptr);
+    lbuf = getVoidData();
+  }
+  if (nxs_valid_id(getDeviceId())) {
     auto *rt = getParentOfType<RuntimeImpl>();
     if (nxs_success(rt->runAPIFunction<NF_nxsCopyBuffer>(getId(), lbuf, 0))) {
       auto *sys = getParentOfType<detail::SystemImpl>();
-      return sys->createBuffer(data->size(), data->data());
+      return sys->createBuffer(size, reinterpret_cast<const char *>(lbuf));
     }
   }
   return Buffer();
@@ -65,10 +94,12 @@ Buffer detail::BufferImpl::getLocal() const {
 
 nxs_status detail::BufferImpl::copyData(void *_hostBuf) const {
   if (nxs_valid_id(getDeviceId())) {
+    NEXUS_LOG(NXS_LOG_NOTE, "copyData: from device: ", getSize());
     auto *rt = getParentOfType<RuntimeImpl>();
     return (nxs_status)rt->runAPIFunction<NF_nxsCopyBuffer>(getId(), _hostBuf,
                                                             0);
   }
+  NEXUS_LOG(NXS_LOG_NOTE, "copyData: from host: ", getSize());
   memcpy(_hostBuf, getData(), getSize());
   return NXS_Success;
 }

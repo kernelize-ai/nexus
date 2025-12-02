@@ -206,8 +206,11 @@ enum _nxs_data_type {
     NXS_DataType_U8 = 13 << NXS_CommandArgType_NextBitOffset,
     NXS_DataType_I4 = 14 << NXS_CommandArgType_NextBitOffset,
     NXS_DataType_U4 = 15 << NXS_CommandArgType_NextBitOffset,
-    NXS_DataType_Mask = 15 << NXS_CommandArgType_NextBitOffset,
-    NXS_DataType_NextBitOffset = NXS_CommandArgType_NextBitOffset + 4
+    NXS_DataType_F64 = 16 << NXS_CommandArgType_NextBitOffset,
+    NXS_DataType_I64 = 17 << NXS_CommandArgType_NextBitOffset,
+    NXS_DataType_U64 = 18 << NXS_CommandArgType_NextBitOffset,
+    NXS_DataType_Mask = 31 << NXS_CommandArgType_NextBitOffset,
+    NXS_DataType_NextBitOffset = NXS_CommandArgType_NextBitOffset + 5
 };
 typedef enum _nxs_data_type nxs_data_type;
 
