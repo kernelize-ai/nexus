@@ -72,8 +72,8 @@ public:
   }
   void release(rt::Buffer *buffer) { buffer_pool.release(buffer); }
 
-  CudaSchedule *getSchedule(nxs_int device_id, nxs_uint settings = 0) {
-    return schedule_pool.get_new(device_id, settings);
+  CudaSchedule *getSchedule(CudaDevice *device, nxs_uint settings = 0) {
+    return schedule_pool.get_new(device, settings);
   }
 
   CudaCommand *getCommand(CUfunction kernel, nxs_uint settings = 0) {
