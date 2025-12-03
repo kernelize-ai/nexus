@@ -137,13 +137,19 @@
  */
 
 #include <assert.h>
-#include <rt_runtime.h>
-#include <rt_utilities.h>
-#include <string.h>
-
 #include <iostream>
 #include <optional>
 #include <vector>
+
+#include <nexus-api/nxs_log.h>
+#define NXSAPI_LOG_MODULE "metal"
+
+#include <rt_runtime.h>
+#include <rt_command.h>
+#include <rt_schedule.h>
+#include <rt_utilities.h>
+
+#include <string.h>
 
 #include <nexus-api.h>
 
@@ -154,8 +160,6 @@
 
 #include <Metal/Metal.hpp>
 /* #include <QuartzCore/QuartzCore.hpp> */
-
-#define NXSAPI_LOG_MODULE "metal"
 
 using namespace nxs;
 
@@ -196,59 +200,42 @@ MetalRuntime *getRuntime() {
 ////////////////////////////////////////////////////////////////////////////
 // Metal Command
 ////////////////////////////////////////////////////////////////////////////
-class MetalCommand {
-  nxs_int id;
-  nxs_command_type type;
-  nxs_int event_value;
-  nxs_int group_size;
-  nxs_int grid_size;
-  nxs_uint shared_memory_size;
+class MetalCommand : public rt::Command<MTL::ComputePipelineState *, MTL::Event *, MTL::CommandBuffer *> {
  public:
-  MetalCommand(nxs_int id, nxs_command_type type, nxs_int event_value = 0)
-   : id(id), type(type), event_value(event_value), group_size(1), grid_size(1) {}
-  nxs_status createCommand(MetalRuntime *rt, rt::Object *cobj, MTL::CommandBuffer *cmdbuf) {
-    NXSAPI_LOG(nexus::NXS_LOG_NOTE, "createCommand ", id, " - ", type);
+  MetalCommand(MTL::ComputePipelineState *kernel, nxs_uint settings = 0)
+   : Command(kernel, settings) {}
+  MetalCommand(MTL::Event *event, nxs_command_type type, nxs_int event_value = 0, nxs_uint settings = 0)
+   : Command(event, type, event_value, settings) {}
+
+   virtual nxs_status runCommand(MTL::CommandBuffer *cmdbuf) override {
+    NXSAPI_LOG(nexus::NXS_LOG_NOTE, "runCommand ", kernel, " - ", type);
 
     switch (type) {
       case NXS_CommandType_Dispatch: {
-        auto kernel = rt->get<MTL::ComputePipelineState>(id);
-        if (!kernel) return NXS_InvalidKernel;
         auto *command = cmdbuf->computeCommandEncoder();
         command->setComputePipelineState(kernel);
         int idx = 0;
-        for (auto arg : cobj->getChildren()) {
-          auto buf = rt->get<MTL::Buffer>(arg);
-          if (!buf) return NXS_InvalidBuffer;
-          command->setBuffer(buf, 0, idx++);
+        for (int i = 0; i < getArgsCount(); i++) {
+          auto arg = args[i];
+          command->setBuffer((MTL::Buffer *)arg.value, 0, i);
         }
-        command->dispatchThreads(MTL::Size(grid_size * group_size, 1, 1),
-                                 MTL::Size(group_size, 1, 1));
+        command->dispatchThreads(MTL::Size(grid_size.x, grid_size.y, grid_size.z),
+                                 MTL::Size(block_size.x, block_size.y, block_size.z));
         command->endEncoding();
         return NXS_Success;
       }
       case NXS_CommandType_Signal: {
-        auto event = rt->get<MTL::Event>(id);
-        if (!event) return NXS_InvalidEvent;
         cmdbuf->encodeSignalEvent(event, event_value);
         return NXS_Success;
       }
       case NXS_CommandType_Wait: {
-        auto event = rt->get<MTL::Event>(id);
-        if (!event) return NXS_InvalidEvent;
         cmdbuf->encodeWait(event, event_value);
         return NXS_Success;
       }
       default:
         return NXS_InvalidCommand;
     }
-  }
-  void setDimensions(nxs_int grid_size, nxs_int group_size, nxs_uint shared_memory_size) {
-    this->grid_size = grid_size;
-    this->group_size = group_size;
-    this->shared_memory_size = shared_memory_size;
-  }
-  void release() {
-    // TODO: release the command buffer
+    return NXS_Success;
   }
 };
 
@@ -258,34 +245,45 @@ class MetalCommand {
 // - We need to create a command buffer for each command queue
 // - so command buffer creation is deferred until the schedule is run
 ////////////////////////////////////////////////////////////////////////////
-class MetalSchedule {
+class MetalSchedule : public rt::Schedule<MetalCommand, MTL::Device *, MTL::CommandQueue *> {
   std::unordered_map<MTL::CommandQueue *, MTL::CommandBuffer *> cmdbufs;
  public:
-  MetalSchedule() {
-  }
-  ~MetalSchedule() {
-    for (auto cmdbuf : cmdbufs) {
-      cmdbuf.second->release();
-    }
-    cmdbufs.clear();
+  MetalSchedule(MTL::Device *device, nxs_uint settings = 0) : Schedule(device, settings) {
   }
 
-  MTL::CommandBuffer *getCommandBuffer(MetalRuntime *rt, rt::Object *sched, MTL::CommandQueue *queue) {
+  virtual nxs_status run(MTL::CommandQueue *queue, nxs_uint run_settings) override {
     auto ii = cmdbufs.find(queue);
-    if (ii != cmdbufs.end())
-      return ii->second;
+    MTL::CommandBuffer *cmdbuf;
+    if (ii != cmdbufs.end()) {
+      cmdbuf = ii->second;
+    } else {
+      cmdbuf = queue->commandBuffer();
+      cmdbufs[queue] = cmdbuf;
 
-    auto *cmdbuf = queue->commandBuffer();
-    cmdbufs[queue] = cmdbuf;
-    // Add all the commands to the command buffer
-    for (auto cmd_id : sched->getChildren()) {
-      auto cobj = rt->getObject(cmd_id);
-      if (!cobj) continue;
-      auto *cmd = (*cobj)->get<MetalCommand>();
-      if (!cmd) continue;
-      cmd->createCommand(rt, *cobj, cmdbuf);
+      // Add all the commands to the command buffer
+      for (auto cmd : getCommands()) {
+        cmd->runCommand(cmdbuf);
+      }
     }
-    return cmdbuf;
+    // commit the command buffer
+    cmdbuf->enqueue();
+    cmdbuf->commit();
+    if (!(run_settings & NXS_ExecutionSettings_NonBlocking)) {
+      cmdbuf->waitUntilCompleted();  // Synchronous wait for simplicity
+      if (cmdbuf->status() == MTL::CommandBufferStatusError) {
+        NXSAPI_LOG(
+            nexus::NXS_LOG_ERROR,
+            "runSchedule: "
+                , cmdbuf->error()->localizedDescription()->utf8String());
+        return NXS_InvalidSchedule;
+      }
+    }
+    return NXS_Success;
+  }
+
+  virtual nxs_status release() override {
+    cmdbufs.clear();
+    return NXS_Success;
   }
 };
 
@@ -777,7 +775,7 @@ extern "C" nxs_int nxsCreateSchedule(nxs_int device_id,
   if (!dev) return NXS_InvalidDevice;
 
   NXSAPI_LOG(nexus::NXS_LOG_NOTE, "createSchedule");
-  auto *sched = new MetalSchedule();
+  auto *sched = new MetalSchedule(dev, sched_settings);
   return rt->addObject(sched, true);
 }
 
@@ -796,23 +794,7 @@ extern "C" nxs_status nxsRunSchedule(nxs_int schedule_id, nxs_int stream_id,
   auto stream = rt->get<MTL::CommandQueue>(stream_id);
   if (!stream) return NXS_InvalidStream;
 
-  auto *cmdbuf = sched->getCommandBuffer(rt, *parent, stream);
-  if (!cmdbuf) return NXS_InvalidSchedule;
-
-  cmdbuf->enqueue();
-
-  cmdbuf->commit();
-  if (!(sched_settings & NXS_ExecutionSettings_NonBlocking)) {
-    cmdbuf->waitUntilCompleted();  // Synchronous wait for simplicity
-    if (cmdbuf->status() == MTL::CommandBufferStatusError) {
-      NXSAPI_LOG(
-          nexus::NXS_LOG_ERROR,
-          "runSchedule: "
-              , cmdbuf->error()->localizedDescription()->utf8String());
-      return NXS_InvalidEvent;
-    }
-  }
-  return NXS_Success;
+  return sched->run(stream, sched_settings);
 }
 
 /************************************************************************
@@ -846,10 +828,9 @@ extern "C" nxs_int NXS_API_CALL nxsCreateCommand(nxs_int schedule_id,
 
   NXSAPI_LOG(nexus::NXS_LOG_NOTE, "createCommand");
 
-  auto *cmd = new MetalCommand(kernel_id, NXS_CommandType_Dispatch);
-  auto res = rt->addObject(cmd, true);
-  (*parent)->addChild(res);
-  return res;
+  auto *cmd = new MetalCommand(pipeState, command_settings);
+  sched->addCommand(cmd);
+  return rt->addObject(cmd, true);
 }
 
 /************************************************************************
@@ -870,10 +851,9 @@ nxsCreateSignalCommand(nxs_int schedule_id, nxs_int event_id,
   if (!event) return NXS_InvalidEvent;
 
   NXSAPI_LOG(nexus::NXS_LOG_NOTE, "createSignalCommand");
-  auto *cmd = new MetalCommand(event_id, NXS_CommandType_Signal, signal_value);
-  auto res = rt->addObject(cmd, true);
-  (*parent)->addChild(res);
-  return res;
+  auto *cmd = new MetalCommand(event, NXS_CommandType_Signal, signal_value, command_settings);
+  sched->addCommand(cmd);
+  return rt->addObject(cmd, true);
 }
 /************************************************************************
  * @def CreateWaitCommand
@@ -893,10 +873,9 @@ nxsCreateWaitCommand(nxs_int schedule_id, nxs_int event_id, nxs_int wait_value,
   if (!event) return NXS_InvalidEvent;
 
   NXSAPI_LOG(nexus::NXS_LOG_NOTE, "createWaitCommand");
-  auto *cmd = new MetalCommand(event_id, NXS_CommandType_Wait, wait_value);
-  auto res = rt->addObject(cmd, true);
-  (*parent)->addChild(res);
-  return res;
+  auto *cmd = new MetalCommand(event, NXS_CommandType_Wait, wait_value, command_settings);
+  sched->addCommand(cmd);
+  return rt->addObject(cmd, true);
 }
 
 /************************************************************************
@@ -907,7 +886,9 @@ nxsCreateWaitCommand(nxs_int schedule_id, nxs_int event_id, nxs_int wait_value,
  ***********************************************************************/
 extern "C" nxs_status NXS_API_CALL nxsSetCommandArgument(nxs_int command_id,
                                                          nxs_int argument_index,
-                                                         nxs_int buffer_id) {
+                                                         nxs_int buffer_id,
+                                                         const char *name,
+                                                         nxs_uint arg_settings) {
   NXSAPI_LOG(nexus::NXS_LOG_NOTE, "setCommandArg ", command_id, " - "
                                                   , argument_index, " - "
                                                   , buffer_id);
@@ -918,8 +899,7 @@ extern "C" nxs_status NXS_API_CALL nxsSetCommandArgument(nxs_int command_id,
   if (!cmd) return NXS_InvalidCommand;
   auto buf = rt->get<MTL::Buffer>(buffer_id);
   if (!buf) return NXS_InvalidBuffer;
-  // TODO: needs retained buffer
-  (*parent)->addChild(buffer_id, argument_index);
+  cmd->setScalar(argument_index, buf, name, arg_settings);
   return NXS_Success;
 }
 
@@ -937,7 +917,7 @@ extern "C" nxs_status NXS_API_CALL nxsFinalizeCommand(nxs_int command_id,
   auto cmd = rt->get<MetalCommand>(command_id);
   if (!cmd) return NXS_InvalidCommand;
 
-  cmd->setDimensions(grid_size.x, group_size.x, shared_memory_size);
+  cmd->finalize(grid_size, group_size, shared_memory_size);
 
   return NXS_Success;
 }
