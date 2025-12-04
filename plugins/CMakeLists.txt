@@ -33,3 +33,5 @@ elseif(MACOS)
     add_subdirectory(metal)
 
 endif()
+
+add_subdirectory(tenstorrent)
