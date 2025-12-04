@@ -1,5 +1,5 @@
-import importlib
 import nexus
+import sys
 
 """
 Utility functions for the Nexus module.
@@ -7,19 +7,8 @@ Utility functions for the Nexus module.
 This module provides helper functions and utilities for working with Nexus.
 """
 
-numpy_loaded = False
-try:
-    importlib.find_loader('numpy')
-    numpy_loaded = True
-except ImportError:
-    numpy_loaded = False
-
-torch_loaded = False
-try:
-    importlib.find_loader('torch')
-    torch_loaded = True
-except ImportError:
-    torch_loaded = False
+numpy_loaded = 'numpy' in sys.modules
+torch_loaded = 'torch' in sys.modules
 
 def version_info():
     """
