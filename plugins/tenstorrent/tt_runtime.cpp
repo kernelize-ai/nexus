@@ -134,8 +134,6 @@ extern "C" nxs_status NXS_API_CALL nxsCopyBuffer(nxs_int buffer_id,
   auto rt = getRuntime();
   auto buf = rt->get<TTBuffer>(buffer_id);
   if (!buf) return NXS_InvalidBuffer;
-  NXSAPI_LOG(nexus::NXS_LOG_ERROR, "CopyBuffer not implemented");
-
   return buf->copyToHost(host_ptr);
 }
 

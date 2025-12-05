@@ -41,7 +41,7 @@ nxs_status TTCommand::runCommand(nxs_int stream, ttmd::MeshWorkload &workload,
       size_t tile_count = *(nxs_int*)consts[i].value;
       size_t tile_size_bytes = tile_size * getDataTypeSize(cst.settings);
       auto data_format = getDataFormat(consts[i].settings);
-      NXSAPI_LOG(nexus::NXS_LOG_NOTE, "CB size: ", tile_size_bytes, ", format=", data_format);
+      NXSAPI_LOG(nexus::NXS_LOG_NOTE, "CB size (", i, "): ", tile_size_bytes, ", format=", data_format);
       auto cb_config = make_cb_config(static_cast<tt::CBIndex>(i), tile_count, tile_size_bytes, data_format);
       TT_CHECK(ttm::CreateCircularBuffer, program, cores, cb_config);
       ctas.push_back(i);
