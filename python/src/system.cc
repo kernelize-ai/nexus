@@ -23,7 +23,7 @@ struct DevPtr {
 
 static DevPtr getPointer(PyObject *obj) {
   DevPtr result{nullptr, 0, "", -1, NXS_DataType_Undefined};
-  if (Py_IsNone(obj) || PyLong_Check(obj) || PyFloat_Check(obj)) {
+  if (obj == Py_None || PyLong_Check(obj) || PyFloat_Check(obj)) {
     return result;
   }
   PyObject *data_ptr_m = PyObject_GetAttrString(obj, "data_ptr");
