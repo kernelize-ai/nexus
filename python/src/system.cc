@@ -23,7 +23,7 @@ struct DevPtr {
 
 static DevPtr getPointer(PyObject *obj) {
   DevPtr result{nullptr, 0, "", -1, NXS_DataType_Undefined};
-  if (obj == Py_None) {
+  if (Py_IsNone(obj) || PyLong_Check(obj) || PyFloat_Check(obj)) {
     return result;
   }
   PyObject *data_ptr_m = PyObject_GetAttrString(obj, "data_ptr");
@@ -89,25 +89,28 @@ static Buffer make_buffer(py::object tensor, Device device = Device()) {
   // Buffer)
   auto data_ptr = getPointer(tensor.ptr());
   nxs_uint settings = data_ptr.dtype;
-  if (data_ptr.size == 0) {
-    throw std::runtime_error("Invalid buffer");
+  if (data_ptr.size == 0) { // is size 0 legal?
+    return Buffer();
   }
-  if (!data_ptr.runtime_name.empty() && data_ptr.runtime_name != "cpu" && data_ptr.device_id != -1) {
+  if (!data_ptr.runtime_name.empty() && data_ptr.device_id != -1) {
     auto buffer_runtime = nexus::getSystem().getRuntime(data_ptr.runtime_name);
     if (buffer_runtime) {
       auto dp_device = buffer_runtime.getDevice(data_ptr.device_id);
       if (!dp_device) {
         throw std::runtime_error("Device not found: " + std::string(data_ptr.runtime_name) + " " + std::to_string(data_ptr.device_id));
       }
-      return dp_device.createBuffer(data_ptr.size, data_ptr.ptr, settings | NXS_BufferSettings_OnDevice);
+      auto buf = dp_device.createBuffer(data_ptr.size, data_ptr.ptr, settings | NXS_BufferSettings_OnDevice);
+      if (device && device != dp_device) {
+        return device.copyBuffer(buf);
+      }
+      return buf;
     }
-    throw std::runtime_error("Runtime not found: " +
-                             std::string(data_ptr.runtime_name));
+    return Buffer();
   }
   if (device) {
     return device.createBuffer(data_ptr.size, data_ptr.ptr, settings);
   }
-  return nexus::getSystem().createBuffer(data_ptr.size, data_ptr.ptr);
+  return nexus::getSystem().createBuffer(data_ptr.size, data_ptr.ptr, settings);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -229,6 +232,9 @@ static nxs_status set_argument(Command &self, int index, py::object value,
   if (py::isinstance<Buffer>(value)) {
     auto buf = value.cast<Buffer>();
     return self.setArgument(index, buf, name, settings);
+  }
+  else if (Buffer buffer = make_buffer(value)) {
+    return self.setArgument(index, buffer, name, settings);
   }
   // Test for bool (check before int, since bool is subclass of int in Python)
   else if (py::isinstance<py::bool_>(value)) {
@@ -456,7 +462,7 @@ void pynexus::init_system_bindings(py::module &m) {
             if (cmd) {
               int idx = 0;
               for (auto buf : buffers) {
-                set_argument(cmd, idx, buf);
+                set_argument(cmd, idx++, buf);
               }
               if (dims.size() == 2 && dims[0].x > 0 && dims[1].x > 0) {
                 cmd.finalize(dims[0], dims[1], 0);

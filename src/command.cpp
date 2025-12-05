@@ -64,6 +64,11 @@ class CommandImpl : public Impl {
 
   nxs_status setArgument(nxs_uint index, Buffer buffer, const char *name, nxs_uint settings) {
     if (event) return NXS_InvalidArgIndex;
+    auto *dev = getParentOfType<DeviceImpl>();
+    auto *buf_dev = buffer.getParentOfType<DeviceImpl>();
+    if (buf_dev && buf_dev != dev) {
+      buffer = dev->copyBuffer(buffer);
+    }
     putArgument(index, buffer, name);
     auto *rt = getParentOfType<RuntimeImpl>();
     return (nxs_status)rt->runAPIFunction<NF_nxsSetCommandArgument>(

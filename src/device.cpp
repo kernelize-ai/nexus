@@ -159,16 +159,17 @@ Buffer detail::DeviceImpl::createBuffer(size_t size, const void *data,
                                         nxs_uint settings) {
   NEXUS_LOG(NXS_LOG_NOTE, "  createBuffer");
   APICALL(nxsCreateBuffer, getId(), size, (void *)data, settings);
-  Buffer nbuf(Impl(this, apiResult, settings), getId(), size);
+  Buffer nbuf(Impl(this, apiResult, settings), getId(), size, data);
   buffers.add(nbuf);
   return nbuf;
 }
 
 Buffer detail::DeviceImpl::copyBuffer(Buffer buf, nxs_uint settings) {
   NEXUS_LOG(NXS_LOG_NOTE, "  copyBuffer");
+  settings |= buf.getSettings() & ~NXS_BufferSettings_OnDevice;
   APICALL(nxsCreateBuffer, getId(), buf.getSize(), (void *)buf.getData(),
           settings);
-  Buffer nbuf(Impl(this, apiResult, settings), getId(), buf.getSize());
+  Buffer nbuf(Impl(this, apiResult, settings), getId(), buf.getSize(), buf.getData());
   buffers.add(nbuf);
   return nbuf;
 }

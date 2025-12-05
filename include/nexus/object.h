@@ -26,8 +26,6 @@ class Impl {
 
   void setSettings(nxs_uint _settings) { settings = _settings; }
 
- protected:
-  // Only the derived class can access
   template <typename T = Impl>
   T *getParent() const {
     return dynamic_cast<T *>(owner);
@@ -75,6 +73,12 @@ class Object {
   virtual ~Object() {}
 
   operator bool() const { return nxs_valid_id(getId()); }
+
+  template <typename T>
+  T *getParentOfType() const {
+    if (auto *impl = getImpl()) return impl->template getParentOfType<T>();
+    return nullptr;
+  }
 
   void release() { impl.reset(); }
 
