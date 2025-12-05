@@ -99,14 +99,11 @@ static Buffer make_buffer(py::object tensor, Device device = Device()) {
       if (!dp_device) {
         throw std::runtime_error("Device not found: " + std::string(data_ptr.runtime_name) + " " + std::to_string(data_ptr.device_id));
       }
-      if (device) {
-        auto buf = dp_device.createBuffer(data_ptr.size, data_ptr.ptr, settings | NXS_BufferSettings_OnDevice);
-        if (device != dp_device) {
-          return device.copyBuffer(buf);
-        }
-        return buf;
+      auto buf = dp_device.createBuffer(data_ptr.size, data_ptr.ptr, settings | NXS_BufferSettings_OnDevice);
+      if (device && device != dp_device) {
+        return device.copyBuffer(buf);
       }
-      return dp_device.createBuffer(data_ptr.size, data_ptr.ptr, settings | NXS_BufferSettings_OnDevice);
+      return buf;
     }
     return Buffer();
   }
@@ -237,7 +234,6 @@ static nxs_status set_argument(Command &self, int index, py::object value,
     return self.setArgument(index, buf, name, settings);
   }
   else if (Buffer buffer = make_buffer(value)) {
-    // TODO: check device
     return self.setArgument(index, buffer, name, settings);
   }
   // Test for bool (check before int, since bool is subclass of int in Python)

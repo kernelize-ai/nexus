@@ -32,7 +32,21 @@ class Buffer {
   char *getData() const { return buf; }
   size_t size() const { return sz; }
   size_t getSize() const { return sz; }
+  void setSize(size_t new_size) {
+    auto *buf_c = buf;
+    if (settings & NXS_BufferSettings_Maintain) {
+      buf = (char *)realloc(buf, new_size);
+    } else {
+      settings |= NXS_BufferSettings_Maintain;
+      buf = (char *)malloc(new_size);
+      if (buf_c) std::memcpy((void *)buf, buf_c, std::min(sz, new_size));
+    }
+    sz = new_size;
+  }
   nxs_uint getSettings() const { return settings; }
+  void setSettings(nxs_uint new_settings) {
+    settings = new_settings;
+  }
   template <typename T = void>
   T *get() {
     return reinterpret_cast<T *>(buf);
