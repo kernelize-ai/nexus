@@ -33,4 +33,8 @@ if(EXISTS ${TT_METAL_CMAKE_PATH})
         target_link_options(tt_plugin PRIVATE "LINKER:--enable-auto-import,--enable-runtime-pseudo-reloc")
     endif()
 
+else()
+
+    message(STATUS "TT Metal not found!")
+
 endif()
