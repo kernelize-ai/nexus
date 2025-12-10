@@ -4,16 +4,17 @@
 #include "tenstorrent.h"
 
 #include <tt_command.h>
+#include <tt_device.h>
 #include <rt_schedule.h>
 
 #include <chrono>
 
-class TTSchedule : public nxs::rt::Schedule<TTCommand, TTDevice, nxs_int> {
+class TTSchedule : public nxs::rt::Schedule<TTCommand, TTDevice *, nxs_int> {
   std::chrono::steady_clock::time_point start_time;
   std::chrono::steady_clock::time_point end_time;
 
  public:
-  TTSchedule(TTDevice device = TTDevice(), nxs_uint settings = 0)
+  TTSchedule(TTDevice *device = nullptr, nxs_uint settings = 0)
       : Schedule(device, settings) {}
   virtual ~TTSchedule() = default;
 

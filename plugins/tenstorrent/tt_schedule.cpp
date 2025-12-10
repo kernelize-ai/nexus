@@ -9,31 +9,34 @@ float TTSchedule::getTime() const {
       .count();
 }
 
-bool placeCommand(nxs_uint cmdSize, ttm::CoreRangeSet &coreRangeSet, ttm::CoreRange &cmdRange, const ttm::CoreCoord &devSize) {
-  auto numRows = (cmdSize / devSize.x) + !!(cmdSize % devSize.x);
-  auto tail = cmdSize % devSize.x;
+bool placeCommand(nxs_uint cmdSize, ttm::CoreRange &cmdRange, ttm::CoreRange &devRange, size_t rowLen) {
+  auto numRows = (cmdSize / rowLen) + !!(cmdSize % rowLen);
+  auto tail = cmdSize % rowLen;
 
   // TODO: use this instead
-  // std::optional<CoreRange> select_contiguous_range_from_corerangeset(const CoreRangeSet& crs, uint32_t x, uint32_t y);
   if (numRows == 1) {
     // find gap  and return
-
   }
-  // MUST BE A RECTANGLE
-  size_t nextRow = 0;
-  if (!coreRangeSet.empty())
-    nextRow = coreRangeSet.bounding_box().end_coord.y + 1;
-
-  NXSAPI_LOG(nexus::NXS_LOG_NOTE, "placeCommand: nextRow=", nextRow, ", numRows=", numRows);
-  if (nextRow + numRows > devSize.y)
+  if (numRows > devRange.end_coord.y - devRange.start_coord.y + 1) {
     return false;
-
-  size_t endX = (numRows > 1 ? devSize.x : cmdSize) - 1;
-  size_t endY = nextRow + numRows - 1;
-  cmdRange = {{0, nextRow}, {endX, endY}};
-  // ??? how to merge? this doesn't link
-  //coreRangeSet = coreRangeSet.merge(cmdRange);
+  }
+  cmdRange.start_coord.x = devRange.start_coord.x;
+  cmdRange.start_coord.y = devRange.start_coord.y;
+  cmdRange.end_coord.x = numRows > 1 ? devRange.end_coord.x : devRange.start_coord.x + tail - 1;
+  cmdRange.end_coord.y = devRange.start_coord.y + numRows - 1;
+  devRange.start_coord.y += numRows;
+  NXSAPI_LOG(nexus::NXS_LOG_NOTE, "placeCommand: devRange=", devRange.start_coord.x, ",", devRange.start_coord.y, " - ", devRange.end_coord.x, ",", devRange.end_coord.y, ", numRows=", numRows);
+  NXSAPI_LOG(nexus::NXS_LOG_NOTE, "placeCommand: cmdRange=", cmdRange.start_coord.x, ",", cmdRange.start_coord.y, " - ", cmdRange.end_coord.x, ",", cmdRange.end_coord.y);
   return true;
+  // TODO: this fails
+  //auto crange = select_contiguous_range_from_corerangeset(coreRangeSet, devSize.x, numRows);
+  //if (crange) {
+  //  NXSAPI_LOG(nexus::NXS_LOG_NOTE, "placeCommand: crange=", crange->start_coord.x, ",", crange->start_coord.y, " - ", crange->end_coord.x, ",", crange->end_coord.y);
+  //  cmdRange = *crange;
+  //  //coreRangeSet = coreRangeSet.merge(cmdRange);
+  //  return true;
+  //}
+  return false;
 }
 
 nxs_status TTSchedule::run(nxs_int stream, nxs_uint run_settings) {
@@ -43,23 +46,26 @@ nxs_status TTSchedule::run(nxs_int stream, nxs_uint run_settings) {
   nxs_uint settings = getSettings() | run_settings;
 
   // map commands across cores
-  auto device = getDevice();
-  TT_NOBJ_CHECK(device_range, ttmd::MeshCoordinateRange, device->shape());
-  ttmd::MeshCommandQueue& cq = device->mesh_command_queue();
+  auto *device = getDevice();
+  auto device_range = device->getRange();
+  auto &cq = device->getCQ();
   ttmd::MeshWorkload workload;
 
   // get current device size
-  // TODO: use CoreRangeSet to collect runs
-  auto devGrid = device->logical_grid_size();
+  TT_NOBJ_CHECK(devGrid, device->get()->compute_with_storage_grid_size);
   NXSAPI_LOG(nexus::NXS_LOG_NOTE, "Device grid: ", devGrid.x, ",", devGrid.y);
 
-  ttm::CoreRangeSet coreRangeSet;
+//  ttm::CoreRangeSet coreRangeSet(
+//    ttm::num_cores_to_corerangeset(devGrid.x * devGrid.y, devGrid, true));
+//  NXSAPI_LOG(nexus::NXS_LOG_NOTE, "Core range set: ", coreRangeSet.bounding_box().start_coord.x, ",", coreRangeSet.bounding_box().start_coord.y, " - ", coreRangeSet.bounding_box().end_coord.x, ",", coreRangeSet.bounding_box().end_coord.y);
 
+  ttm::CoreRange devRange = {{0,0}, {devGrid.x - 1, devGrid.y - 1}};
   for (auto cmd : getCommands()) {
     ttm::CoreRange cmdCores {{0,0}, {0,0}};
-    if (!placeCommand(cmd->getGridSize(), coreRangeSet, cmdCores, devGrid)) {
+    if (!placeCommand(cmd->getGridSize(), cmdCores, devRange, devGrid.x)) {
       //assert(0); // enqueue and start another workload
     }
+    NXSAPI_LOG(nexus::NXS_LOG_NOTE, "placeCommand: cmdCores=", cmdCores.start_coord.x, ",", cmdCores.start_coord.y, " - ", cmdCores.end_coord.x, ",", cmdCores.end_coord.y);
     auto status = cmd->runCommand(stream, workload, device_range, cmdCores);
     if (!nxs_success(status)) return status;
   }

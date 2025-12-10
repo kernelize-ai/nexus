@@ -5,15 +5,16 @@
 
 #include <rt_buffer.h>
 
+class TTDevice;
+
 class TTBuffer : public nxs::rt::Buffer {
   typedef std::shared_ptr<ttmd::MeshBuffer> Buffer_sp;
-  TTDevice device;
-  Buffer_sp buffer;
+  TTDevice *device;
   nxs_uint address;
-  bool buffer_loaded;
+  Buffer_sp buffer;
 
  public:
-  TTBuffer(TTDevice dev = TTDevice(), size_t size = 0,
+  TTBuffer(TTDevice *dev = nullptr, size_t size = 0,
            void *data_ptr = nullptr, nxs_uint settings = 0);
 
   ~TTBuffer() = default;

@@ -10,11 +10,10 @@
 
 #include <tt-metalium/host_api.hpp>
 #include <tt-metalium/distributed.hpp>
+#include <tt-metalium/work_split.hpp>
 
 namespace ttm = tt::tt_metal;
 namespace ttmd = tt::tt_metal::distributed;
-
-typedef std::shared_ptr<ttmd::MeshDevice> TTDevice;
 
 inline tt::DataFormat getDataFormat(nxs_uint settings) {
     auto nxsFormat = settings & NXS_DataType_Mask;

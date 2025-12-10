@@ -4,7 +4,7 @@
 #include "tenstorrent.h"
 
 #include <tt_command.h>
-#include <tt_runtime.h>
+#include <tt_device.h>
 #include <tt_schedule.h>
 #include <tt_library.h>
 #include <tt_buffer.h>
@@ -25,19 +25,8 @@ class TTRuntime : public rt::Runtime {
     NXSAPI_LOG(nexus::NXS_LOG_NOTE, "Create TTDevice count: ", numDevs);
     for (size_t i = 0; i < numDevs; ++i) {
       NXSAPI_LOG(nexus::NXS_LOG_NOTE, "Create TTDevice: ", i);
-        //   static std::shared_ptr<MeshDevice> create_unit_mesh(
-        //     int device_id,
-        //     size_t l1_small_size = DEFAULT_L1_SMALL_SIZE,
-        //     size_t trace_region_size = DEFAULT_TRACE_REGION_SIZE,
-        //     size_t num_command_queues = 1,
-        //     const DispatchCoreConfig& dispatch_core_config = DispatchCoreConfig{},
-        //     tt::stl::Span<const std::uint32_t> l1_bank_remap = {}, 
-        //     size_t worker_l1_size = DEFAULT_WORKER_L1_SIZE);
-      TT_NOBJ_CHECK(device, ttmd::MeshDevice::create_unit_mesh, i);
-      //TT_NOBJ_CHECK(&cq, device->mesh_command_queue);
-      devices.push_back(device);
-      addObject(i);
-      break;
+      devices.emplace_back(i);
+      addObject(&devices.back());
     }
   }
   ~TTRuntime() {
@@ -47,8 +36,8 @@ class TTRuntime : public rt::Runtime {
 
   nxs_int getNumDevices() const { return devices.size(); }
 
-  TTDevice getDevice(nxs_int device_id) {
-    return devices[device_id];
+  TTDevice *getDevice(nxs_int device_id) {
+    return &devices[device_id];
   }
 
   template <typename T>
@@ -56,7 +45,7 @@ class TTRuntime : public rt::Runtime {
     return static_cast<T>(get(id));
   }
 
-  TTBuffer *getBuffer(TTDevice device, size_t size, void *data_ptr = nullptr,
+  TTBuffer *getBuffer(TTDevice *device, size_t size, void *data_ptr = nullptr,
                         nxs_uint settings = 0) {
     return buffer_pool.get_new(device, size, data_ptr, settings);
   }
@@ -68,7 +57,7 @@ class TTRuntime : public rt::Runtime {
     return NXS_Success;
   }
 
-  nxs_int getSchedule(TTDevice device, nxs_uint settings = 0) {
+  nxs_int getSchedule(TTDevice *device, nxs_uint settings = 0) {
     auto schedule = schedule_pool.get_new(device, settings);
     if (!schedule) return NXS_InvalidSchedule;
     return addObject(schedule);
