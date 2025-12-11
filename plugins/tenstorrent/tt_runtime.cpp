@@ -87,7 +87,7 @@ nxsGetDeviceProperty(nxs_int device_id, nxs_uint device_property_id,
       return rt::getPropertyStr(property_value, property_value_size, "npu");
     case NP_Architecture: {
       TT_NOBJ_CHECK(arch, dev->get()->arch);
-      auto archName = tt::get_string(arch);
+      auto archName = tt::arch_to_str(arch);
       return rt::getPropertyStr(property_value, property_value_size,
                                 archName);
     }

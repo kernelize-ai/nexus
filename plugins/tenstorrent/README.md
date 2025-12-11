@@ -108,10 +108,10 @@ num_cores = device.get_property_int('Size')  # Grid size (x * y)
 # Create buffer with data
 import numpy as np
 data = np.array([1.0, 2.0, 3.0], dtype=np.float32)
-buffer = device.create_buffer(data, dtype='fp32')
+buffer = device.create_buffer(data) # auto-detects datatype
 
 # Create empty buffer
-buffer = device.create_buffer((1024, 1024), dtype='fp16')
+buffer = device.create_buffer((1024, 1024), dtype=nexus.datatype.F16)
 
 # Copy buffer to host
 host_data = buffer.copy_to_host()
@@ -121,7 +121,7 @@ host_data = buffer.copy_to_host()
 
 ```python
 # Load library from source file
-library = device.create_library_from_file('my_kernel.cpp')
+library = device.create_library('my_kernel.cpp')
 
 # Get kernel
 kernel = library.get_kernel('my_kernel')
@@ -133,16 +133,16 @@ schedule = device.create_schedule()
 command = schedule.create_command(kernel)
 
 # Set buffer arguments
-command.set_argument(0, input_buffer)
-command.set_argument(1, output_buffer)
+command.set_arg(0, input_buffer)
+command.set_arg(1, output_buffer)
 
 # Set scalar arguments
-command.set_scalar(2, value=42, name='param')
+command.set_arg(2, value=42, name='param')
 
 # Finalize command with grid/group sizes
 command.finalize(
     grid_size=(8, 8, 1),    # Grid dimensions
-    group_size=(1, 1, 1)     # Group dimensions (not used by TT)
+    group_size=(1, 1, 1)     # Group dimensions (not used by TT, must be single-threaded)
 )
 
 # Run schedule
@@ -210,7 +210,7 @@ Commands can configure circular buffers using constants:
 
 ```python
 # Set circular buffer constant
-command.set_scalar(0, value=tile_count, name='CB', dtype='i32')
+command.set_const(0, value=tile_count, name='CB', dtype='i32')
 # This creates a circular buffer with:
 # - Index: 0
 # - Tile count: tile_count
