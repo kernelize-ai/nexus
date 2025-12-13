@@ -27,6 +27,9 @@ class Buffer : public Object<detail::BufferImpl> {
 
   size_t getSize() const;
   const char *getData() const;
+  nxs_data_type getDataType() const;
+  size_t getNumElements() const;
+  size_t getElementSize() const;
 
   Buffer getLocal() const;
 

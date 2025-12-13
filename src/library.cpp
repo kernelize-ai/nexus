@@ -66,9 +66,9 @@ Kernel LibraryImpl::getKernel(const std::string &kernelName, Info info) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-Library::Library(Impl base) : Object(base) {}
+Library::Library(detail::Impl base) : Object(base) {}
 
-Library::Library(Impl base, Info info) : Object(base, info) {}
+Library::Library(detail::Impl base, Info info) : Object(base, info) {}
 
 Info Library::getInfo() const { NEXUS_OBJ_MCALL(Info(), getInfo); }
 

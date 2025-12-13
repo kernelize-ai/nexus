@@ -28,6 +28,8 @@ if(LINUX)
 
     add_subdirectory(hip)
 
+    add_subdirectory(tenstorrent)
+
 elseif(MACOS)
 
     add_subdirectory(metal)
