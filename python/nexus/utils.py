@@ -53,7 +53,7 @@ def format_device_info(device):
         return f"Device: {device} (error getting info: {e})"
 
 
-def get_data_type(tensor):
+def get_data_type(obj):
     """
     Get the data type of a tensor.
     
@@ -66,49 +66,97 @@ def get_data_type(tensor):
     Raises:
         ValueError: If the tensor is not a numpy or torch tensor.
     """
-
+    if isinstance(obj, nexus.buffer):
+        return obj.dtype
+    if isinstance(obj, nexus.data_type.nxs_data_type):
+        return obj
     if torch_loaded:
         import torch
-        if isinstance(tensor, torch.Tensor):
-            if tensor.dtype == torch.bfloat16:
-                return nexus.data_type.BF16
-            elif tensor.dtype == torch.float16:
-                return nexus.data_type.F16
-            elif tensor.dtype == torch.float32:
-                return nexus.data_type.F32
-            elif tensor.dtype == torch.float64:
-                return nexus.data_type.F64
-            elif tensor.dtype == torch.int32:
-                return nexus.data_type.I32
-            elif tensor.dtype == torch.int64:
-                return nexus.data_type.I64
-            elif tensor.dtype == torch.uint8:
-                return nexus.data_type.U8
-            elif tensor.dtype == torch.int8:
-                return nexus.data_type.I8
-            elif tensor.dtype == torch.uint16:
-                return nexus.data_type.U16
-            return nexus.data_type.Undefined
+        tdtype = None
+        if isinstance(obj, torch.Tensor):
+            tdtype = obj.dtype
+        elif isinstance(obj, torch.dtype):
+            tdtype = obj
+        if tdtype == torch.bfloat16:
+            return nexus.data_type.bfloat16
+        elif tdtype == torch.float16:
+            return nexus.data_type.float16
+        elif tdtype == torch.float32:
+            return nexus.data_type.float32
+        elif tdtype == torch.float64:
+            return nexus.data_type.float64
+        elif tdtype == torch.int32:
+            return nexus.data_type.int32
+        elif tdtype == torch.int64:
+            return nexus.data_type.int64
+        elif tdtype == torch.uint8:
+            return nexus.data_type.uint8
+        elif tdtype == torch.int8:
+            return nexus.data_type.int8
+        elif tdtype == torch.uint16:
+            return nexus.data_type.uint16
+        return nexus.data_type.undefined
     if numpy_loaded:
         import numpy
-        if isinstance(tensor, numpy.ndarray):
-            if tensor.dtype == numpy.bfloat16:
-                return nexus.data_type.BF16
-            elif tensor.dtype == numpy.float16:
-                return nexus.data_type.F16
-            elif tensor.dtype == numpy.float32:
-                return nexus.data_type.F32
-            elif tensor.dtype == numpy.float64:
-                return nexus.data_type.F64
-            elif tensor.dtype == numpy.int32:
-                return nexus.data_type.I32
-            elif tensor.dtype == numpy.int64:
-                return nexus.data_type.I64
-            elif tensor.dtype == numpy.uint8:
-                return nexus.data_type.U8
-            elif tensor.dtype == numpy.int8:
-                return nexus.data_type.I8
-            elif tensor.dtype == numpy.uint16:
-                return nexus.data_type.U16
-            return nexus.data_type.Undefined
+        tdtype = None
+        if isinstance(obj, numpy.ndarray):
+            tdtype = obj.dtype
+        elif isinstance(obj, numpy.dtype):
+            tdtype = obj
+        if tdtype == numpy.bfloat16:
+            return nexus.data_type.bfloat16
+        elif tdtype == numpy.float16:
+            return nexus.data_type.float16
+        elif tdtype == numpy.float32:
+            return nexus.data_type.float32
+        elif tdtype == numpy.float64:
+            return nexus.data_type.float64
+        elif tdtype == numpy.int32:
+            return nexus.data_type.int32
+        elif tdtype == numpy.int64:
+            return nexus.data_type.int64
+        elif tdtype == numpy.uint8:
+            return nexus.data_type.uint8
+        elif tdtype == numpy.int8:
+            return nexus.data_type.int8
+        elif tdtype == numpy.uint16:
+            return nexus.data_type.uint16
+        return nexus.data_type.undefined
     raise ValueError("numpy or torch is not loaded")
+
+def get_data_type_size(obj):
+    dtype = get_data_type(obj)
+    if dtype == nexus.data_type.float32:
+        return 4
+    elif dtype == nexus.data_type.int32:
+        return 4
+    elif dtype == nexus.data_type.float16:
+        return 2
+    elif dtype == nexus.data_type.bfloat16:
+        return 2
+    elif dtype == nexus.data_type.float8:
+        return 1
+    elif dtype == nexus.data_type.bfloat8:
+        return 1
+    elif dtype == nexus.data_type.uint32:
+        return 4
+    elif dtype == nexus.data_type.int16:
+        return 2
+    elif dtype == nexus.data_type.uint16:
+        return 2
+    elif dtype == nexus.data_type.int8:
+        return 1
+    elif dtype == nexus.data_type.uint8:
+        return 1
+    elif dtype == nexus.data_type.int4:
+        return 1
+    elif dtype == nexus.data_type.uint4:
+        return 1
+    elif dtype == nexus.data_type.float64:
+        return 8
+    elif dtype == nexus.data_type.int64:
+        return 8
+    elif dtype == nexus.data_type.uint64:
+        return 8
+    else:
+        raise ValueError("Invalid data type")

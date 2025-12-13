@@ -32,9 +32,7 @@ static DevPtr getPointer(PyObject *obj) {
   }
   PyObject *nbytes_ret = PyObject_GetAttrString(obj, "nbytes");
   if (data_ptr_m && nbytes_ret) {
-    PyObject *empty_tuple = PyTuple_New(0);
-    PyObject *data_ret = PyObject_Call(data_ptr_m, empty_tuple, NULL);
-    Py_DECREF(empty_tuple);
+    PyObject *data_ret = PyObject_CallNoArgs(data_ptr_m);
     Py_DECREF(data_ptr_m);
     if (!data_ret || *((nxs_long*)&data_ret) == -1) {
       PyErr_SetString(
@@ -84,9 +82,25 @@ static DevPtr getPointer(PyObject *obj) {
   return result;
 }
 
+PyObject *import_from(const char *module_name, const char *var_name) {
+  py::object var = py::module_::import(module_name).attr(var_name);
+  return var.release().ptr();
+}
+
+
 static Buffer make_buffer(py::object tensor, Device device = Device()) {
   // TODO: track ownership of the py::object tensor (release on destruction of
   // Buffer)
+  static auto nexus_buffer = import_from("nexus", "buffer");
+  if (PyObject_IsInstance(tensor.ptr(), nexus_buffer)) {
+    // TODO: check for matching device
+    auto buffer = tensor.cast<Buffer>();
+    if (device && device != buffer.getParentImpl()) {
+      return device.copyBuffer(buffer);
+    }
+    return buffer;
+  }
+
   auto data_ptr = getPointer(tensor.ptr());
   nxs_uint settings = data_ptr.dtype;
   if (data_ptr.size == 0) { // is size 0 legal?
@@ -344,25 +358,30 @@ void pynexus::init_system_bindings(py::module &m) {
   eventTypeEnum.export_values();
 
   //////////////////////////////////////////////////////////////////////////
-  // Generate python enum for nxs_event_type
-  // - added to `event_type` submodule for scoping
+  // Generate python enum for nxs_data_type
+  // - added to `data_type` submodule for scoping
+  // - TODO: confirm match with torch dtype names
   auto mdataType = m.def_submodule("data_type");
   auto dataTypeEnum = py::enum_<nxs_data_type>(mdataType, "nxs_data_type", py::module_local());
   dataTypeEnum.value("undefined", NXS_DataType_Undefined);
-  dataTypeEnum.value("F32", NXS_DataType_F32);
-  dataTypeEnum.value("F16", NXS_DataType_F16);
-  dataTypeEnum.value("BF16", NXS_DataType_BF16);
-  dataTypeEnum.value("F8", NXS_DataType_F8);
-  dataTypeEnum.value("BF8", NXS_DataType_BF8);
-  dataTypeEnum.value("F4", NXS_DataType_F4);
-  dataTypeEnum.value("BF4", NXS_DataType_BF4);
-  dataTypeEnum.value("I32", NXS_DataType_I32);
-  dataTypeEnum.value("U32", NXS_DataType_U32);
-  dataTypeEnum.value("I16", NXS_DataType_I16);
-  dataTypeEnum.value("I8", NXS_DataType_I8);
-  dataTypeEnum.value("U8", NXS_DataType_U8);
-  dataTypeEnum.value("I4", NXS_DataType_I4);
-  dataTypeEnum.value("U4", NXS_DataType_U4);
+  dataTypeEnum.value("float32", NXS_DataType_F32);
+  dataTypeEnum.value("float16", NXS_DataType_F16);
+  dataTypeEnum.value("bfloat16", NXS_DataType_BF16);
+  dataTypeEnum.value("float8", NXS_DataType_F8); // 
+  dataTypeEnum.value("bfloat8", NXS_DataType_BF8);
+  dataTypeEnum.value("float4", NXS_DataType_F4);
+  dataTypeEnum.value("bfloat4", NXS_DataType_BF4);
+  dataTypeEnum.value("int32", NXS_DataType_I32);
+  dataTypeEnum.value("uint32", NXS_DataType_U32);
+  dataTypeEnum.value("int16", NXS_DataType_I16);
+  dataTypeEnum.value("uint16", NXS_DataType_U16);
+  dataTypeEnum.value("int8", NXS_DataType_I8);
+  dataTypeEnum.value("uint8", NXS_DataType_U8);
+  dataTypeEnum.value("int4", NXS_DataType_I4);
+  dataTypeEnum.value("uint4", NXS_DataType_U4);
+  dataTypeEnum.value("float64", NXS_DataType_F64);
+  dataTypeEnum.value("int64", NXS_DataType_I64);
+  dataTypeEnum.value("uint64", NXS_DataType_U64);
   dataTypeEnum.export_values();
 
   //////////////////////////////////////////////////////////////////////////
@@ -370,7 +389,7 @@ void pynexus::init_system_bindings(py::module &m) {
   //////////////////////////////////////////////////////////////////////////
 
   // Properties Object
-  py::class_<Info>(m, "_info", py::module_local())
+  py::class_<Info>(m, "info", py::module_local())
       .def("__bool__", [](Info &self) { return (bool)self; })
       .def(
           "get",
@@ -385,7 +404,15 @@ void pynexus::init_system_bindings(py::module &m) {
           },
           py::arg("path") = std::vector<std::string_view>());
 
-  make_object_class<Buffer>(m, "_buffer")
+  make_object_class<Buffer>(m, "buffer")
+      .def("size", [](Buffer &self) { return self.getSize(); })
+      .def("numel", [](Buffer &self) { return self.getNumElements(); })
+      .def("element_size", [](Buffer &self) { return self.getElementSize(); })
+      .def("data_type", [](Buffer &self) { return self.getDataType(); })
+      .def_property_readonly("size", [](Buffer &self) { return self.getSize(); })
+      .def_property_readonly("nbytes", [](Buffer &self) { return self.getSize(); })
+      .def_property_readonly("dtype", [](Buffer &self) { return self.getDataType(); })
+      .def("data_ptr", [](Buffer &self) -> intptr_t { return reinterpret_cast<intptr_t>(self.getData()); }) // TODO: get Device pointer
       .def("copy", [](Buffer &self, py::object tensor) {
         auto data_ptr = getPointer(tensor.ptr());
         if (!data_ptr.runtime_name.empty() && data_ptr.runtime_name != "cpu") {
@@ -393,14 +420,14 @@ void pynexus::init_system_bindings(py::module &m) {
         }
         return self.copy(data_ptr.ptr);
       });
-  make_objects_class<Buffer>(m, "_buffers");
+  make_objects_class<Buffer>(m, "buffers");
 
-  make_object_class<Kernel>(m, "_kernel").def("get_info", [](Kernel &self) {
+  make_object_class<Kernel>(m, "kernel").def("get_info", [](Kernel &self) {
     return self.getInfo();
   });
-  make_objects_class<Kernel>(m, "_kernels");
+  make_objects_class<Kernel>(m, "kernels");
 
-  make_object_class<Library>(m, "_library")
+  make_object_class<Library>(m, "library")
       .def("get_info", [](Library &self) { return self.getInfo(); })
       .def("get_kernel",
            [](Library &self, const std::string &name) {
@@ -408,12 +435,12 @@ void pynexus::init_system_bindings(py::module &m) {
            })
       .def("get_kernels", [](Library &self) { return self.getKernels(); });
 
-  make_object_class<Stream>(m, "_stream");
-  make_object_class<Event>(m, "_event")
+  make_object_class<Stream>(m, "stream");
+  make_object_class<Event>(m, "event")
       .def("signal", [](Event &self, int signal_value) { return self.signal(signal_value); }, py::arg("signal_value") = 1)
       .def("wait", [](Event &self, int wait_value) { return self.wait(wait_value); }, py::arg("wait_value") = 1);
 
-  make_object_class<Command>(m, "_command")
+  make_object_class<Command>(m, "command")
       .def("get_event", [](Command &self) { return self.getEvent(); })
       .def("get_kernel", [](Command &self) { return self.getKernel(); })
       .def("set_arg", [](Command &self, int index, py::object value, const char *name, nxs_data_type data_type) -> nxs_status {
@@ -433,9 +460,9 @@ void pynexus::init_system_bindings(py::module &m) {
         }, py::arg("grid"), py::arg("block") = py::list{}, py::arg("shared_memory_size") = 0
       );
 
-  make_objects_class<Command>(m, "_commands");
+  make_objects_class<Command>(m, "commands");
 
-  make_object_class<Schedule>(m, "_schedule")
+  make_object_class<Schedule>(m, "schedule")
       .def(
           "create_command",
           [](Schedule &self, Kernel kernel, std::vector<Buffer> buffers,
@@ -493,19 +520,21 @@ void pynexus::init_system_bindings(py::module &m) {
           py::arg("stream") = Stream(), py::arg("blocking") = true);
 
   // Object Containers
-  make_objects_class<Library>(m, "_libraries");
-  make_objects_class<Schedule>(m, "_schedules");
-  make_objects_class<Stream>(m, "_streams");
-  make_objects_class<Event>(m, "_events");
+  make_objects_class<Library>(m, "librarys");
+  make_objects_class<Schedule>(m, "schedules");
+  make_objects_class<Stream>(m, "streams");
+  make_objects_class<Event>(m, "events");
 
-  make_object_class<Device>(m, "_device")
+  make_object_class<Device>(m, "device")
       .def("get_info", [](Device &self) { return self.getInfo(); })
       .def("create_buffer",
            [](Device &self, py::object tensor) {
              return make_buffer(tensor, self);
            })
       .def("create_buffer",
-           [](Device &self, size_t size) { return self.createBuffer(size); })
+           [](Device &self, size_t size, nxs_uint settings) {
+             return self.createBuffer(size, nullptr, settings);
+          }, py::arg("size"), py::arg("settings") = 0)
       .def("copy_buffer",
            [](Device &self, Buffer buf) { return self.copyBuffer(buf); })
       .def("get_buffers", [](Device &self) { return self.getBuffers(); })
@@ -535,15 +564,15 @@ void pynexus::init_system_bindings(py::module &m) {
            [](Device &self) { return self.createSchedule(); })
       .def("get_schedules", [](Device &self) { return self.getSchedules(); });
 
-  make_objects_class<Device>(m, "_devices");
-  make_objects_class<Runtime>(m, "_runtimes");
+  make_objects_class<Device>(m, "devices");
+  make_objects_class<Runtime>(m, "runtimes");
 
-  make_object_class<Runtime>(m, "_runtime")
+  make_object_class<Runtime>(m, "runtime")
       .def("get_device",
            [](Runtime &self, nxs_int id) { return self.getDevice(id); })
       .def("get_devices", [](Runtime &self) { return self.getDevices(); });
 
-  make_objects_class<Info>(m, "_infos");
+  make_objects_class<Info>(m, "infos");
 
   // query
   m.def("get_runtime", [](const std::string &name) { return nexus::getSystem().getRuntime(name); });

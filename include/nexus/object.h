@@ -49,6 +49,7 @@ class Impl {
 // Facade base-class
 template <typename Timpl>
 class Object {
+  typedef Timpl Impl;
   // set of runtimes
   typedef std::shared_ptr<Timpl> ImplRef;
   ImplRef impl;
@@ -75,8 +76,13 @@ class Object {
   operator bool() const { return nxs_valid_id(getId()); }
 
   template <typename T>
-  T *getParentOfType() const {
+  const T *getParentOfType() const {
     if (auto *impl = getImpl()) return impl->template getParentOfType<T>();
+    return nullptr;
+  }
+
+  const detail::Impl *getParentImpl() const {
+    if (auto *impl = getImpl()) return impl->template getParent();
     return nullptr;
   }
 
@@ -93,6 +99,8 @@ class Object {
 
   bool operator==(const Object &other) const { return get() == other.get(); }
   bool operator!=(const Object &other) const { return get() != other.get(); }
+  bool operator==(const detail::Impl *other) const { return reinterpret_cast<const detail::Impl *>(get().get()) == other; }
+  bool operator!=(const detail::Impl *other) const { return reinterpret_cast<const detail::Impl *>(get().get()) != other; }
 
   virtual std::optional<Property> getProperty(nxs_int prop) const = 0;
 

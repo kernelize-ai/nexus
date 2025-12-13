@@ -20,6 +20,9 @@ class BufferImpl : public Impl {
 
   size_t getSize() const { return size; }
   const char *getData() const;
+  nxs_data_type getDataType() const;
+  size_t getNumElements() const;
+  size_t getElementSize() const;
 
   void setData(size_t sz, const char *hostData);
   void setData(void *_data) { data = _data; }

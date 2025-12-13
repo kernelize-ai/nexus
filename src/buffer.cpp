@@ -48,6 +48,47 @@ const char *detail::BufferImpl::getData() const {
   return reinterpret_cast<const char *>(getVoidData());
 }
 
+nxs_data_type detail::BufferImpl::getDataType() const {
+  return static_cast<nxs_data_type>(getSettings() & NXS_DataType_Mask);
+}
+
+size_t detail::BufferImpl::getNumElements() const {
+  return getSize() / getElementSize();
+}
+
+size_t detail::BufferImpl::getElementSize() const {
+  auto dataType = getDataType();
+  switch (dataType) {
+    case NXS_DataType_F32:
+    case NXS_DataType_I32:
+    case NXS_DataType_U32:
+      return 4;
+    case NXS_DataType_F16:
+    case NXS_DataType_BF16:
+    case NXS_DataType_I16:
+    case NXS_DataType_U16:
+      return 2;
+    case NXS_DataType_F8:
+    case NXS_DataType_BF8:
+    case NXS_DataType_I8:
+    case NXS_DataType_U8:
+      return 1;
+    case NXS_DataType_F4:
+    case NXS_DataType_BF4:
+    case NXS_DataType_I4:
+    case NXS_DataType_U4:
+      //assert(0);
+      return 1;
+    case NXS_DataType_F64:
+    case NXS_DataType_I64:
+    case NXS_DataType_U64:
+      return 8;
+    default:
+      break;
+  }
+  return 1;
+}
+
 std::optional<Property> detail::BufferImpl::getProperty(nxs_int prop) const {
   if (getDeviceId()) {
     auto *rt = getParentOfType<RuntimeImpl>();
@@ -126,6 +167,9 @@ std::optional<Property> Buffer::getProperty(nxs_int prop) const {
 
 size_t Buffer::getSize() const { NEXUS_OBJ_MCALL(0, getSize); }
 const char *Buffer::getData() const { NEXUS_OBJ_MCALL(nullptr, getData); }
+nxs_data_type Buffer::getDataType() const { NEXUS_OBJ_MCALL(NXS_DataType_Undefined, getDataType); }
+size_t Buffer::getNumElements() const { NEXUS_OBJ_MCALL(0, getNumElements); }
+size_t Buffer::getElementSize() const { NEXUS_OBJ_MCALL(0, getElementSize); }
 
 Buffer Buffer::getLocal() const {
   if (!nxs_valid_id(getDeviceId())) return *this;
