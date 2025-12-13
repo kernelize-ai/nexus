@@ -25,6 +25,7 @@ class TTDevice {
  private:
   bool initDevice() {
     if (device) return true;
+    NXSAPI_LOG(nexus::NXS_LOG_NOTE, "Create TTDevice: ", device_id);
     TT_OBJ_CHECK(device, ttmd::MeshDevice::create_unit_mesh, device_id);
     return true;
   }

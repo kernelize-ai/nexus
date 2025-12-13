@@ -24,7 +24,6 @@ class TTRuntime : public rt::Runtime {
     TT_NOBJ_CHECK(numDevs, ttm::GetNumAvailableDevices);
     NXSAPI_LOG(nexus::NXS_LOG_NOTE, "Create TTDevice count: ", numDevs);
     for (size_t i = 0; i < numDevs; ++i) {
-      NXSAPI_LOG(nexus::NXS_LOG_NOTE, "Create TTDevice: ", i);
       devices.emplace_back(i);
       addObject(&devices.back());
     }

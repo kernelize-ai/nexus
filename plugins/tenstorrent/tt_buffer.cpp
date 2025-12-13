@@ -21,7 +21,9 @@ TTBuffer::Buffer_sp TTBuffer::makeDeviceBuffer() {
       pad_size = size() + tile_size - (size() % tile_size);
     }
     std::vector<nxs_uchar> buf_v(pad_size, 0);
-    std::copy(data(), data() + size(), buf_v.begin());
+    if (auto data_ptr = getData()) {
+      std::copy(data_ptr, data_ptr + size(), buf_v.begin());
+    }
     ttmd::DeviceLocalBufferConfig dram_config{
         .page_size = tile_size,  // Number of bytes when round-robin between banks. Usually this is the same
                                       // as the tile size for efficiency.
