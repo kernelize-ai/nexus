@@ -82,7 +82,8 @@ class Object {
   }
 
   const detail::Impl *getParentImpl() const {
-    if (auto *impl = getImpl()) return impl->template getParent();
+    if (auto *impl = getImpl())
+      return impl->template getParent<detail::Impl>();
     return nullptr;
   }
 
