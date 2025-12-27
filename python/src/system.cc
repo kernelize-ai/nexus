@@ -537,6 +537,8 @@ void pynexus::init_system_bindings(py::module &m) {
           }, py::arg("size"), py::arg("settings") = 0)
       .def("copy_buffer",
            [](Device &self, Buffer buf) { return self.copyBuffer(buf); })
+      .def("release_buffer",
+          [](Device &self, Buffer buf) { return self.releaseBuffer(buf); })
       .def("get_buffers", [](Device &self) { return self.getBuffers(); })
       .def("load_library",
            [](Device &self, const char *data, size_t size) {

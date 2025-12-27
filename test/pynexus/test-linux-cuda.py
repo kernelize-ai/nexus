@@ -35,8 +35,10 @@ cmd.finalize([32,1,1], [32,1,1], 2048)
 
 sched.run()
 
-#res = nr2.get()
-
 nb2.copy(res2)
 
 print(res2)
+
+dev.release_buffer(nb0)
+dev.release_buffer(nb1)
+dev.release_buffer(nb2)

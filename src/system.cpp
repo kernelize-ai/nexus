@@ -47,6 +47,11 @@ Buffer SystemImpl::copyBuffer(Buffer buf, Device dev, nxs_uint settings) {
   return nbuf;
 }
 
+void SystemImpl::releaseBuffer(Buffer buf, Device dev) {
+  NEXUS_LOG(NXS_LOG_NOTE, "releaseBuffer ", buf.getId());
+  dev.releaseBuffer(buf);
+}
+
 Info SystemImpl::loadCatalog(const std::string &catalogPath) {
   NEXUS_LOG(NXS_LOG_NOTE, "loadCatalog ", catalogPath);
   Info cat(catalogPath);
@@ -84,6 +89,10 @@ Buffer System::createBuffer(size_t sz, const void *hostData,
 
 Buffer System::copyBuffer(Buffer buf, Device dev, nxs_uint settings) {
   NEXUS_OBJ_MCALL(Buffer(), copyBuffer, buf, dev, settings);
+}
+
+void System::releaseBuffer(Buffer buf, Device dev) {
+  NEXUS_OBJ_MCALL_VOID(releaseBuffer, buf, dev);
 }
 
 /// @brief Get the System Platform
