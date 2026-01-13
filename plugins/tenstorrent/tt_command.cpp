@@ -4,6 +4,8 @@
 
 #include <tt-metalium/bfloat16.hpp>
 
+#include <algorithm>
+
 /************************************************************************
  * @def _cpu_barrier
  * @brief Barrier for CPU fibers
@@ -57,21 +59,28 @@ nxs_status TTCommand::runCommand(nxs_int stream, ttmd::MeshWorkload &workload,
   // collect uniform args
   TTLibrary::RunTimeArgs rt_args;
   size_t numArgs = getArgsCount();
+  assert(numArgs <= NXS_KERNEL_MAX_ARGS - 5);
   for (size_t i = 0; i < numArgs; i++) {
     uint32_t arg_val = *static_cast<uint32_t *>(args[i].value);
     NXSAPI_LOG(nexus::NXS_LOG_NOTE, "Runtime arg: ", i, "=", arg_val);
     rt_args[i] = arg_val;
   }
 
+  // compute persistent grid size
+  int total_grid_size = grid_size.x * grid_size.y * grid_size.z;
+  int persistent_grid_stride = std::max(1, total_grid_size / (int)cores.size());
+  NXSAPI_LOG(nexus::NXS_LOG_NOTE, "Total grid size: ", total_grid_size, ", cores: ", cores.size(), ", persistent grid stride: ", persistent_grid_stride);
+
   // set params
-  int grid_idx = 0;
+  int persistent_grid_idx = 0;
   for (const auto& core : cores) {
-    rt_args[numArgs] = grid_idx % grid_size.x;
-    rt_args[numArgs + 1] = (grid_idx % (grid_size.x * grid_size.y)) / grid_size.x;
-    rt_args[numArgs + 2] = grid_idx / (grid_size.x * grid_size.y);
-    NXSAPI_LOG(nexus::NXS_LOG_NOTE, "Launch params: grid_idx=", grid_idx, ", x=", rt_args[numArgs], ", y=", rt_args[numArgs+1]);
+    rt_args[numArgs] = persistent_grid_idx * persistent_grid_stride;
+    rt_args[numArgs+1] = persistent_grid_idx * persistent_grid_stride + persistent_grid_stride;
+    if (rt_args[numArgs+1] > total_grid_size)
+      rt_args[numArgs+1] = total_grid_size;
+    NXSAPI_LOG(nexus::NXS_LOG_NOTE, "Launch params: grid_idx=", persistent_grid_idx, ", start=", rt_args[numArgs], ", end=", rt_args[numArgs+1]);
     library->setupCoreRuntime(program, core, rt_args);
-    grid_idx++;
+    persistent_grid_idx++;
   }
 
   // local or passed in?

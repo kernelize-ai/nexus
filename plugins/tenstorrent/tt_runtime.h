@@ -21,7 +21,8 @@ class TTRuntime : public rt::Runtime {
 
  public:
   TTRuntime() : rt::Runtime() {
-    TT_NOBJ_CHECK(numDevs, ttm::GetNumAvailableDevices);
+    //TT_NOBJ_CHECK(numDevs, ttm::GetNumAvailableDevices);
+    int numDevs = 1; // TODO: remove this once tt-metal supports multiple devices
     NXSAPI_LOG(nexus::NXS_LOG_NOTE, "Create TTDevice count: ", numDevs);
     for (size_t i = 0; i < numDevs; ++i) {
       devices.emplace_back(i);

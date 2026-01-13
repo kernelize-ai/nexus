@@ -8,9 +8,12 @@ class TTDevice {
   std::shared_ptr<ttmd::MeshDevice> device;
  public:
   TTDevice(int device_id = 0) : device_id(device_id) {}
-  virtual ~TTDevice() = default;
+  virtual ~TTDevice() { release(); }
 
-  nxs_status release() { device = nullptr; return NXS_Success; }
+  nxs_status release() {
+    device = nullptr;
+    return NXS_Success;
+  }
 
   std::shared_ptr<ttmd::MeshDevice> get() { initDevice(); return device; }
 

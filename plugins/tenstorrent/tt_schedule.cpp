@@ -13,13 +13,19 @@ bool placeCommand(nxs_uint cmdSize, ttm::CoreRange &cmdRange, ttm::CoreRange &de
   auto numRows = (cmdSize / rowLen) + !!(cmdSize % rowLen);
   auto tail = cmdSize % rowLen;
 
+  if (devRange.end_coord.y <= devRange.start_coord.y) {
+    // No rows available
+    return false;
+  }
+
   // TODO: use this instead
   if (numRows == 1) {
     // find gap  and return
+  } else if (numRows > devRange.end_coord.y - devRange.start_coord.y + 1) {
+    numRows = devRange.end_coord.y - devRange.start_coord.y + 1;
   }
-  if (numRows > devRange.end_coord.y - devRange.start_coord.y + 1) {
-    return false;
-  }
+
+  // Compute range and make persistent if necessary
   cmdRange.start_coord.x = devRange.start_coord.x;
   cmdRange.start_coord.y = devRange.start_coord.y;
   cmdRange.end_coord.x = numRows > 1 ? devRange.end_coord.x : devRange.start_coord.x + tail - 1;
@@ -55,8 +61,7 @@ nxs_status TTSchedule::run(nxs_int stream, nxs_uint run_settings) {
   TT_NOBJ_CHECK(devGrid, device->get()->compute_with_storage_grid_size);
   NXSAPI_LOG(nexus::NXS_LOG_NOTE, "Device grid: ", devGrid.x, ",", devGrid.y);
 
-//  ttm::CoreRangeSet coreRangeSet(
-//    ttm::num_cores_to_corerangeset(devGrid.x * devGrid.y, devGrid, true));
+//  TODO: use split_work_to_cores utility function to distribute commands across cores
 //  NXSAPI_LOG(nexus::NXS_LOG_NOTE, "Core range set: ", coreRangeSet.bounding_box().start_coord.x, ",", coreRangeSet.bounding_box().start_coord.y, " - ", coreRangeSet.bounding_box().end_coord.x, ",", coreRangeSet.bounding_box().end_coord.y);
 
   ttm::CoreRange devRange = {{0,0}, {devGrid.x - 1, devGrid.y - 1}};
