@@ -28,7 +28,7 @@ class BufferImpl : public Impl {
   void setData(void *_data) { data = _data; }
 
   Buffer getLocal();
-  nxs_status copyData(void *_hostBuf) const;
+  nxs_status copyData(void *_hostBuf, nxs_uint direction) const;
 
   std::string print() const;
 
