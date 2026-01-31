@@ -71,15 +71,18 @@ nxs_status TTCommand::runCommand(nxs_int stream, ttmd::MeshWorkload &workload,
   int persistent_grid_stride = std::max(1, total_grid_size / (int)cores.size());
   NXSAPI_LOG(nexus::NXS_LOG_NOTE, "Total grid size: ", total_grid_size, ", cores: ", cores.size(), ", persistent grid stride: ", persistent_grid_stride);
 
+  library->setupCommonRuntime(program, rt_args);
+
   // set params
   int persistent_grid_idx = 0;
   for (const auto& core : cores) {
-    rt_args[numArgs] = persistent_grid_idx * persistent_grid_stride;
-    rt_args[numArgs+1] = persistent_grid_idx * persistent_grid_stride + persistent_grid_stride;
-    if (rt_args[numArgs+1] > total_grid_size)
-      rt_args[numArgs+1] = total_grid_size;
-    NXSAPI_LOG(nexus::NXS_LOG_NOTE, "Launch params: grid_idx=", persistent_grid_idx, ", start=", rt_args[numArgs], ", end=", rt_args[numArgs+1]);
-    library->setupCoreRuntime(program, core, rt_args);
+    TTLibrary::RunTimeArgs core_rt_args;
+    core_rt_args[0] = persistent_grid_idx * persistent_grid_stride;
+    core_rt_args[1] = persistent_grid_idx * persistent_grid_stride + persistent_grid_stride;
+    if (core_rt_args[1] > total_grid_size)
+      core_rt_args[1] = total_grid_size;
+    NXSAPI_LOG(nexus::NXS_LOG_NOTE, "Launch params: grid_idx=", persistent_grid_idx, ", start=", core_rt_args[0], ", end=", core_rt_args[1]);
+    library->setupCoreRuntime(program, core, core_rt_args);
     persistent_grid_idx++;
   }
 
