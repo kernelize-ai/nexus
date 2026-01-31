@@ -41,6 +41,7 @@ class TTLibrary {
   typedef std::array<uint32_t, NXS_KERNEL_MAX_ARGS> RunTimeArgs;
 
   void jitProgram(ttm::Program &program, const ttm::CoreRange &cores, const CompileTimeArgs &compile_time_args);
+  void setupCommonRuntime(ttm::Program &program, const RunTimeArgs &run_time_args);
   void setupCoreRuntime(ttm::Program &program, const ttm::CoreCoord &core, const RunTimeArgs &run_time_args);
 };
 
