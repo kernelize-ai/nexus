@@ -29,7 +29,7 @@ class BufferImpl : public Impl {
 
   Buffer getLocal();
   nxs_status copyData(void *_hostBuf, nxs_uint direction) const;
-
+  nxs_status fillData(float fillValue) const;
   std::string print() const;
 
  private:
