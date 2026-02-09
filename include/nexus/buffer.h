@@ -35,7 +35,7 @@ class Buffer : public Object<detail::BufferImpl> {
 
   nxs_status copy(void *_hostBuf, nxs_uint direction = NXS_BufferDeviceToHost);
   
-  nxs_status fill(const void* value);
+  nxs_status fill(float value);
 };
 
 typedef Objects<Buffer> Buffers;
