@@ -152,6 +152,19 @@ nxs_status detail::BufferImpl::copyData(void *_hostBuf, nxs_uint direction) cons
   return NXS_Success;
 }
 
+nxs_status detail::BufferImpl::fillData(const void* value) const {
+  std::cout << ">>> FILL BUFFER CALLED! <<<" << std::endl;
+  nxs_status returnstatus = NXS_Failure;
+  if (nxs_valid_id(getDeviceId())) {
+    NEXUS_LOG(NXS_LOG_NOTE, "fillData: on device: ", getSize());
+    auto *rt = getParentOfType<RuntimeImpl>();
+    //returnstatus = (nxs_status)rt->runAPIFunction<NF_nxsFillBuffer>(getId(), value);
+  }
+  NEXUS_LOG(NXS_LOG_NOTE, "fillData: on host: ", getSize());
+  memcpy(getData(), value, getSize());
+  return returnstatus;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 Buffer::Buffer(detail::Impl base, size_t _sz, const void *_hostData)
     : Object(base, _sz, (const char *)_hostData) {}
@@ -177,3 +190,4 @@ Buffer Buffer::getLocal() const {
 }
 
 nxs_status Buffer::copy(void *_hostBuf, nxs_uint direction) { NEXUS_OBJ_MCALL(NXS_InvalidBuffer, copyData, _hostBuf, direction); }
+nxs_status Buffer::fill(const void* fillValue) { NEXUS_OBJ_MCALL(NXS_InvalidBuffer, fillValue); }
