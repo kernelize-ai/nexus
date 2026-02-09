@@ -158,7 +158,7 @@ nxs_status detail::BufferImpl::fillData(float value) const {
   if (nxs_valid_id(getDeviceId())) {
     NEXUS_LOG(NXS_LOG_NOTE, "fillData: on device: ", getSize());
     auto *rt = getParentOfType<RuntimeImpl>();
-    //return_stat = (nxs_status)rt->runAPIFunction<NF_nxsFillBuffer>(getId(), value);
+    return_stat = (nxs_status)rt->runAPIFunction<NF_nxsFillBuffer>(getId(), &value);
   }
   NEXUS_LOG(NXS_LOG_NOTE, "fillData: on host: ", getSize());
   memset((void *)getData(), value, getSize());
