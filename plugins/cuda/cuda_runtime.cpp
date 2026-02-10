@@ -297,6 +297,18 @@ extern "C" nxs_status NXS_API_CALL nxsFillBuffer(nxs_int buffer_id, void *value,
   return NXS_Success;
 }
 
+extern "C" nxs_status NXS_API_CALL nxsReshapeBuffer(nxs_int buffer_id, int *new_shape, int ndims) {
+  auto rt = getRuntime();
+
+  auto buffer = rt->get<rt::Buffer>(buffer_id);
+  if (!buffer) return NXS_InvalidBuffer;
+
+  std::vector<int> shape(new_shape, new_shape + ndims);
+
+  buffer->setShape(shape);
+  return NXS_Success;
+}
+
 /*
  * Release a buffer on the device.
  */

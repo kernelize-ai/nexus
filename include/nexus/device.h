@@ -48,8 +48,10 @@ class Device : public Object<detail::DeviceImpl> {
 
   Buffer createBuffer(size_t size, const void *data = nullptr,
                       nxs_uint settings = 0);
+  Buffer createBuffer(std::vector<nxs_int> shape, const void *data = nullptr,
+                      nxs_uint settings = 0);
   Buffer copyBuffer(Buffer buf, nxs_uint settings = 0);
-  
+  Buffer reshapeBuffer(Buffer buf, std::vector<nxs_int> new_shape);
   Buffer fillBuffer(void *value, size_t size);
 };
 
