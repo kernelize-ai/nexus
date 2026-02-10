@@ -19,6 +19,8 @@ class Buffer : public Object<detail::BufferImpl> {
   Buffer(detail::Impl base, size_t _sz, const void *_hostData = nullptr);
   Buffer(detail::Impl base, nxs_int devId, size_t _sz,
          const void *_deviceData = nullptr);
+  Buffer(detail::Impl base, nxs_int devId, std::vector<nxs_int> shape,
+         const void *_deviceData = nullptr);
   using Object::Object;
 
   nxs_int getDeviceId() const;
@@ -35,6 +37,7 @@ class Buffer : public Object<detail::BufferImpl> {
 
   nxs_status copy(void *_hostBuf, nxs_uint direction = NXS_BufferDeviceToHost);
   
+  nxs_status reshape(std::vector<nxs_int> new_shape);
   nxs_status fill(float value);
 };
 

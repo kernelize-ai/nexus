@@ -30,6 +30,7 @@ main() {
 
   elif [[ "$os_type" == "linux" ]]; then
     printf "Running Linux test"
+    ./test/cpp/test_buffers cuda
     ./test/cpp/test_basic_kernel cuda kernel_libs/add_vectors.ptx add_vectors
     ./test/cpp/test_kernel_catalog cuda kernel_libs/add_vectors.kc add_vectors
     ./test/cpp/test_smi cuda kernel_libs/add_vectors.ptx add_vectors

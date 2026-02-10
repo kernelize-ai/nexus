@@ -25,6 +25,14 @@ detail::BufferImpl::BufferImpl(detail::Impl base, nxs_int _devId, size_t _sz,
   setData(_sz, _hostData);
 }
 
+detail::BufferImpl::BufferImpl(detail::Impl base, nxs_int _devId, std::vector<nxs_int> shape,
+                               const char *_hostData)
+    : Impl(base), deviceId(_devId), size(0), shape(std::move(shape)), data(nullptr) {
+  size_t totalSize = 1;
+  for (auto dim : shape) totalSize *= dim;
+  setData(totalSize, _hostData);
+}
+
 detail::BufferImpl::~BufferImpl() { release(); }
 
 void detail::BufferImpl::release() {
@@ -152,6 +160,12 @@ nxs_status detail::BufferImpl::copyData(void *_hostBuf, nxs_uint direction) cons
   return NXS_Success;
 }
 
+nxs_status detail::BufferImpl::reshape(std::vector<nxs_int> new_shape) {
+  std::cout << ">>> RESHAPE BUFFER CALLED! <<<" << std::endl;
+  auto *rt = getParentOfType<RuntimeImpl>();
+  return (nxs_status)rt->runAPIFunction<NF_nxsReshapeBuffer>(getId(), new_shape.data(), new_shape.size());
+}
+
 nxs_status detail::BufferImpl::fillData(float value) const {
   std::cout << ">>> FILL BUFFER CALLED! <<<" << std::endl;
   nxs_status return_stat;
@@ -172,6 +186,9 @@ Buffer::Buffer(detail::Impl base, size_t _sz, const void *_hostData)
 Buffer::Buffer(detail::Impl base, nxs_int _devId, size_t _sz, const void *_hostData)
     : Object(base, _devId, _sz, (const char *)_hostData) {}
 
+Buffer::Buffer(detail::Impl base, nxs_int _devId, std::vector<nxs_int> shape,
+               const void *_hostData) {}
+
 nxs_int Buffer::getDeviceId() const { NEXUS_OBJ_MCALL(NXS_InvalidBuffer, getDeviceId); }
 
 std::optional<Property> Buffer::getProperty(nxs_int prop) const {
@@ -190,4 +207,5 @@ Buffer Buffer::getLocal() const {
 }
 
 nxs_status Buffer::copy(void *_hostBuf, nxs_uint direction) { NEXUS_OBJ_MCALL(NXS_InvalidBuffer, copyData, _hostBuf, direction); }
+nxs_status Buffer::reshape(std::vector<nxs_int> new_shape) {NEXUS_OBJ_MCALL(NXS_InvalidBuffer, reshape, new_shape);}
 nxs_status Buffer::fill(float fillValue) { NEXUS_OBJ_MCALL(NXS_InvalidBuffer, fillData, fillValue); }
