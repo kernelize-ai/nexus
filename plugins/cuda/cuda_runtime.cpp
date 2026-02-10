@@ -245,6 +245,18 @@ extern "C" nxs_status NXS_API_CALL nxsCopyBuffer(nxs_int buffer_id,
   return NXS_Success;
 }
 
+extern "C" nxs_status NXS_API_CALL nxsReshapeBuffer(nxs_int buffer_id, int *new_shape, int ndims) {
+  auto rt = getRuntime();
+
+  auto buffer = rt->get<rt::Buffer>(buffer_id);
+  if (!buffer) return NXS_InvalidBuffer;
+
+  std::vector<int> shape(new_shape, new_shape + ndims);
+
+  buffer->setShape(shape);
+  return NXS_Success;
+}
+
 // Add the 'const' to match the header
 extern "C" nxs_status NXS_API_CALL nxsFillBuffer(nxs_int buffer_id, const void *fill_value) {
     // 1. Get the Nexus buffer object

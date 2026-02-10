@@ -12,7 +12,7 @@ class Buffer {
   char *buf;
   size_t sz;
   nxs_uint settings;
-
+  std::vector<int> shape;
  public:
   Buffer(size_t size = 0, void *data_ptr = nullptr, nxs_uint settings = 0)
       : buf((char *)data_ptr), sz(size), settings(settings) {
@@ -51,6 +51,7 @@ class Buffer {
   T *get() {
     return reinterpret_cast<T *>(buf);
   }
+  void setShape(std::vector<int>new_shape) {shape = new_shape;}
 };
 
 }  // namespace rt

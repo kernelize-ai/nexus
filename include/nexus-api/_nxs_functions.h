@@ -113,6 +113,12 @@ NEXUS_API_FUNC(nxs_status, CopyBuffer,
     nxs_uint buffer_settings
 )
 
+NEXUS_API_FUNC(nxs_status, ReshapeBuffer,
+    nxs_int buffer_id,
+    int *new_shape,
+    int ndims
+)
+
 /************************************************************************
  * @def FillBuffer
  * @brief Fill buffer on the device with a value
