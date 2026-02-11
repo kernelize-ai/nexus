@@ -22,6 +22,12 @@ void TTLibrary::jitProgram(ttm::Program &program, const ttm::CoreRange &cores, c
         ttm::ComputeConfig{.math_fidelity = MathFidelity::HiFi4, .compile_args = compile_time_args});
 }
 
+void TTLibrary::setupCommonRuntime(ttm::Program &program, const RunTimeArgs &run_time_args) {
+    TT_CHECK(ttm::SetCommonRuntimeArgs, program, reader_kernel, run_time_args);
+    TT_CHECK(ttm::SetCommonRuntimeArgs, program, writer_kernel, run_time_args);
+    TT_CHECK(ttm::SetCommonRuntimeArgs, program, compute_kernel, run_time_args);
+}
+
 void TTLibrary::setupCoreRuntime(ttm::Program &program, const ttm::CoreCoord &core, const RunTimeArgs &run_time_args) {
     TT_CHECK(ttm::SetRuntimeArgs, program, reader_kernel, core, run_time_args);
     TT_CHECK(ttm::SetRuntimeArgs, program, writer_kernel, core, run_time_args);
