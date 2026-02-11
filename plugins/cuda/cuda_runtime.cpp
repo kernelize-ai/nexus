@@ -245,33 +245,56 @@ extern "C" nxs_status NXS_API_CALL nxsCopyBuffer(nxs_int buffer_id,
   return NXS_Success;
 }
 
-// Add the 'const' to match the header
-extern "C" nxs_status NXS_API_CALL nxsFillBuffer(nxs_int buffer_id, const void *fill_value) {
-    // 1. Get the Nexus buffer object
-    auto rt = getRuntime();
-    auto buffer = rt->get<rt::Buffer>(buffer_id);
-    if (!buffer) return NXS_InvalidBuffer;
+extern "C" nxs_status NXS_API_CALL nxsFillBuffer(nxs_int buffer_id, void *value, size_t value_size) {
+  auto rt = getRuntime();
+  auto buffer = rt->get<rt::Buffer>(buffer_id);
+  if (!buffer || value_size == 0) return NXS_InvalidBuffer;
 
-    // 2. Properly extract the float value
-    // We cast the generic pointer to a float pointer, then dereference.
-    float val = *static_cast<const float*>(fill_value);
+  uint8_t val_bytes[8] = {0};
+  std::memcpy(val_bytes, value, value_size);
 
-    // 3. The "Inefficient" but Reliable Method:
-    // Calculate how many floats we need to fill the allocated space
-    size_t num_elements = buffer->size() / sizeof(float);
-    
-    // Create a temporary host buffer and fill it using the CPU
-    std::vector<float> host_gold_standard(num_elements, val);
+  size_t total_size = buffer->size();
 
-    // 4. Blast the filled buffer to the Device
-    // This bypasses the cudaMemset byte-smearing problem entirely.
-    CUDA_CHECK(NXS_InvalidBuffer, cudaMemcpy, 
-               buffer->get(),               // Destination (Device)
-               host_gold_standard.data(),   // Source (Host)
-               buffer->size(), 
-               cudaMemcpyHostToDevice);
+  bool is_zero = true;
+  for (size_t i = 0; i < value_size; ++i) {
+    if (val_bytes[i] != 0) {
+      is_zero = false;
+      break;
+    }
+  }
 
+  if (is_zero || value_size == 1) {
+    cudaMemset(buffer->get(), *((unsigned char*)value), total_size);
     return NXS_Success;
+    }
+
+  else {
+    assert(total_size % value_size == 0 && "Buffer size must be aligned with value size");
+    std::vector<uint8_t> host_buffer(total_size);
+    if (value_size == 2) {
+      uint16_t val;
+      std::memcpy(&val, val_bytes, sizeof(val));
+      auto* ptr = reinterpret_cast<uint16_t*>(host_buffer.data());
+      std::fill(ptr, ptr + total_size / 2, val);
+    } else if (value_size == 4) {
+      uint32_t val;
+      std::memcpy(&val, val_bytes, sizeof(val));
+      auto* ptr = reinterpret_cast<uint32_t*>(host_buffer.data());
+      std::fill(ptr, ptr + total_size / 4, val);
+    } else {
+      assert(total_size % value_size == 0 && "Buffer size must be aligned with value size");
+      for (size_t i = 0; i < total_size; i += value_size) {
+        std::memcpy(host_buffer.data() + i, val_bytes, value_size);
+      }
+    }
+
+    CUDA_CHECK(NXS_InvalidBuffer, cudaMemcpy,
+              buffer->get(),
+              host_buffer.data(),
+              total_size,
+              cudaMemcpyHostToDevice);
+  }
+  return NXS_Success;
 }
 
 /*

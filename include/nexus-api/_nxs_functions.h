@@ -121,7 +121,8 @@ NEXUS_API_FUNC(nxs_status, CopyBuffer,
 ***********************************************************************/
 NEXUS_API_FUNC(nxs_status, FillBuffer,
     nxs_int buffer_id,
-    const void* value
+    void *value,
+    size_t size
 )
 
 /************************************************************************

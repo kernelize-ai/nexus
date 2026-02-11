@@ -50,7 +50,7 @@ class Device : public Object<detail::DeviceImpl> {
                       nxs_uint settings = 0);
   Buffer copyBuffer(Buffer buf, nxs_uint settings = 0);
   
-  Buffer fillBuffer(const void *value);
+  Buffer fillBuffer(void *value, size_t size);
 };
 
 typedef Objects<Device> Devices;

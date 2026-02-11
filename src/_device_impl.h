@@ -52,7 +52,7 @@ class DeviceImpl : public Impl {
   Buffer createBuffer(size_t size, const void *data = nullptr,
                       nxs_uint settings = 0);
   Buffer copyBuffer(Buffer buf, nxs_uint settings = 0);
-  Buffer fillBuffer(float value);
+  Buffer fillBuffer(void *value, size_t size);
 
 };
 
