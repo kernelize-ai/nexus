@@ -9,6 +9,7 @@ class BufferImpl : public Impl {
  public:
   BufferImpl(Impl base, size_t _sz, const char *_hostData);
   BufferImpl(Impl base, nxs_int _devId, size_t _sz, const char *_hostData);
+  BufferImpl(Impl base, nxs_int _devId, std::vector<nxs_int> shape, const char *_hostData);
 
   ~BufferImpl();
 
@@ -28,8 +29,9 @@ class BufferImpl : public Impl {
   void setData(void *_data) { data = _data; }
 
   Buffer getLocal();
-  nxs_status copyData(void *_hostBuf) const;
-
+  nxs_status copyData(void *_hostBuf, nxs_uint direction) const;
+  nxs_status reshape(std::vector<nxs_int> new_shape);
+  nxs_status fillData(float fillValue) const;
   std::string print() const;
 
  private:
@@ -40,6 +42,7 @@ class BufferImpl : public Impl {
   // set of runtimes
   nxs_int deviceId;
   size_t size;
+  std::vector<nxs_int> shape;
   void *data;
 };
 }  // namespace detail

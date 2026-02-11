@@ -252,6 +252,17 @@ enum _nxs_buffer_settings {
 };
 typedef enum _nxs_buffer_settings nxs_buffer_settings;
 
+/* ENUM _nxs_buffer_transfer */
+/*
+ * NXS_BufferDeviceToHost:
+ *   - Copy buffer from device to host
+ * NXS_BufferHostToDevice:
+ *   - Copy buffer from host to device
+ */
+enum _nxs_buffer_transfer {
+    NXS_BufferDeviceToHost = 0,
+    NXS_BufferHostToDevice = 1,
+};
 
 /********************************************************************************************************/
 /* Constants */

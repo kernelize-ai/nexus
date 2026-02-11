@@ -25,6 +25,14 @@ detail::BufferImpl::BufferImpl(detail::Impl base, nxs_int _devId, size_t _sz,
   setData(_sz, _hostData);
 }
 
+detail::BufferImpl::BufferImpl(detail::Impl base, nxs_int _devId, std::vector<nxs_int> shape,
+                               const char *_hostData)
+    : Impl(base), deviceId(_devId), size(0), shape(std::move(shape)), data(nullptr) {
+  size_t totalSize = 1;
+  for (auto dim : shape) totalSize *= dim;
+  setData(totalSize, _hostData);
+}
+
 detail::BufferImpl::~BufferImpl() { release(); }
 
 void detail::BufferImpl::release() {
@@ -140,16 +148,35 @@ Buffer detail::BufferImpl::getLocal() {
   return Buffer();
 }
 
-nxs_status detail::BufferImpl::copyData(void *_hostBuf) const {
+nxs_status detail::BufferImpl::copyData(void *_hostBuf, nxs_uint direction) const {
   if (nxs_valid_id(getDeviceId())) {
     NEXUS_LOG(NXS_LOG_NOTE, "copyData: from device: ", getSize());
     auto *rt = getParentOfType<RuntimeImpl>();
     return (nxs_status)rt->runAPIFunction<NF_nxsCopyBuffer>(getId(), _hostBuf,
-                                                            0);
+                                                            direction);
   }
   NEXUS_LOG(NXS_LOG_NOTE, "copyData: from host: ", getSize());
   memcpy(_hostBuf, getData(), getSize());
   return NXS_Success;
+}
+
+nxs_status detail::BufferImpl::reshape(std::vector<nxs_int> new_shape) {
+  std::cout << ">>> RESHAPE BUFFER CALLED! <<<" << std::endl;
+  auto *rt = getParentOfType<RuntimeImpl>();
+  return (nxs_status)rt->runAPIFunction<NF_nxsReshapeBuffer>(getId(), new_shape.data(), new_shape.size());
+}
+
+nxs_status detail::BufferImpl::fillData(float value) const {
+  std::cout << ">>> FILL BUFFER CALLED! <<<" << std::endl;
+  nxs_status return_stat;
+  if (nxs_valid_id(getDeviceId())) {
+    NEXUS_LOG(NXS_LOG_NOTE, "fillData: on device: ", getSize());
+    auto *rt = getParentOfType<RuntimeImpl>();
+    return_stat = (nxs_status)rt->runAPIFunction<NF_nxsFillBuffer>(getId(), &value);
+  }
+  NEXUS_LOG(NXS_LOG_NOTE, "fillData: on host: ", getSize());
+  memset((void *)getData(), value, getSize());
+  return return_stat;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -158,6 +185,9 @@ Buffer::Buffer(detail::Impl base, size_t _sz, const void *_hostData)
 
 Buffer::Buffer(detail::Impl base, nxs_int _devId, size_t _sz, const void *_hostData)
     : Object(base, _devId, _sz, (const char *)_hostData) {}
+
+Buffer::Buffer(detail::Impl base, nxs_int _devId, std::vector<nxs_int> shape,
+               const void *_hostData) {}
 
 nxs_int Buffer::getDeviceId() const { NEXUS_OBJ_MCALL(NXS_InvalidBuffer, getDeviceId); }
 
@@ -176,4 +206,6 @@ Buffer Buffer::getLocal() const {
   return get()->getLocal();
 }
 
-nxs_status Buffer::copy(void *_hostBuf) { NEXUS_OBJ_MCALL(NXS_InvalidBuffer, copyData, _hostBuf); }
+nxs_status Buffer::copy(void *_hostBuf, nxs_uint direction) { NEXUS_OBJ_MCALL(NXS_InvalidBuffer, copyData, _hostBuf, direction); }
+nxs_status Buffer::reshape(std::vector<nxs_int> new_shape) {NEXUS_OBJ_MCALL(NXS_InvalidBuffer, reshape, new_shape);}
+nxs_status Buffer::fill(float fillValue) { NEXUS_OBJ_MCALL(NXS_InvalidBuffer, fillData, fillValue); }

@@ -236,10 +236,54 @@ extern "C" nxs_status NXS_API_CALL nxsCopyBuffer(nxs_int buffer_id,
   auto buffer = rt->get<rt::Buffer>(buffer_id);
   if (!buffer) return NXS_InvalidBuffer;
   if (!host_ptr) return NXS_InvalidHostPtr;
-
-  CUDA_CHECK(NXS_InvalidBuffer, cudaMemcpy, host_ptr, buffer->get(),
-             buffer->size(), cudaMemcpyDeviceToHost);
+  if (copy_settings == NXS_BufferDeviceToHost)
+    CUDA_CHECK(NXS_InvalidBuffer, cudaMemcpy, host_ptr, buffer->get(),
+              buffer->size(), cudaMemcpyDeviceToHost);
+  else
+    CUDA_CHECK(NXS_InvalidBuffer, cudaMemcpy, buffer->get(), host_ptr,
+              buffer->size(), cudaMemcpyHostToDevice);
   return NXS_Success;
+}
+
+extern "C" nxs_status NXS_API_CALL nxsReshapeBuffer(nxs_int buffer_id, int *new_shape, int ndims) {
+  auto rt = getRuntime();
+
+  auto buffer = rt->get<rt::Buffer>(buffer_id);
+  if (!buffer) return NXS_InvalidBuffer;
+
+  std::vector<int> shape(new_shape, new_shape + ndims);
+
+  buffer->setShape(shape);
+  return NXS_Success;
+}
+
+// Add the 'const' to match the header
+extern "C" nxs_status NXS_API_CALL nxsFillBuffer(nxs_int buffer_id, const void *fill_value) {
+    // 1. Get the Nexus buffer object
+    auto rt = getRuntime();
+    auto buffer = rt->get<rt::Buffer>(buffer_id);
+    if (!buffer) return NXS_InvalidBuffer;
+
+    // 2. Properly extract the float value
+    // We cast the generic pointer to a float pointer, then dereference.
+    float val = *static_cast<const float*>(fill_value);
+
+    // 3. The "Inefficient" but Reliable Method:
+    // Calculate how many floats we need to fill the allocated space
+    size_t num_elements = buffer->size() / sizeof(float);
+    
+    // Create a temporary host buffer and fill it using the CPU
+    std::vector<float> host_gold_standard(num_elements, val);
+
+    // 4. Blast the filled buffer to the Device
+    // This bypasses the cudaMemset byte-smearing problem entirely.
+    CUDA_CHECK(NXS_InvalidBuffer, cudaMemcpy, 
+               buffer->get(),               // Destination (Device)
+               host_gold_standard.data(),   // Source (Host)
+               buffer->size(), 
+               cudaMemcpyHostToDevice);
+
+    return NXS_Success;
 }
 
 /*
