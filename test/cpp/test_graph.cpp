@@ -87,7 +87,7 @@ int test_graph(int argc, char** argv) {
     time = sched.getProp<nxs_double>(NP_ElapsedTime);
   }
 
-  buf2.copy(vecResult_GPU.data());
+  buf2.copy(vecResult_GPU.data(), NXS_BufferDeviceToHost);
 
   std::cout << std::endl << "Test Time: " << time << std::endl;
 

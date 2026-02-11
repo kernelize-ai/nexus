@@ -84,7 +84,7 @@ int test_basic_kernel(int argc, char** argv) {
   auto time_ms = sched.getProp<nxs_double>(NP_ElapsedTime);
   std::cout << "Elapsed time: " << time_ms << std::endl;
 
-  buf2.copy(vecResult_GPU.data());
+  buf2.copy(vecResult_GPU.data(), NXS_BufferDeviceToHost);
 
   int i = 0;
   for (auto v : vecResult_GPU) {

@@ -140,12 +140,12 @@ Buffer detail::BufferImpl::getLocal() {
   return Buffer();
 }
 
-nxs_status detail::BufferImpl::copyData(void *_hostBuf) const {
+nxs_status detail::BufferImpl::copyData(void *_hostBuf, nxs_uint direction) const {
   if (nxs_valid_id(getDeviceId())) {
     NEXUS_LOG(NXS_LOG_NOTE, "copyData: from device: ", getSize());
     auto *rt = getParentOfType<RuntimeImpl>();
     return (nxs_status)rt->runAPIFunction<NF_nxsCopyBuffer>(getId(), _hostBuf,
-                                                            0);
+                                                            direction);
   }
   NEXUS_LOG(NXS_LOG_NOTE, "copyData: from host: ", getSize());
   memcpy(_hostBuf, getData(), getSize());
@@ -176,4 +176,4 @@ Buffer Buffer::getLocal() const {
   return get()->getLocal();
 }
 
-nxs_status Buffer::copy(void *_hostBuf) { NEXUS_OBJ_MCALL(NXS_InvalidBuffer, copyData, _hostBuf); }
+nxs_status Buffer::copy(void *_hostBuf, nxs_uint direction) { NEXUS_OBJ_MCALL(NXS_InvalidBuffer, copyData, _hostBuf, direction); }

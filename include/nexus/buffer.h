@@ -33,7 +33,7 @@ class Buffer : public Object<detail::BufferImpl> {
 
   Buffer getLocal() const;
 
-  nxs_status copy(void *_hostBuf);
+  nxs_status copy(void *_hostBuf, nxs_uint direction = NXS_BufferDeviceToHost);
 };
 
 typedef Objects<Buffer> Buffers;

@@ -114,7 +114,7 @@ int test_multi_stream_sync(int argc, char** argv) {
 
   evFinal.wait();
 
-  buf3.copy(vecResult_GPU.data());
+  buf3.copy(vecResult_GPU.data(), NXS_BufferDeviceToHost);
 
   int i = 0;
   for (auto v : vecResult_GPU) {
