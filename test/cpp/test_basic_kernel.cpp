@@ -67,7 +67,6 @@ int test_basic_kernel(int argc, char** argv) {
   auto buf0 = dev0.createBuffer(size, vecA.data());
   auto buf1 = dev0.createBuffer(size, vecB.data());
   auto buf2 = dev0.createBuffer(size, vecResult_GPU.data());
-
   auto stream0 = dev0.createStream();
 
   auto sched = dev0.createSchedule();

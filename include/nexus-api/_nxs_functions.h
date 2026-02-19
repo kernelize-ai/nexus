@@ -112,6 +112,19 @@ NEXUS_API_FUNC(nxs_status, CopyBuffer,
     void* host_ptr,
     nxs_uint buffer_settings
 )
+
+/************************************************************************
+ * @def FillBuffer
+ * @brief Fill buffer on the device with a value
+  * @return Negative value is an error status.
+  *         Non-negative is the bufferId.
+***********************************************************************/
+NEXUS_API_FUNC(nxs_status, FillBuffer,
+    nxs_int buffer_id,
+    void *value,
+    size_t size
+)
+
 /************************************************************************
  * @def ReleaseBuffer
  * @brief Release the buffer on the device
