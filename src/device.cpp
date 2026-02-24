@@ -164,6 +164,17 @@ Buffer detail::DeviceImpl::createBuffer(size_t size, const void *data,
   return nbuf;
 }
 
+Buffer detail::DeviceImpl::createBuffer(std::vector<nxs_int> shape, const void *data,
+                                        nxs_uint settings) {
+  NEXUS_LOG(NXS_LOG_NOTE, "  createBuffer with shape");
+  size_t totalSize = 1;
+  for (auto dim : shape) totalSize *= dim;
+  APICALL(nxsCreateBuffer, getId(), totalSize, (void *)data, settings);
+  Buffer nbuf(Impl(this, apiResult, settings), getId(), shape, data);
+  buffers.add(nbuf);
+  return nbuf;
+}
+
 Buffer detail::DeviceImpl::copyBuffer(Buffer buf, nxs_uint settings) {
   NEXUS_LOG(NXS_LOG_NOTE, "  copyBuffer");
   settings |= buf.getSettings() & ~NXS_BufferSettings_OnDevice;
@@ -172,6 +183,12 @@ Buffer detail::DeviceImpl::copyBuffer(Buffer buf, nxs_uint settings) {
   Buffer nbuf(Impl(this, apiResult, settings), getId(), buf.getSize(), buf.getData());
   buffers.add(nbuf);
   return nbuf;
+}
+
+Buffer detail::DeviceImpl::reshapeBuffer(Buffer buf, std::vector<nxs_int> new_shape) {
+  NEXUS_LOG(NXS_LOG_NOTE, "  reshapeBuffer");
+  APICALL(nxsReshapeBuffer, buf.getId(), new_shape.data(), new_shape.size());
+  return buf;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -211,6 +228,10 @@ Schedule Device::createSchedule(nxs_uint settings) {
 
 Buffer Device::createBuffer(size_t size, const void *data, nxs_uint settings) {
   NEXUS_OBJ_MCALL(Buffer(), createBuffer, size, data, settings);
+}
+
+Buffer Device::createBuffer(std::vector<nxs_int> shape, const void *data, nxs_uint settings) {
+  NEXUS_OBJ_MCALL(Buffer(), createBuffer, shape, data, settings);
 }
 
 Buffer Device::copyBuffer(Buffer buf, nxs_uint settings) {
