@@ -87,7 +87,7 @@ NEXUS_API_FUNC(nxs_status, GetDeviceProperty,
 ***********************************************************************/
 NEXUS_API_FUNC(nxs_int, CreateBuffer,
     nxs_int device_id,
-    size_t size,
+    nxs_shape shape,
     void* host_ptr,
     nxs_uint buffer_settings
 )
@@ -122,7 +122,7 @@ NEXUS_API_FUNC(nxs_status, CopyBuffer,
 NEXUS_API_FUNC(nxs_status, FillBuffer,
     nxs_int buffer_id,
     void *value,
-    size_t size
+    nxs_uint value_size_bytes
 )
 
 /************************************************************************

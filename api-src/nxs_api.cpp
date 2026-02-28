@@ -60,3 +60,59 @@ nxs_status nxsGetStatusEnum(const char *statusName) {
     std::string sname = std::string("NXS_") + statusName;
     return *magic_enum::enum_cast<nxs_status>(sname);
 }
+
+nxs_data_type nxsGetDataType(nxs_uint settings) {
+    return (nxs_data_type)(settings & NXS_DataType_Mask);
+}
+
+nxs_uint nxsGetDataTypeFlags(nxs_uint settings) {
+    return settings & NXS_DataType_Flags;
+}
+
+nxs_uint nxsGetDataTypeSizeBits(nxs_uint settings) {
+    switch (nxsGetDataType(settings)) {
+        case NXS_DataType_F32:
+        case NXS_DataType_I32:
+        case NXS_DataType_U32:
+            return 32;
+        case NXS_DataType_F16:
+        case NXS_DataType_BF16:
+        case NXS_DataType_I16:
+        case NXS_DataType_U16:
+            return 16;
+        case NXS_DataType_F8:
+        case NXS_DataType_BF8:
+        case NXS_DataType_I8:
+        case NXS_DataType_U8:
+            return 8;
+        case NXS_DataType_F4:
+        case NXS_DataType_BF4:
+        case NXS_DataType_I4:
+        case NXS_DataType_U4:
+            return 4;
+        case NXS_DataType_F64:
+        case NXS_DataType_I64:
+        case NXS_DataType_U64:
+            return 64;
+        case NXS_DataType_Bool:
+            return 8;
+        default:
+            break;
+    }
+    return 0;
+}
+
+nxs_ulong nxsGetNumElements(nxs_shape shape) {
+    nxs_ulong num_elements = 1;
+    for (nxs_uint i = 0; i < shape.rank; i++) {
+        num_elements *= shape.dims[i];
+    }
+    return num_elements;
+}
+
+const char *nxsGetDataTypeName(nxs_data_type type) {
+    auto fenum = magic_enum::enum_cast<nxs_data_type>(type);
+    if (fenum)
+        return magic_enum::enum_name(*fenum).data() + NXS_DataType_PREFIX_LEN;
+    return "";
+}

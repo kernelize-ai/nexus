@@ -104,6 +104,8 @@ NEXUS_API_PROP(Description,           _prop_str,        "Unit Description")
 /* Property Hierarchy */
 NEXUS_API_PROP(Count,                 _prop_int,        "Number of Units")
 NEXUS_API_PROP(Size,                  _prop_int,        "Number of Sub-Units")
+NEXUS_API_PROP(Rank,                  _prop_int,        "Rank")
+NEXUS_API_PROP(Shape,                 _prop_int_vec,    "Shape")
 NEXUS_API_PROP(SubUnits,              _prop_str_vec,    "Sub-Unit Vector")
 NEXUS_API_PROP(SubUnitType,           _prop_str,        "Sub-Unit Type")
 

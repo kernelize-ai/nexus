@@ -24,7 +24,7 @@ if(EXISTS ${TT_METAL_CMAKE_PATH})
       tt_schedule.cpp)
 
 
-    target_link_libraries(tt_plugin PUBLIC TT::Metalium)
+    target_link_libraries(tt_plugin PRIVATE TT::Metalium nxs-api)
 
     if(UNIX AND (NOT APPLE))
         target_link_options(tt_plugin PRIVATE "LINKER:--exclude-libs,ALL")

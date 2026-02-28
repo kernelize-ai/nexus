@@ -118,15 +118,15 @@ nxsGetDeviceProperty(nxs_int device_id, nxs_uint device_property_id,
  * @brief Create a buffer on the device
  * @return Error status or Succes.
  ***********************************************************************/
-extern "C" nxs_int NXS_API_CALL nxsCreateBuffer(nxs_int device_id, size_t size,
+extern "C" nxs_int NXS_API_CALL nxsCreateBuffer(nxs_int device_id, nxs_shape shape,
                                                 void *host_ptr,
                                                 nxs_uint settings) {
   auto rt = getRuntime();
   auto dev = rt->getObject(device_id);
   if (!dev) return NXS_InvalidDevice;
 
-  NXSAPI_LOG(nexus::NXS_LOG_NOTE, "createBuffer ", size);
-  auto *buf = rt->getBuffer(size, host_ptr, settings);
+  NXSAPI_LOG(nexus::NXS_LOG_NOTE, "createBuffer ", shape.rank);
+  auto *buf = rt->getBuffer(shape, host_ptr, settings);
   if (!buf) return NXS_InvalidBuffer;
 
   return rt->addObject(buf);
@@ -144,7 +144,7 @@ extern "C" nxs_status NXS_API_CALL nxsCopyBuffer(nxs_int buffer_id,
   auto buf = rt->getObject(buffer_id);
   if (!buf) return NXS_InvalidBuffer;
   auto bufObj = (*buf)->get<rt::Buffer>();
-  std::memcpy(host_ptr, bufObj->data(), bufObj->size());
+  std::memcpy(host_ptr, bufObj->data(), bufObj->getSizeBytes());
   return NXS_Success;
 }
 

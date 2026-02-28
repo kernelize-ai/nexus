@@ -32,17 +32,17 @@ std::optional<Property> SystemImpl::getProperty(nxs_int prop) const {
   return std::nullopt;
 }
 
-Buffer SystemImpl::createBuffer(size_t sz, const void *hostData,
+Buffer SystemImpl::createBuffer(const Shape &shape, const void *hostData,
                                 nxs_uint settings) {
-  NEXUS_LOG(NXS_LOG_NOTE, "createBuffer ", sz);
+  NEXUS_LOG(NXS_LOG_NOTE, "createBuffer ", shape.getNumElements());
   nxs_uint id = buffers.size();
-  Buffer buf(detail::Impl(this, id, settings), sz, hostData);
+  Buffer buf(detail::Impl(this, id, settings), shape, hostData);
   buffers.add(buf);
   return buf;
 }
 
 Buffer SystemImpl::copyBuffer(Buffer buf, Device dev, nxs_uint settings) {
-  NEXUS_LOG(NXS_LOG_NOTE, "copyBuffer ", buf.getSize());
+  NEXUS_LOG(NXS_LOG_NOTE, "copyBuffer ", buf.getSizeBytes());
   Buffer nbuf = dev.copyBuffer(buf, settings);
   return nbuf;
 }
@@ -77,9 +77,9 @@ Info System::loadCatalog(const std::string &catalogPath) {
   NEXUS_OBJ_MCALL(Info(), loadCatalog, catalogPath);
 }
 
-Buffer System::createBuffer(size_t sz, const void *hostData,
+Buffer System::createBuffer(const Shape &shape, const void *hostData,
                             nxs_uint settings) {
-  NEXUS_OBJ_MCALL(Buffer(), createBuffer, sz, hostData, settings);
+  NEXUS_OBJ_MCALL(Buffer(), createBuffer, shape, hostData, settings);
 }
 
 Buffer System::copyBuffer(Buffer buf, Device dev, nxs_uint settings) {

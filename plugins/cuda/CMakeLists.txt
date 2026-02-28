@@ -3,6 +3,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/runtime_libs")
 #set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}")
 
 add_library(cuda_plugin SHARED cuda_runtime.cpp cuda_schedule.cpp)
+target_link_libraries(cuda_plugin PRIVATE nxs-api)
 
 if(UNIX AND (NOT APPLE))
   find_package(CUDAToolkit REQUIRED)

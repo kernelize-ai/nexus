@@ -205,13 +205,14 @@ nxsGetDevicePropertyFromPath(
 /*
  * Allocate a buffer on the device.
  */
-extern "C" nxs_int NXS_API_CALL nxsCreateBuffer(nxs_int device_id, size_t size,
+extern "C" nxs_int NXS_API_CALL nxsCreateBuffer(nxs_int device_id, nxs_shape shape,
                                                 void *data_ptr,
                                                 nxs_uint buffer_settings) {
   auto rt = getRuntime();
   auto deviceObject = rt->get<CudaDevice>(device_id);
   if (!deviceObject) return NXS_InvalidDevice;
 
+  size_t size = nxsGetNumElements(shape);
   NXSAPI_LOG(nexus::NXS_LOG_NOTE, "createBuffer: ", size);
   if (!(buffer_settings & NXS_BufferSettings_OnDevice)) {
     void *cuda_ptr = nullptr;
@@ -222,7 +223,7 @@ extern "C" nxs_int NXS_API_CALL nxsCreateBuffer(nxs_int device_id, size_t size,
     data_ptr = cuda_ptr;
   }
 
-  auto *buf = rt->getBuffer(size, data_ptr, NXS_BufferSettings_OnDevice);
+  auto *buf = rt->getBuffer(shape, data_ptr, NXS_BufferSettings_OnDevice);
   if (!buf) return NXS_InvalidBuffer;
 
   return rt->addObject(buf);
@@ -245,19 +246,18 @@ extern "C" nxs_status NXS_API_CALL nxsCopyBuffer(nxs_int buffer_id,
   return NXS_Success;
 }
 
-extern "C" nxs_status NXS_API_CALL nxsFillBuffer(nxs_int buffer_id, void *value, size_t value_size) {
+extern "C" nxs_status NXS_API_CALL nxsFillBuffer(nxs_int buffer_id,
+                                                 void *value,
+                                                 nxs_uint value_size) {
   auto rt = getRuntime();
   auto buffer = rt->get<rt::Buffer>(buffer_id);
   if (!buffer || value_size == 0) return NXS_InvalidBuffer;
 
-  uint8_t val_bytes[8] = {0};
-  std::memcpy(val_bytes, value, value_size);
-
   size_t total_size = buffer->size();
 
   bool is_zero = true;
-  for (size_t i = 0; i < value_size; ++i) {
-    if (val_bytes[i] != 0) {
+  for (nxs_uint i = 0; i < value_size; ++i) {
+    if (*((unsigned char*)value + i) != 0) {
       is_zero = false;
       break;
     }
@@ -266,34 +266,31 @@ extern "C" nxs_status NXS_API_CALL nxsFillBuffer(nxs_int buffer_id, void *value,
   if (is_zero || value_size == 1) {
     cudaMemset(buffer->get(), *((unsigned char*)value), total_size);
     return NXS_Success;
-    }
-
-  else {
-    assert(total_size % value_size == 0 && "Buffer size must be aligned with value size");
-    std::vector<uint8_t> host_buffer(total_size);
-    if (value_size == 2) {
-      uint16_t val;
-      std::memcpy(&val, val_bytes, sizeof(val));
-      auto* ptr = reinterpret_cast<uint16_t*>(host_buffer.data());
-      std::fill(ptr, ptr + total_size / 2, val);
-    } else if (value_size == 4) {
-      uint32_t val;
-      std::memcpy(&val, val_bytes, sizeof(val));
-      auto* ptr = reinterpret_cast<uint32_t*>(host_buffer.data());
-      std::fill(ptr, ptr + total_size / 4, val);
-    } else {
-      assert(total_size % value_size == 0 && "Buffer size must be aligned with value size");
-      for (size_t i = 0; i < total_size; i += value_size) {
-        std::memcpy(host_buffer.data() + i, val_bytes, value_size);
-      }
-    }
-
-    CUDA_CHECK(NXS_InvalidBuffer, cudaMemcpy,
-              buffer->get(),
-              host_buffer.data(),
-              total_size,
-              cudaMemcpyHostToDevice);
   }
+
+  assert(total_size % value_size == 0 && "Buffer size must be aligned with value size");
+  std::vector<uint8_t> host_buffer(total_size);
+  if (value_size == 2) {
+    uint16_t val = *((uint16_t*)value);
+    auto* ptr = reinterpret_cast<uint16_t*>(host_buffer.data());
+    std::fill(ptr, ptr + total_size / 2, val);
+  } else if (value_size == 4) {
+    uint32_t val = *((uint32_t*)value);
+    auto* ptr = reinterpret_cast<uint32_t*>(host_buffer.data());
+    std::fill(ptr, ptr + total_size / 4, val);
+  } else {
+    assert(total_size % value_size == 0 && "Buffer size must be aligned with value size");
+    for (size_t i = 0; i < total_size; i += value_size) {
+      std::memcpy(host_buffer.data() + i, value, value_size);
+    }
+  }
+
+  CUDA_CHECK(NXS_InvalidBuffer, cudaMemcpy,
+            buffer->get(),
+            host_buffer.data(),
+            total_size,
+            cudaMemcpyHostToDevice);
+
   return NXS_Success;
 }
 

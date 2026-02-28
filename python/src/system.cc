@@ -14,15 +14,15 @@ namespace py = pybind11;
 using namespace nexus;
 
 struct DevPtr {
-  char *ptr;
-  size_t size;
+  char *ptr = nullptr;
+  Shape shape;
   std::string runtime_name;
-  nxs_int device_id;
-  nxs_data_type dtype;
+  nxs_int device_id = -1;
+  nxs_data_type dtype = NXS_DataType_Undefined;
 };
 
 static DevPtr getPointer(PyObject *obj) {
-  DevPtr result{nullptr, 0, "", -1, NXS_DataType_Undefined};
+  DevPtr result;
   if (obj == Py_None || PyLong_Check(obj) || PyFloat_Check(obj)) {
     return result;
   }
@@ -75,7 +75,29 @@ static DevPtr getPointer(PyObject *obj) {
     }
 
     result.ptr = (char *)PyLong_AsUnsignedLongLong(data_ret);
-    result.size = PyLong_AsUnsignedLongLong(nbytes_ret);
+    PyObject *shape_m = PyObject_GetAttrString(obj, "shape");
+    if (shape_m) {
+      PyObject *builtins = PyImport_ImportModule("builtins");
+      PyObject *func = PyObject_GetAttrString(builtins, "len");
+      PyObject *shape_len = PyObject_CallFunction(func, "(s)", shape_m);
+      Py_DECREF(func);
+      assert(shape_len);
+      nxs_shape _shape;
+      _shape.rank = PyLong_AsUnsignedLongLong(shape_len);
+      assert(_shape.rank < NXS_MAX_DIMS);
+      for (nxs_int i = 0; i < _shape.rank; i++) {
+        PyObject *index = PyLong_FromLong(i);
+        PyObject *item = PyObject_GetItem(shape_m, index);  
+        Py_DECREF(index);
+        _shape.dims[i] = PyLong_AsUnsignedLongLong(item);
+        Py_DECREF(item);
+      }
+      result.shape = Shape(_shape);
+      Py_DECREF(shape_len);
+      Py_DECREF(shape_m);
+    } else {
+      result.shape = Shape(PyLong_AsUnsignedLongLong(nbytes_ret));
+    }
     Py_DECREF(data_ret);
     Py_DECREF(nbytes_ret);
   }
@@ -103,7 +125,7 @@ static Buffer make_buffer(py::object tensor, Device device = Device()) {
 
   auto data_ptr = getPointer(tensor.ptr());
   nxs_uint settings = data_ptr.dtype;
-  if (data_ptr.size == 0) { // is size 0 legal?
+  if (data_ptr.shape.getRank() == 0) { // is size 0 legal?
     return Buffer();
   }
   if (!data_ptr.runtime_name.empty() && data_ptr.device_id != -1) {
@@ -113,7 +135,7 @@ static Buffer make_buffer(py::object tensor, Device device = Device()) {
       if (!dp_device) {
         throw std::runtime_error("Device not found: " + std::string(data_ptr.runtime_name) + " " + std::to_string(data_ptr.device_id));
       }
-      auto buf = dp_device.createBuffer(data_ptr.size, data_ptr.ptr, settings | NXS_BufferSettings_OnDevice);
+      auto buf = dp_device.createBuffer(data_ptr.shape, data_ptr.ptr, settings | NXS_BufferSettings_OnDevice);
       if (device && device != dp_device) {
         return device.copyBuffer(buf);
       }
@@ -122,9 +144,9 @@ static Buffer make_buffer(py::object tensor, Device device = Device()) {
     return Buffer();
   }
   if (device) {
-    return device.createBuffer(data_ptr.size, data_ptr.ptr, settings);
+    return device.createBuffer(data_ptr.shape, data_ptr.ptr, settings);
   }
-  return nexus::getSystem().createBuffer(data_ptr.size, data_ptr.ptr, settings);
+  return nexus::getSystem().createBuffer(data_ptr.shape, data_ptr.ptr, settings);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -382,6 +404,7 @@ void pynexus::init_system_bindings(py::module &m) {
   dataTypeEnum.value("float64", NXS_DataType_F64);
   dataTypeEnum.value("int64", NXS_DataType_I64);
   dataTypeEnum.value("uint64", NXS_DataType_U64);
+  dataTypeEnum.value("bool", NXS_DataType_Bool);
   dataTypeEnum.export_values();
 
   //////////////////////////////////////////////////////////////////////////
@@ -404,13 +427,21 @@ void pynexus::init_system_bindings(py::module &m) {
           },
           py::arg("path") = std::vector<std::string_view>());
 
-  make_object_class<Buffer>(m, "buffer")
-      .def("size", [](Buffer &self) { return self.getSize(); })
+    py::class_<Shape>(m, "shape", py::module_local())
+      .def("rank", [](Shape &self) { return self.getRank(); })
+      .def_property_readonly("rank", [](Shape &self) { return self.getRank(); })
+      .def("dim", [](Shape &self, size_t index) { return self.getDim(index); })
+      //.def("stride", [](Shape &self, size_t index) { return self.getStride(index); })
+      .def("numel", [](Shape &self) { return self.getNumElements(); })
+      .def_property_readonly("numel", [](Shape &self) { return self.getNumElements(); });
+    
+    make_object_class<Buffer>(m, "buffer")
+      .def("shape", [](Buffer &self) { return self.getShape(); })
       .def("numel", [](Buffer &self) { return self.getNumElements(); })
-      .def("element_size", [](Buffer &self) { return self.getElementSize(); })
+      .def("element_size", [](Buffer &self) { return self.getElementSizeBits(); })
       .def("data_type", [](Buffer &self) { return self.getDataType(); })
-      .def_property_readonly("size", [](Buffer &self) { return self.getSize(); })
-      .def_property_readonly("nbytes", [](Buffer &self) { return self.getSize(); })
+      .def_property_readonly("size_bytes", [](Buffer &self) { return self.getSizeBytes(); })
+      .def_property_readonly("nbytes", [](Buffer &self) { return self.getSizeBytes(); })
       .def_property_readonly("dtype", [](Buffer &self) { return self.getDataType(); })
       .def("data_ptr", [](Buffer &self) -> intptr_t { return reinterpret_cast<intptr_t>(self.getData()); }) // TODO: get Device pointer
       .def("copy", [](Buffer &self, py::object tensor) {
@@ -532,9 +563,10 @@ void pynexus::init_system_bindings(py::module &m) {
              return make_buffer(tensor, self);
            })
       .def("create_buffer",
-           [](Device &self, size_t size, nxs_uint settings) {
-             return self.createBuffer(size, nullptr, settings);
-          }, py::arg("size"), py::arg("settings") = 0)
+           [](Device &self, std::vector<size_t> shape, nxs_uint settings) {
+             Shape s(shape.data(), shape.size());
+             return self.createBuffer(s, nullptr, settings);
+          }, py::arg("shape"), py::arg("settings") = 0)
       .def("copy_buffer",
            [](Device &self, Buffer buf) { return self.copyBuffer(buf); })
       .def("get_buffers", [](Device &self) { return self.getBuffers(); })

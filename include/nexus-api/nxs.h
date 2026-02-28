@@ -218,10 +218,21 @@ enum _nxs_data_type {
     NXS_DataType_F64 = 16 << NXS_CommandArgType_NextBitOffset,
     NXS_DataType_I64 = 17 << NXS_CommandArgType_NextBitOffset,
     NXS_DataType_U64 = 18 << NXS_CommandArgType_NextBitOffset,
+    NXS_DataType_Bool = 19 << NXS_CommandArgType_NextBitOffset,
     NXS_DataType_Mask = 31 << NXS_CommandArgType_NextBitOffset,
-    NXS_DataType_NextBitOffset = NXS_CommandArgType_NextBitOffset + 5
+    NXS_DataType_PREFIX_LEN = 13,
+    /* Flags */
+    NXS_DataType_Block = 32 << NXS_CommandArgType_NextBitOffset,
+    NXS_DataType_Flags = 1 << (NXS_CommandArgType_NextBitOffset + 5),
+    NXS_DataType_NextBitOffset = NXS_CommandArgType_NextBitOffset + 6
 };
 typedef enum _nxs_data_type nxs_data_type;
+
+nxs_data_type nxsGetDataType(nxs_uint settings);
+nxs_uint nxsGetDataTypeFlags(nxs_uint settings);
+nxs_uint nxsGetDataTypeSizeBits(nxs_uint settings);
+nxs_ulong nxsGetNumElements(nxs_shape shape);
+const char *nxsGetDataTypeName(nxs_data_type type);
 
 /* ENUM nxs_command_queue_properties
  *

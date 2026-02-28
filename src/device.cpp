@@ -155,11 +155,11 @@ Event detail::DeviceImpl::createEvent(nxs_event_type event_type,
   return event;
 }
 
-Buffer detail::DeviceImpl::createBuffer(size_t size, const void *data,
+Buffer detail::DeviceImpl::createBuffer(const Shape &shape, const void *data,
                                         nxs_uint settings) {
   NEXUS_LOG(NXS_LOG_NOTE, "  createBuffer");
-  APICALL(nxsCreateBuffer, getId(), size, (void *)data, settings);
-  Buffer nbuf(Impl(this, apiResult, settings), getId(), size, data);
+  APICALL(nxsCreateBuffer, getId(), shape.get(), (void *)data, settings);
+  Buffer nbuf(Impl(this, apiResult, settings), shape, data);
   buffers.add(nbuf);
   return nbuf;
 }
@@ -167,9 +167,9 @@ Buffer detail::DeviceImpl::createBuffer(size_t size, const void *data,
 Buffer detail::DeviceImpl::copyBuffer(Buffer buf, nxs_uint settings) {
   NEXUS_LOG(NXS_LOG_NOTE, "  copyBuffer");
   settings |= buf.getSettings() & ~NXS_BufferSettings_OnDevice;
-  APICALL(nxsCreateBuffer, getId(), buf.getSize(), (void *)buf.getData(),
+  APICALL(nxsCreateBuffer, getId(), buf.getShape().get(), (void *)buf.getData(),
           settings);
-  Buffer nbuf(Impl(this, apiResult, settings), getId(), buf.getSize(), buf.getData());
+  Buffer nbuf(Impl(this, apiResult, settings), buf.getShape(), buf.getData());
   buffers.add(nbuf);
   return nbuf;
 }
@@ -209,8 +209,8 @@ Schedule Device::createSchedule(nxs_uint settings) {
   NEXUS_OBJ_MCALL(Schedule(), createSchedule, settings);
 }
 
-Buffer Device::createBuffer(size_t size, const void *data, nxs_uint settings) {
-  NEXUS_OBJ_MCALL(Buffer(), createBuffer, size, data, settings);
+Buffer Device::createBuffer(const Shape &shape, const void *data, nxs_uint settings) {
+  NEXUS_OBJ_MCALL(Buffer(), createBuffer, shape, data, settings);
 }
 
 Buffer Device::copyBuffer(Buffer buf, nxs_uint settings) {

@@ -123,6 +123,8 @@
     #define NXS_API_PREFIX__VERSION_2_2_DEPRECATED NXS_API_PREFIX_COMMON NXS_API_PREFIX_DEPRECATED
 #endif
 
+#define NXS_MAX_DIMS 8
+
 #if (defined (_WIN32) && defined(_MSC_VER))
 
 #if defined(__clang__)
@@ -258,6 +260,11 @@ typedef double          nxs_double;
 
 struct nxs_dim3 {
     nxs_uint x,y,z;
+};
+
+struct nxs_shape {
+    nxs_ulong dims[NXS_MAX_DIMS];
+    nxs_uint rank;
 };
 
 /* Macro names and corresponding values defined by OpenCL */
