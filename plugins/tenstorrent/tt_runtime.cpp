@@ -109,15 +109,15 @@ nxsGetDeviceProperty(nxs_int device_id, nxs_uint device_property_id,
  * @brief Create a buffer on the device
  * @return Error status or Succes.
  ***********************************************************************/
-extern "C" nxs_int NXS_API_CALL nxsCreateBuffer(nxs_int device_id, size_t size,
+extern "C" nxs_int NXS_API_CALL nxsCreateBuffer(nxs_int device_id, nxs_shape shape,
                                                 void *host_ptr,
                                                 nxs_uint settings) {
   auto rt = getRuntime();
   auto dev = rt->getDevice(device_id);
   if (!dev) return NXS_InvalidDevice;
 
-  NXSAPI_LOG(nexus::NXS_LOG_NOTE, "createBuffer ", size);
-  auto *buf = rt->getBuffer(dev, size, host_ptr, settings);
+  NXSAPI_LOG(nexus::NXS_LOG_NOTE, "createBuffer ", shape.rank);
+  auto *buf = rt->getBuffer(dev, shape, host_ptr, settings);
   if (!buf) return NXS_InvalidBuffer;
 
   return rt->addObject(buf);

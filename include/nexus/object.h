@@ -23,8 +23,11 @@ class Impl {
   nxs_int getId() const { return id; }
 
   nxs_uint getSettings() const { return settings; }
+  bool hasSetting(nxs_uint setting) const { return settings & setting; }
 
   void setSettings(nxs_uint _settings) { settings = _settings; }
+  void setSetting(nxs_uint setting) { settings |= setting; }
+  void removeSetting(nxs_uint setting) { settings &= ~setting; }
 
   template <typename T = Impl>
   T *getParent() const {

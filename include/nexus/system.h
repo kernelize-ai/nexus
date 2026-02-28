@@ -28,7 +28,7 @@ class System : Object<detail::SystemImpl> {
 
   Runtime getRuntime(int idx) const;
   Runtime getRuntime(const std::string &name);
-  Buffer createBuffer(size_t sz, const void *hostData = nullptr,
+  Buffer createBuffer(const Shape &shape, const void *hostData = nullptr,
                       nxs_uint settings = 0);
   Buffer copyBuffer(Buffer buf, Device dev, nxs_uint settings = 0);
   Info loadCatalog(const std::string &catalogPath);

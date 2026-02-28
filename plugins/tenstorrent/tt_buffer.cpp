@@ -2,43 +2,85 @@
 #include <tt_device.h>
 #include <tt_runtime.h>
 
-TTBuffer::TTBuffer(TTDevice *dev, size_t size,
+#include <tt-metalium/tilize_utils.hpp>
+
+TTBuffer::TTBuffer(TTDevice *dev, nxs_shape shape,
                    void *data_ptr, nxs_uint settings)
-  : Buffer(size, data_ptr, settings), device(dev) {
-    if (device)
-      makeDeviceBuffer();
+  : Buffer(shape, data_ptr, settings), device(dev) {
+    if (device) {
+      switch (nxsGetDataType(settings)) {
+        case NXS_DataType_F32:
+          makeDeviceBuffer<float>();
+          break;
+        case NXS_DataType_BF16:
+          makeDeviceBuffer<bfloat16>();
+          break;
+        case NXS_DataType_U32:
+          makeDeviceBuffer<uint32_t>();
+          break;
+        case NXS_DataType_U16:
+          makeDeviceBuffer<uint16_t>();
+          break;
+        default:
+          NXSAPI_LOG(nexus::NXS_LOG_ERROR, "TTBuffer: Unsupported data type: ",
+             nxsGetDataTypeName(nxsGetDataType(settings)));
+          break;
+      }
+    }
 }
 
 
+
+template <typename T>
 TTBuffer::Buffer_sp TTBuffer::makeDeviceBuffer() {
   if (!(getSettings() & NXS_BufferSettings_OnDevice)) {
+    auto shape = getShape();
+    if (shape.rank == 0) {
+      return nullptr;
+    }
+    assert(shape.rank >= 2 && "Shape must be at least 2D");
     setSettings(getSettings() | NXS_BufferSettings_OnDevice);
 
-    size_t tile_size = 1024 * getDataTypeSize(getSettings());
-    //assert(getSize() % tile_size == 0);
-    auto pad_size = size();
-    if (size() % tile_size != 0) {
-      pad_size = size() + tile_size - (size() % tile_size);
+    constexpr nxs_ulong tileWidth = 32;
+
+    // Pad up to the nearest tile size
+    nxs_shape tilizedShape = shape;
+    nxs_ulong rowCount = 1;
+    for (nxs_uint i = 0; i < tilizedShape.rank; i++) {
+      tilizedShape.dims[i] = (tilizedShape.dims[i] + tileWidth - 1) / tileWidth;
+      if (i != 0) rowCount *= tilizedShape.dims[i];
     }
-    std::vector<nxs_uchar> buf_v(pad_size, 0);
-    if (auto data_ptr = getData()) {
-      std::copy(data_ptr, data_ptr + size(), buf_v.begin());
+    nxs_ulong tilizedStride = tilizedShape.dims[0];
+
+    nxs_ulong rowStride = shape.dims[0] * sizeof(T);
+    nxs_ulong paddedSize = nxsGetNumElements(tilizedShape);
+    std::vector<T> buf_v(paddedSize, 0);
+    char *data_ptr = (char *)getData();
+    for (nxs_ulong i = 0; i < rowCount; i++) {
+      std::copy(data_ptr, data_ptr + rowStride, buf_v.begin() + i * tilizedStride);
+      data_ptr += rowStride;
     }
+    buf_v = tilize_nfaces(buf_v, tilizedShape.dims[0], rowCount);
+
+    // Size of a tile in bytes
+    nxs_ulong tileSize = tileWidth * tileWidth * sizeof(T);
+
     ttmd::DeviceLocalBufferConfig dram_config{
-        .page_size = tile_size,  // Number of bytes when round-robin between banks. Usually this is the same
+        .page_size = tileSize,  // Number of bytes when round-robin between banks. Usually this is the same
                                       // as the tile size for efficiency.
         .buffer_type = ttm::BufferType::DRAM};  // Type of buffer (DRAM or L1(SRAM))
     ttmd::ReplicatedBufferConfig distributed_buffer_config{
-        .size = pad_size  // Size of the buffer in bytes
+        .size = paddedSize * sizeof(T)  // Size of the buffer in bytes
     };  
     // Create 3 buffers in DRAM to hold the 2 input tiles and 1 output tile.
     TT_OBJ_CHECK(buffer, ttmd::MeshBuffer::create, distributed_buffer_config, dram_config, device->get().get());
     auto &cq = device->getCQ();
-    TT_CHECK(ttmd::EnqueueWriteMeshBuffer, cq, buffer, buf_v, true); // TODO: change to non-blocking and remove the finish
+    TT_CHECK(ttmd::EnqueueWriteMeshBuffer, cq, buffer, buf_v, true);
+    // TODO: change to non-blocking and remove the finish
     TT_CHECK(ttmd::Finish, cq);
 
     address = buffer->address(); // defer until cq finished
-    NXSAPI_LOG(nexus::NXS_LOG_NOTE, "TTBuffer: makeDeviceBuffer: tile_size=", tile_size, " size=", size());
+    NXSAPI_LOG(nexus::NXS_LOG_NOTE, "TTBuffer: makeDeviceBuffer: tile_size=", tileSize, " size=", paddedSize);
   } else {
     address = static_cast<nxs_uint>(reinterpret_cast<uintptr_t>(data()));
   }

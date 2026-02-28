@@ -46,11 +46,11 @@ class Device : public Object<detail::DeviceImpl> {
                         nxs_uint settings = 0);
   Library createLibrary(const std::string &libraryPath, nxs_uint settings = 0);
 
-  Buffer createBuffer(size_t size, const void *data = nullptr,
+  Buffer createBuffer(const Shape &shape, const void *data = nullptr,
                       nxs_uint settings = 0);
   Buffer copyBuffer(Buffer buf, nxs_uint settings = 0);
   
-  Buffer fillBuffer(void *value, size_t size);
+  Buffer fillBuffer(void *value, nxs_uint value_size_bytes);
 };
 
 typedef Objects<Device> Devices;

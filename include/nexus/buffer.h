@@ -13,29 +13,44 @@ namespace detail {
 class BufferImpl;
 }  // namespace detail
 
+/// @brief Shape of a buffer
+class Shape {
+ public:
+  Shape(nxs_ulong _size=0) : shape{{_size}, (nxs_uint)(_size == 0 ? 0 : 1)} {}
+  Shape(nxs_ulong * _dims, nxs_uint _dims_count);
+  Shape(nxs_shape _shape) : shape(_shape) {}
+  nxs_uint getRank() const { return shape.rank; }
+  nxs_ulong getNumElements() const { return nxsGetNumElements(shape); }
+  nxs_ulong getDim(nxs_uint _idx) const {
+    if (_idx < shape.rank) return shape.dims[_idx];
+    return 0;
+  }
+  //nxs_ulong getStride(nxs_uint _idx) const;
+  nxs_shape get() const { return shape; }
+ private:
+  nxs_shape shape;
+};
+
 // System class
 class Buffer : public Object<detail::BufferImpl> {
  public:
-  Buffer(detail::Impl base, size_t _sz, const void *_hostData = nullptr);
-  Buffer(detail::Impl base, nxs_int devId, size_t _sz,
-         const void *_deviceData = nullptr);
+  Buffer(detail::Impl base, const Shape &shape, const void *_hostData = nullptr);
   using Object::Object;
-
-  nxs_int getDeviceId() const;
 
   std::optional<Property> getProperty(nxs_int prop) const override;
 
-  size_t getSize() const;
+  nxs_ulong getSizeBytes() const;
+  Shape getShape() const;
   const char *getData() const;
   nxs_data_type getDataType() const;
-  size_t getNumElements() const;
-  size_t getElementSize() const;
+  nxs_uint getDataTypeFlags() const;
+  nxs_ulong getNumElements() const;
+  nxs_uint getElementSizeBits() const;
 
   Buffer getLocal() const;
 
   nxs_status copy(void *_hostBuf, nxs_uint direction = NXS_BufferDeviceToHost);
-  
-  nxs_status fill(void *value, size_t size);
+  nxs_status fill(void *value, nxs_uint size_bytes);
 };
 
 typedef Objects<Buffer> Buffers;

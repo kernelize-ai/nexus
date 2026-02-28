@@ -66,9 +66,9 @@ public:
     return get<CudaDevice>(id);
   }
 
-  rt::Buffer *getBuffer(size_t size, void *data_ptr = nullptr,
+  rt::Buffer *getBuffer(nxs_shape shape, void *data_ptr = nullptr,
                         nxs_uint settings = 0) {
-    return buffer_pool.get_new(size, data_ptr, settings);
+    return buffer_pool.get_new(shape, data_ptr, settings);
   }
   void release(rt::Buffer *buffer) { buffer_pool.release(buffer); }
 

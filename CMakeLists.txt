@@ -108,6 +108,7 @@ add_subdirectory(third_party/pybind11_json pybind11_json)
 
 # ------
 # Core API source directory
+add_subdirectory(api-src)
 add_subdirectory(src)
 
 # ------

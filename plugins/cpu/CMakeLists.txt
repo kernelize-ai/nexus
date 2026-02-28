@@ -13,7 +13,8 @@ add_library(cpu_plugin SHARED
  cpu_runtime.cpp
  cpu_schedule.cpp)
 
-target_link_libraries(cpu_plugin PRIVATE cpuinfo ${Boost_LIBRARIES})
+ target_link_libraries(cpu_plugin PRIVATE nxs-api)
+ target_link_libraries(cpu_plugin PRIVATE cpuinfo ${Boost_LIBRARIES})
 
 if(UNIX AND (NOT APPLE))
  target_link_options(cpu_plugin PRIVATE "LINKER:--exclude-libs,ALL")
