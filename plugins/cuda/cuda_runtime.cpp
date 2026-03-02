@@ -239,10 +239,10 @@ extern "C" nxs_status NXS_API_CALL nxsCopyBuffer(nxs_int buffer_id,
   if (!host_ptr) return NXS_InvalidHostPtr;
   if (copy_settings == NXS_BufferDeviceToHost)
     CUDA_CHECK(NXS_InvalidBuffer, cudaMemcpy, host_ptr, buffer->get(),
-              buffer->size(), cudaMemcpyDeviceToHost);
+              buffer->getSizeBytes(), cudaMemcpyDeviceToHost);
   else
     CUDA_CHECK(NXS_InvalidBuffer, cudaMemcpy, buffer->get(), host_ptr,
-              buffer->size(), cudaMemcpyHostToDevice);
+              buffer->getSizeBytes(), cudaMemcpyHostToDevice);
   return NXS_Success;
 }
 
@@ -253,7 +253,7 @@ extern "C" nxs_status NXS_API_CALL nxsFillBuffer(nxs_int buffer_id,
   auto buffer = rt->get<rt::Buffer>(buffer_id);
   if (!buffer || value_size == 0) return NXS_InvalidBuffer;
 
-  size_t total_size = buffer->size();
+  size_t total_size = buffer->getSizeBytes();
 
   bool is_zero = true;
   for (nxs_uint i = 0; i < value_size; ++i) {
