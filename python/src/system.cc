@@ -79,7 +79,7 @@ static DevPtr getPointer(PyObject *obj) {
     if (shape_m) {
       PyObject *builtins = PyImport_ImportModule("builtins");
       PyObject *func = PyObject_GetAttrString(builtins, "len");
-      PyObject *shape_len = PyObject_CallFunction(func, "(s)", shape_m);
+      PyObject *shape_len = PyObject_CallFunctionObjArgs(func, shape_m, NULL);
       Py_DECREF(func);
       assert(shape_len);
       nxs_shape _shape;

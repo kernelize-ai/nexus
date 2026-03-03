@@ -134,7 +134,15 @@ extern "C" nxs_status NXS_API_CALL nxsCopyBuffer(nxs_int buffer_id,
   auto rt = getRuntime();
   auto buf = rt->get<TTBuffer>(buffer_id);
   if (!buf) return NXS_InvalidBuffer;
-  return buf->copyToHost(host_ptr);
+
+  bool blocking = false;
+  //if (settings & NXS_ExecutionSettings_NonBlocking) {
+  //  blocking = false;
+  //}
+
+  if (settings == NXS_BufferDeviceToHost)
+    return buf->copyToHost(host_ptr);
+  return buf->copyToDevice(host_ptr, blocking);
 }
 
 /************************************************************************

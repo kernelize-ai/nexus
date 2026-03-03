@@ -53,6 +53,9 @@ nxs_status TTCommand::runCommand(nxs_int stream, ttmd::MeshWorkload &workload,
     }
   }
 
+  ctas.push_back(ttm::CreateSemaphore(program, cores, 0));
+  ctas.push_back(ttm::CreateSemaphore(program, cores, 0));
+
   // jit the programs
   library->jitProgram(program, cores, ctas);
 

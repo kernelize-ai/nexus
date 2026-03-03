@@ -11,7 +11,12 @@ include_directories(metal-cpp)
 set(CMAKE_CXX_VISIBILITY_PRESET default)
 
 add_library(metal_plugin SHARED metal_runtime.cpp)
-target_link_libraries(metal_plugin PRIVATE "-framework Metal" "-framework Foundation" "-framework QuartzCore" )
+target_link_libraries(metal_plugin PRIVATE
+    "-framework Metal"
+    "-framework Foundation"
+    "-framework QuartzCore"
+    nxs-api)
+    
 #set_target_properties(metal_plugin PROPERTIES C_VISIBILITY_PRESET)
 #target_link_options(metal_plugin PRIVATE "-undefined dynamic_lookup")
 

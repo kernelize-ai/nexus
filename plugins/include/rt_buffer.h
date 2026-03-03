@@ -60,6 +60,9 @@ class Buffer {
   nxs_uint getElementSizeBits() const {
     return nxsGetDataTypeSizeBits(settings);
   }
+  nxs_data_type getDataType() const {
+    return nxsGetDataType(settings);
+  }
   nxs_uint getSettings() const { return settings; }
   void setSettings(nxs_uint new_settings) {
     settings = new_settings;

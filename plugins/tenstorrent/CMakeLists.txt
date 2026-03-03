@@ -23,7 +23,6 @@ if(EXISTS ${TT_METAL_CMAKE_PATH})
       tt_runtime.cpp
       tt_schedule.cpp)
 
-
     target_link_libraries(tt_plugin PRIVATE TT::Metalium nxs-api)
 
     if(UNIX AND (NOT APPLE))

@@ -13,6 +13,11 @@ class TTBuffer : public nxs::rt::Buffer {
   nxs_uint address;
   Buffer_sp buffer;
 
+  nxs_shape tilizedShape;
+  nxs_ulong rowCount;
+  nxs_ulong paddedSize;
+  nxs_uint elementSize;
+
  public:
   TTBuffer(TTDevice *dev = nullptr, nxs_shape shape = nxs_shape{{0}, 0},
            void *data_ptr = nullptr, nxs_uint settings = 0);
@@ -23,9 +28,16 @@ class TTBuffer : public nxs::rt::Buffer {
   nxs_uint *getAddress() { return &address; }
 
   template <typename T>
-  Buffer_sp makeDeviceBuffer();
+  nxs_status tilizeAndCopyToDevice(T *data_ptr, bool blocking);
+
+  nxs_status copyToDevice(void *host_buf, bool blocking);
+
+  template <typename T>
+  nxs_status copyToHostUntilize(T *host_buf);
 
   nxs_status copyToHost(void *host_buf);
+
+  constexpr static nxs_ulong tileWidth = 32;
 
 };
 
