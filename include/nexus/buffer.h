@@ -18,7 +18,17 @@ class Shape {
  public:
   Shape(nxs_ulong _size=0) : shape{{_size}, (nxs_uint)(_size == 0 ? 0 : 1)} {}
   Shape(nxs_ulong * _dims, nxs_uint _dims_count);
+  
+  template <typename T>
+  Shape(const std::vector<T> &_dims) {
+    shape.rank = _dims.size();
+    for (nxs_uint i = 0; i < shape.rank; i++) {
+      shape.dims[i] = _dims[i];
+    }
+  }
+
   Shape(nxs_shape _shape) : shape(_shape) {}
+  
   nxs_uint getRank() const { return shape.rank; }
   nxs_ulong getNumElements() const { return nxsGetNumElements(shape); }
   nxs_ulong getDim(nxs_uint _idx) const {

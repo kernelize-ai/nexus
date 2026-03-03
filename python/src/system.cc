@@ -563,9 +563,8 @@ void pynexus::init_system_bindings(py::module &m) {
              return make_buffer(tensor, self);
            })
       .def("create_buffer",
-           [](Device &self, std::vector<size_t> shape, nxs_uint settings) {
-             Shape s(shape.data(), shape.size());
-             return self.createBuffer(s, nullptr, settings);
+           [](Device &self, std::vector<nxs_ulong> shape, nxs_uint settings) {
+             return self.createBuffer(shape, nullptr, settings);
           }, py::arg("shape"), py::arg("settings") = 0)
       .def("copy_buffer",
            [](Device &self, Buffer buf) { return self.copyBuffer(buf); })
