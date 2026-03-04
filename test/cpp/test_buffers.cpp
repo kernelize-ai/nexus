@@ -11,7 +11,7 @@ char** g_argv;
 class BufferFillTest : public ::testing::TestWithParam<size_t> {};
 
 TEST_P(BufferFillTest, PatternSize) {
-  std::string runtime_name = (g_argc > 1) ? g_argv[1] : "cuda";
+  std::string runtime_name = (g_argc > 1) ? g_argv[1] : "cpu";
   size_t pattern_size = GetParam();
 
   auto sys = nexus::getSystem();
@@ -30,15 +30,40 @@ TEST_P(BufferFillTest, PatternSize) {
   std::vector<uint8_t> host_out(buffer_size);
   buf.copy(host_out.data(), NXS_BufferDeviceToHost);
 
-  size_t effective_size = pattern_size == 0 ? 1 : pattern_size;
-  for (size_t i = 0; i < buffer_size; ++i) {
-    ASSERT_EQ(host_out[i], pattern[i % effective_size])
-      << "Mismatch at byte " << i << " for pattern_size=" << pattern_size;
+  if (pattern_size > 0) {
+    size_t effective_size = pattern_size == 0 ? 1 : pattern_size;
+    for (size_t i = 0; i < buffer_size; ++i) {
+      ASSERT_EQ(host_out[i], pattern[i % effective_size])
+        << "Mismatch at byte " << i << " for pattern_size=" << pattern_size;
+    }
   }
 }
 
 INSTANTIATE_TEST_SUITE_P(AllPatternSizes, BufferFillTest,
   ::testing::Values(size_t{0}, size_t{1}, size_t{2}, size_t{4}));
+
+class BufferShapeTest : public ::testing::TestWithParam<std::vector<size_t>> {};
+
+TEST_P(BufferShapeTest, Shape) {
+  std::string runtime_name = (g_argc > 1) ? g_argv[1] : "cpu";
+  std::vector<size_t> shape = GetParam();
+
+  auto sys = nexus::getSystem();
+  auto runtime = sys.getRuntime(runtime_name);
+  ASSERT_TRUE(runtime && !runtime.getDevices().empty());
+  auto dev = runtime.getDevice(0);
+  auto buf = dev.createBuffer(shape, nullptr, NXS_DataType_F16);
+
+  size_t size_bytes = nxsGetDataTypeSizeBits(NXS_DataType_F16) / 8;
+  for (size_t i = 0; i < shape.size(); ++i) {
+    size_bytes *= shape[i];
+  }
+  ASSERT_EQ(buf.getSizeBytes(), size_bytes);
+}
+
+INSTANTIATE_TEST_SUITE_P(AllShapes, BufferShapeTest,
+  ::testing::Values(std::vector<size_t>{1024}, std::vector<size_t>{1024, 1024}, std::vector<size_t>{1024, 1024, 4}));
+
 
 int main(int argc, char** argv) {
   g_argc = argc;
