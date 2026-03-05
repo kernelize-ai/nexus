@@ -44,7 +44,7 @@ class CpuRuntime : public rt::Runtime {
     return static_cast<T>(get(id));
   }
 
-  rt::Buffer *getBuffer(nxs_shape shape, void *data_ptr = nullptr,
+  rt::Buffer *getBuffer(nxs_buffer_layout shape, void *data_ptr = nullptr,
                         nxs_uint settings = 0) {
     return buffer_pool.get_new(shape, data_ptr, settings | NXS_BufferSettings_Maintain);
   }

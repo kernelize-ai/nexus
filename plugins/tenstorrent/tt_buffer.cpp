@@ -4,19 +4,19 @@
 
 #include <tt-metalium/tilize_utils.hpp>
 
-static bool compareShapes(nxs_shape shape1, nxs_shape shape2) {
+static bool compareShapes(nxs_buffer_layout shape1, nxs_buffer_layout shape2) {
   if (shape1.rank != shape2.rank) {
     return false;
   }
   for (nxs_uint i = 0; i < shape1.rank; i++) {
-    if (shape1.dims[i] != shape2.dims[i]) {
+    if (shape1.dim[i] != shape2.dim[i]) {
       return false;
     }
   }
   return true;
 }
 
-TTBuffer::TTBuffer(TTDevice *dev, nxs_shape shape,
+TTBuffer::TTBuffer(TTDevice *dev, nxs_buffer_layout shape,
                    void *data_ptr, nxs_uint settings)
   : Buffer(shape, data_ptr, settings), device(dev) {
     if (shape.rank != 0) {
@@ -26,9 +26,9 @@ TTBuffer::TTBuffer(TTDevice *dev, nxs_shape shape,
       rowCount = 1;
       paddedSize = 1;
       for (nxs_uint i = 0; i < shape.rank; i++) {
-        tilizedShape.dims[i] = ((shape.dims[i] + tileWidth - 1) / tileWidth) * tileWidth;
-        paddedSize *= tilizedShape.dims[i];
-        if (i != 0) rowCount *= tilizedShape.dims[i];
+        tilizedShape.dim[i] = ((shape.dim[i] + tileWidth - 1) / tileWidth) * tileWidth;
+        paddedSize *= tilizedShape.dim[i];
+        if (i != 0) rowCount *= tilizedShape.dim[i];
       }
 
       // Size of a tile in bytes
@@ -57,16 +57,16 @@ TTBuffer::TTBuffer(TTDevice *dev, nxs_shape shape,
 
 template <typename T>
 nxs_status TTBuffer::tilizeAndCopyToDevice(T *data_ptr, bool blocking) {
-  nxs_ulong tilizedStride = tilizedShape.dims[0];
+  nxs_ulong tilizedStride = tilizedShape.dim[0];
 
   auto shape = getShape();
-  nxs_ulong rowStride = shape.dims[0];
+  nxs_ulong rowStride = shape.dim[0];
   std::vector<T> buf_v(paddedSize, 0);
   for (nxs_ulong i = 0; i < rowCount; i++) {
     std::copy(data_ptr, data_ptr + rowStride, buf_v.begin() + i * tilizedStride);
     data_ptr += rowStride;
   }
-  buf_v = tilize_nfaces(buf_v, tilizedShape.dims[0], rowCount);
+  buf_v = tilize_nfaces(buf_v, tilizedShape.dim[0], rowCount);
 
   auto &cq = device->getCQ();
   TT_CHECK(ttmd::EnqueueWriteMeshBuffer, cq, buffer, buf_v, blocking);
@@ -109,11 +109,11 @@ nxs_status TTBuffer::copyToHostUntilize(T *data_ptr) {
   TT_CHECK(ttmd::EnqueueReadMeshBuffer, cq, buf_v, buffer, true);
   TT_CHECK(ttmd::Finish, cq);
 
-  nxs_ulong tilizedStride = tilizedShape.dims[0];
+  nxs_ulong tilizedStride = tilizedShape.dim[0];
   buf_v = untilize_nfaces(buf_v, tilizedStride, rowCount);
 
   T *tbuf_ptr = reinterpret_cast<T *>(buf_v.data());
-  nxs_ulong rowStride = getShape().dims[0] * elementSize;
+  nxs_ulong rowStride = getShape().dim[0] * elementSize;
   nxs_ulong tilizedRowStride = tilizedStride * elementSize;
   for (nxs_ulong i = 0; i < rowCount; i++) {
     std::copy(tbuf_ptr, tbuf_ptr + rowStride, data_ptr);

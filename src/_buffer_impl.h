@@ -7,7 +7,7 @@ namespace nexus {
 namespace detail {
 class BufferImpl : public Impl {
  public:
-  BufferImpl(Impl base, const Shape &shape, const char *_hostData);
+  BufferImpl(Impl base, const Layout &layout, const char *_hostData);
 
   ~BufferImpl();
 
@@ -16,12 +16,8 @@ class BufferImpl : public Impl {
   std::optional<Property> getProperty(nxs_int prop) const;
 
   nxs_ulong getSizeBytes() const { return size_bytes; }
-  const Shape &getShape() const { return shape; }
+  const Layout &getLayout() const { return layout; }
   const char *getData() const;
-  nxs_data_type getDataType() const;
-  nxs_uint getDataTypeFlags() const;
-  nxs_ulong getNumElements() const;
-  nxs_uint getElementSizeBits() const;
 
   void setData(nxs_ulong sz, const char *hostData);
   void setData(void *_data) { data = _data; }
@@ -38,7 +34,7 @@ class BufferImpl : public Impl {
 
   // set of runtimes
   nxs_ulong size_bytes;
-  Shape shape;
+  Layout layout;
   void *data;
 };
 }  // namespace detail

@@ -4,7 +4,7 @@
 #include <nexus-api.h>
 #include <nexus/object.h>
 
-#include <list>
+#include <vector>
 
 namespace nexus {
 class Device;
@@ -13,49 +13,57 @@ namespace detail {
 class BufferImpl;
 }  // namespace detail
 
-/// @brief Shape of a buffer
-class Shape {
+/// @brief Layout of a buffer, including shape and data type.
+class Layout {
  public:
-  Shape(nxs_ulong _size=0) : shape{{_size}, (nxs_uint)(_size == 0 ? 0 : 1)} {}
-  Shape(nxs_ulong * _dims, nxs_uint _dims_count);
+  Layout(nxs_ulong _size = 0, nxs_uint _data_type = NXS_DataType_Undefined)
+    : layout{(nxs_uint)_data_type, (nxs_uint)(_size == 0 ? 0 : 1), {_size}, {0}} {}
+
+  Layout(nxs_ulong *_dims, nxs_uint _dims_count,
+         nxs_uint _data_type = NXS_DataType_Undefined);
   
   template <typename T>
-  Shape(const std::vector<T> &_dims) {
-    shape.rank = _dims.size();
-    for (nxs_uint i = 0; i < shape.rank; i++) {
-      shape.dims[i] = _dims[i];
+  Layout(const std::vector<T> &_dims,
+         nxs_uint _data_type = NXS_DataType_Undefined)
+      : layout{} {
+    layout.data_type = (nxs_uint)_data_type;
+    layout.rank = _dims.size();
+    for (nxs_uint i = 0; i < layout.rank; i++) {
+      layout.dim[i] = _dims[i];
     }
   }
 
-  Shape(nxs_shape _shape) : shape(_shape) {}
+  Layout(const nxs_buffer_layout &_layout) : layout(_layout) {}
   
-  nxs_uint getRank() const { return shape.rank; }
-  nxs_ulong getNumElements() const { return nxsGetNumElements(shape); }
+  operator bool() const { return layout.rank != 0; }
+
+  nxs_uint getRank() const { return layout.rank; }
+  nxs_uint getElementSizeBits() const { return nxsGetDataTypeSizeBits(layout.data_type); }
+  nxs_ulong getNumElements() const { return nxsGetNumElements(layout); }
   nxs_ulong getDim(nxs_uint _idx) const {
-    if (_idx < shape.rank) return shape.dims[_idx];
+    if (_idx < layout.rank) return layout.dim[_idx];
     return 0;
   }
-  //nxs_ulong getStride(nxs_uint _idx) const;
-  nxs_shape get() const { return shape; }
+  nxs_data_type getDataType() const { return nxsGetDataType(layout.data_type); }
+  nxs_uint getDataTypeFlags() const { return nxsGetDataTypeFlags(layout.data_type); }
+  void setDataType(nxs_uint _data_type) { layout.data_type = _data_type; }
+  // nxs_ulong getStride(nxs_uint _idx) const;
+  const nxs_buffer_layout &get() const { return layout; }
  private:
-  nxs_shape shape;
+  nxs_buffer_layout layout;
 };
 
 // System class
 class Buffer : public Object<detail::BufferImpl> {
  public:
-  Buffer(detail::Impl base, const Shape &shape, const void *_hostData = nullptr);
+  Buffer(detail::Impl base, const Layout &layout, const void *_hostData = nullptr);
   using Object::Object;
 
   std::optional<Property> getProperty(nxs_int prop) const override;
 
   nxs_ulong getSizeBytes() const;
-  Shape getShape() const;
+  const Layout &getLayout() const;
   const char *getData() const;
-  nxs_data_type getDataType() const;
-  nxs_uint getDataTypeFlags() const;
-  nxs_ulong getNumElements() const;
-  nxs_uint getElementSizeBits() const;
 
   Buffer getLocal() const;
 

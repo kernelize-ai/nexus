@@ -13,13 +13,14 @@ class TTBuffer : public nxs::rt::Buffer {
   nxs_uint address;
   Buffer_sp buffer;
 
-  nxs_shape tilizedShape;
+  nxs_buffer_layout tilizedShape;
   nxs_ulong rowCount;
   nxs_ulong paddedSize;
   nxs_uint elementSize;
 
  public:
-  TTBuffer(TTDevice *dev = nullptr, nxs_shape shape = nxs_shape{{0}, 0},
+  TTBuffer(TTDevice *dev = nullptr,
+           nxs_buffer_layout shape = nxs_buffer_layout{(nxs_uint)NXS_DataType_Undefined, 0, {0}, {0}},
            void *data_ptr = nullptr, nxs_uint settings = 0);
 
   ~TTBuffer() = default;

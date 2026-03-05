@@ -155,11 +155,22 @@ Event detail::DeviceImpl::createEvent(nxs_event_type event_type,
   return event;
 }
 
-Buffer detail::DeviceImpl::createBuffer(const Shape &shape, const void *data,
+Buffer detail::DeviceImpl::createBuffer(const Layout &layout, const void *data,
                                         nxs_uint settings) {
   NEXUS_LOG(NXS_LOG_NOTE, "  createBuffer");
-  APICALL(nxsCreateBuffer, getId(), shape.get(), (void *)data, settings);
-  Buffer nbuf(Impl(this, apiResult, settings), shape, data);
+  Layout normalized_layout = layout;
+  if (normalized_layout.getDataType() == NXS_DataType_Undefined) {
+    auto data_type = nxsGetDataType(settings);
+    if (data_type != NXS_DataType_Undefined) {
+      normalized_layout.setDataType(data_type);
+    }
+  }
+  nxs_uint buffer_settings =
+      settings & (NXS_BufferSettings_OnHost | NXS_BufferSettings_OnDevice |
+                  NXS_BufferSettings_Maintain);
+  APICALL(nxsCreateBuffer, getId(), normalized_layout.get(), (void *)data,
+          buffer_settings);
+  Buffer nbuf(Impl(this, apiResult, buffer_settings), normalized_layout, data);
   buffers.add(nbuf);
   return nbuf;
 }
@@ -167,9 +178,9 @@ Buffer detail::DeviceImpl::createBuffer(const Shape &shape, const void *data,
 Buffer detail::DeviceImpl::copyBuffer(Buffer buf, nxs_uint settings) {
   NEXUS_LOG(NXS_LOG_NOTE, "  copyBuffer");
   settings |= buf.getSettings() & ~NXS_BufferSettings_OnDevice;
-  APICALL(nxsCreateBuffer, getId(), buf.getShape().get(), (void *)buf.getData(),
+  APICALL(nxsCreateBuffer, getId(), buf.getLayout().get(), (void *)buf.getData(),
           settings);
-  Buffer nbuf(Impl(this, apiResult, settings), buf.getShape(), buf.getData());
+  Buffer nbuf(Impl(this, apiResult, settings), buf.getLayout(), buf.getData());
   buffers.add(nbuf);
   return nbuf;
 }
@@ -209,8 +220,8 @@ Schedule Device::createSchedule(nxs_uint settings) {
   NEXUS_OBJ_MCALL(Schedule(), createSchedule, settings);
 }
 
-Buffer Device::createBuffer(const Shape &shape, const void *data, nxs_uint settings) {
-  NEXUS_OBJ_MCALL(Buffer(), createBuffer, shape, data, settings);
+Buffer Device::createBuffer(const Layout &layout, const void *data, nxs_uint settings) {
+  NEXUS_OBJ_MCALL(Buffer(), createBuffer, layout, data, settings);
 }
 
 Buffer Device::copyBuffer(Buffer buf, nxs_uint settings) {

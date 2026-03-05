@@ -66,7 +66,7 @@ nxs_data_type nxsGetDataType(nxs_uint settings) {
 }
 
 nxs_uint nxsGetDataTypeFlags(nxs_uint settings) {
-    return settings & NXS_DataType_Flags;
+    return settings & NXS_DataType_Flags_Mask;
 }
 
 nxs_uint nxsGetDataTypeSizeBits(nxs_uint settings) {
@@ -102,10 +102,10 @@ nxs_uint nxsGetDataTypeSizeBits(nxs_uint settings) {
     return 0;
 }
 
-nxs_ulong nxsGetNumElements(nxs_shape shape) {
+nxs_ulong nxsGetNumElements(const nxs_buffer_layout &layout) {
     nxs_ulong num_elements = 1;
-    for (nxs_uint i = 0; i < shape.rank; i++) {
-        num_elements *= shape.dims[i];
+    for (nxs_uint i = 0; i < layout.rank; i++) {
+        num_elements *= layout.dim[i];
     }
     return num_elements;
 }

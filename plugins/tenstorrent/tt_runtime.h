@@ -45,7 +45,7 @@ class TTRuntime : public rt::Runtime {
     return static_cast<T>(get(id));
   }
 
-  TTBuffer *getBuffer(TTDevice *device, nxs_shape shape, void *data_ptr = nullptr,
+  TTBuffer *getBuffer(TTDevice *device, nxs_buffer_layout shape, void *data_ptr = nullptr,
                         nxs_uint settings = 0) {
     return buffer_pool.get_new(device, shape, data_ptr, settings);
   }

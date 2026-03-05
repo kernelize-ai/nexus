@@ -10,13 +10,14 @@ namespace rt {
 
 class Buffer {
   char *buf;
-  nxs_shape shape;
+  nxs_buffer_layout layout;
   size_t size_bytes;
   nxs_uint settings;
 
  public:
-  Buffer(const nxs_shape &shape, void *data_ptr = nullptr, nxs_uint settings = 0)
-      : buf((char *)data_ptr), shape(shape), size_bytes(0), settings(settings) {
+  Buffer(const nxs_buffer_layout &layout, void *data_ptr = nullptr,
+         nxs_uint settings = 0)
+      : buf((char *)data_ptr), layout(layout), size_bytes(0), settings(settings) {
     setSizeBytes();
     if (settings & NXS_BufferSettings_Maintain) {
       buf = (char *)malloc(getSizeBytes());
@@ -24,13 +25,18 @@ class Buffer {
     }
   }
   Buffer(size_t size=0, void *data_ptr = nullptr, nxs_uint settings = 0)
-      : Buffer(nxs_shape{{size}, (nxs_uint)(size == 0 ? 0 : 1)}, data_ptr, settings) {}
+      : Buffer(nxs_buffer_layout{
+                   (nxs_uint)NXS_DataType_Undefined,
+                   (nxs_uint)(size == 0 ? 0 : 1),
+                   {size},
+                   {0}},
+               data_ptr, settings) {}
   ~Buffer() { release(); }
   void release() {
     if (buf && settings & NXS_BufferSettings_Maintain)
       free(buf);
     buf = nullptr;
-    shape = nxs_shape{{0}, 0};
+    layout = nxs_buffer_layout{(nxs_uint)NXS_DataType_Undefined, 0, {0}, {0}};
     size_bytes = 0;
   }
   char *data() const { return buf; }
@@ -52,16 +58,17 @@ class Buffer {
       buf = (char *)malloc(new_size_bytes);
       if (buf_c) std::memcpy((void *)buf, buf_c, std::min(size_bytes, new_size_bytes));
     }
-    shape = nxs_shape{{new_size_bytes}, 1};
+    layout = nxs_buffer_layout{(nxs_uint)NXS_DataType_Undefined, 1,
+                               {new_size_bytes}, {0}};
     size_bytes = new_size_bytes;
   }
-  const nxs_shape& getShape() const { return shape; }
-  nxs_ulong getNumElements() const { return nxsGetNumElements(shape); }
+  const nxs_buffer_layout& getShape() const { return layout; }
+  nxs_ulong getNumElements() const { return nxsGetNumElements(layout); }
   nxs_uint getElementSizeBits() const {
-    return nxsGetDataTypeSizeBits(settings);
+    return nxsGetDataTypeSizeBits(layout.data_type);
   }
   nxs_data_type getDataType() const {
-    return nxsGetDataType(settings);
+    return (nxs_data_type)layout.data_type;
   }
   nxs_uint getSettings() const { return settings; }
   void setSettings(nxs_uint new_settings) {

@@ -32,11 +32,21 @@ std::optional<Property> SystemImpl::getProperty(nxs_int prop) const {
   return std::nullopt;
 }
 
-Buffer SystemImpl::createBuffer(const Shape &shape, const void *hostData,
+Buffer SystemImpl::createBuffer(const Layout &layout, const void *hostData,
                                 nxs_uint settings) {
-  NEXUS_LOG(NXS_LOG_NOTE, "createBuffer ", shape.getNumElements());
+  Layout normalized_layout = layout;
+  if (normalized_layout.getDataType() == NXS_DataType_Undefined) {
+    auto data_type = nxsGetDataType(settings);
+    if (data_type != NXS_DataType_Undefined) {
+      normalized_layout.setDataType(data_type);
+    }
+  }
+  nxs_uint buffer_settings =
+      settings & (NXS_BufferSettings_OnHost | NXS_BufferSettings_OnDevice |
+                  NXS_BufferSettings_Maintain);
+  NEXUS_LOG(NXS_LOG_NOTE, "createBuffer ", normalized_layout.getNumElements());
   nxs_uint id = buffers.size();
-  Buffer buf(detail::Impl(this, id, settings), shape, hostData);
+  Buffer buf(detail::Impl(this, id, buffer_settings), normalized_layout, hostData);
   buffers.add(buf);
   return buf;
 }
@@ -77,9 +87,9 @@ Info System::loadCatalog(const std::string &catalogPath) {
   NEXUS_OBJ_MCALL(Info(), loadCatalog, catalogPath);
 }
 
-Buffer System::createBuffer(const Shape &shape, const void *hostData,
+Buffer System::createBuffer(const Layout &layout, const void *hostData,
                             nxs_uint settings) {
-  NEXUS_OBJ_MCALL(Buffer(), createBuffer, shape, hostData, settings);
+  NEXUS_OBJ_MCALL(Buffer(), createBuffer, layout, hostData, settings);
 }
 
 Buffer System::copyBuffer(Buffer buf, Device dev, nxs_uint settings) {

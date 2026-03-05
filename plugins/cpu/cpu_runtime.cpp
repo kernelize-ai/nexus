@@ -118,7 +118,7 @@ nxsGetDeviceProperty(nxs_int device_id, nxs_uint device_property_id,
  * @brief Create a buffer on the device
  * @return Error status or Succes.
  ***********************************************************************/
-extern "C" nxs_int NXS_API_CALL nxsCreateBuffer(nxs_int device_id, nxs_shape shape,
+extern "C" nxs_int NXS_API_CALL nxsCreateBuffer(nxs_int device_id, nxs_buffer_layout shape,
                                                 void *host_ptr,
                                                 nxs_uint settings) {
   auto rt = getRuntime();

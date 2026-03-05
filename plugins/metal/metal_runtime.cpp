@@ -428,7 +428,7 @@ nxsGetDeviceProperty(nxs_int device_id, nxs_uint device_property_id,
  * @brief Create a buffer on the device
  * @return Error status or Succes.
  ***********************************************************************/
-extern "C" nxs_int NXS_API_CALL nxsCreateBuffer(nxs_int device_id, nxs_shape shape,
+extern "C" nxs_int NXS_API_CALL nxsCreateBuffer(nxs_int device_id, nxs_buffer_layout shape,
                                                 void *host_ptr,
                                                 nxs_uint settings) {
   auto rt = getRuntime();
@@ -439,6 +439,10 @@ extern "C" nxs_int NXS_API_CALL nxsCreateBuffer(nxs_int device_id, nxs_shape sha
 
   MTL::ResourceOptions bopts = MTL::ResourceStorageModeShared;  // unified?
   auto size = nxsGetNumElements(shape);
+  if (auto element_size_bits = nxsGetDataTypeSizeBits(shape.data_type)) {
+    size *= element_size_bits;
+    size /= 8;
+  }
   NXSAPI_LOG(nexus::NXS_LOG_NOTE, "createBuffer ", size);
 
   MTL::Buffer *buf;

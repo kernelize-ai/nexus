@@ -205,7 +205,7 @@ nxsGetDevicePropertyFromPath(
 /*
  * Allocate a buffer on the device.
  */
-extern "C" nxs_int NXS_API_CALL nxsCreateBuffer(nxs_int device_id, nxs_shape shape,
+extern "C" nxs_int NXS_API_CALL nxsCreateBuffer(nxs_int device_id, nxs_buffer_layout shape,
                                                 void *data_ptr,
                                                 nxs_uint buffer_settings) {
   auto rt = getRuntime();
@@ -213,6 +213,10 @@ extern "C" nxs_int NXS_API_CALL nxsCreateBuffer(nxs_int device_id, nxs_shape sha
   if (!deviceObject) return NXS_InvalidDevice;
 
   size_t size = nxsGetNumElements(shape);
+  if (auto element_size_bits = nxsGetDataTypeSizeBits(shape.data_type)) {
+    size *= element_size_bits;
+    size /= 8;
+  }
   NXSAPI_LOG(nexus::NXS_LOG_NOTE, "createBuffer: ", size);
   if (!(buffer_settings & NXS_BufferSettings_OnDevice)) {
     void *cuda_ptr = nullptr;

@@ -87,7 +87,7 @@ NEXUS_API_FUNC(nxs_status, GetDeviceProperty,
 ***********************************************************************/
 NEXUS_API_FUNC(nxs_int, CreateBuffer,
     nxs_int device_id,
-    nxs_shape shape,
+    nxs_buffer_layout shape,
     void* host_ptr,
     nxs_uint buffer_settings
 )

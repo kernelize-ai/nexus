@@ -262,9 +262,11 @@ struct nxs_dim3 {
     nxs_uint x,y,z;
 };
 
-struct nxs_shape {
-    nxs_ulong dims[NXS_MAX_DIMS];
+struct nxs_buffer_layout {
+    nxs_uint data_type;
     nxs_uint rank;
+    nxs_ulong dim[NXS_MAX_DIMS];
+    nxs_ulong stride[NXS_MAX_DIMS];
 };
 
 /* Macro names and corresponding values defined by OpenCL */

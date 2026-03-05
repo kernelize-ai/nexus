@@ -15,7 +15,7 @@ using namespace nexus;
 
 struct DevPtr {
   char *ptr = nullptr;
-  Shape shape;
+  Layout shape;
   std::string runtime_name;
   nxs_int device_id = -1;
   nxs_data_type dtype = NXS_DataType_Undefined;
@@ -82,21 +82,22 @@ static DevPtr getPointer(PyObject *obj) {
       PyObject *shape_len = PyObject_CallFunctionObjArgs(func, shape_m, NULL);
       Py_DECREF(func);
       assert(shape_len);
-      nxs_shape _shape;
+      nxs_buffer_layout _shape{};
+      _shape.data_type = result.dtype;
       _shape.rank = PyLong_AsUnsignedLongLong(shape_len);
       assert(_shape.rank < NXS_MAX_DIMS);
       for (nxs_int i = 0; i < _shape.rank; i++) {
         PyObject *index = PyLong_FromLong(i);
         PyObject *item = PyObject_GetItem(shape_m, index);  
         Py_DECREF(index);
-        _shape.dims[i] = PyLong_AsUnsignedLongLong(item);
+        _shape.dim[i] = PyLong_AsUnsignedLongLong(item);
         Py_DECREF(item);
       }
-      result.shape = Shape(_shape);
+      result.shape = Layout(_shape);
       Py_DECREF(shape_len);
       Py_DECREF(shape_m);
     } else {
-      result.shape = Shape(PyLong_AsUnsignedLongLong(nbytes_ret));
+      result.shape = Layout(PyLong_AsUnsignedLongLong(nbytes_ret), result.dtype);
     }
     Py_DECREF(data_ret);
     Py_DECREF(nbytes_ret);
@@ -124,7 +125,7 @@ static Buffer make_buffer(py::object tensor, Device device = Device()) {
   }
 
   auto data_ptr = getPointer(tensor.ptr());
-  nxs_uint settings = data_ptr.dtype;
+  nxs_uint settings = 0;
   if (data_ptr.shape.getRank() == 0) { // is size 0 legal?
     return Buffer();
   }
@@ -427,22 +428,21 @@ void pynexus::init_system_bindings(py::module &m) {
           },
           py::arg("path") = std::vector<std::string_view>());
 
-    py::class_<Shape>(m, "shape", py::module_local())
-      .def("rank", [](Shape &self) { return self.getRank(); })
-      .def_property_readonly("rank", [](Shape &self) { return self.getRank(); })
-      .def("dim", [](Shape &self, size_t index) { return self.getDim(index); })
-      //.def("stride", [](Shape &self, size_t index) { return self.getStride(index); })
-      .def("numel", [](Shape &self) { return self.getNumElements(); })
-      .def_property_readonly("numel", [](Shape &self) { return self.getNumElements(); });
+    py::class_<Layout>(m, "layout", py::module_local())
+      .def("rank", [](Layout &self) { return self.getRank(); })
+      .def_property_readonly("rank", [](Layout &self) { return self.getRank(); })
+      .def("dim", [](Layout &self, size_t index) { return self.getDim(index); })
+      .def("numel", [](Layout &self) { return self.getNumElements(); })
+      .def_property_readonly("numel", [](Layout &self) { return self.getNumElements(); });
     
     make_object_class<Buffer>(m, "buffer")
-      .def("shape", [](Buffer &self) { return self.getShape(); })
-      .def("numel", [](Buffer &self) { return self.getNumElements(); })
-      .def("element_size", [](Buffer &self) { return self.getElementSizeBits(); })
-      .def("data_type", [](Buffer &self) { return self.getDataType(); })
+      .def("shape", [](Buffer &self) { return self.getLayout(); })
+      .def("numel", [](Buffer &self) { return self.getLayout().getNumElements(); })
+      .def("element_size", [](Buffer &self) { return self.getLayout().getElementSizeBits(); })
+      .def("data_type", [](Buffer &self) { return self.getLayout().getDataType(); })
       .def_property_readonly("size_bytes", [](Buffer &self) { return self.getSizeBytes(); })
       .def_property_readonly("nbytes", [](Buffer &self) { return self.getSizeBytes(); })
-      .def_property_readonly("dtype", [](Buffer &self) { return self.getDataType(); })
+      .def_property_readonly("dtype", [](Buffer &self) { return self.getLayout().getDataType(); })
       .def("data_ptr", [](Buffer &self) -> intptr_t { return reinterpret_cast<intptr_t>(self.getData()); }) // TODO: get Device pointer
       .def("copy", [](Buffer &self, py::object tensor) {
         auto data_ptr = getPointer(tensor.ptr());

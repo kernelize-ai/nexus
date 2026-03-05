@@ -200,38 +200,41 @@ typedef enum _nxs_command_arg_type nxs_command_arg_type;
  */
 enum _nxs_data_type {
     NXS_DataType_Undefined = 0,
-    NXS_DataType_F32 = 1 << NXS_CommandArgType_NextBitOffset,
-    NXS_DataType_F16 = 2 << NXS_CommandArgType_NextBitOffset,
-    NXS_DataType_BF16 = 3 << NXS_CommandArgType_NextBitOffset,
-    NXS_DataType_F8 = 4 << NXS_CommandArgType_NextBitOffset,
-    NXS_DataType_BF8 = 5 << NXS_CommandArgType_NextBitOffset,
-    NXS_DataType_F4 = 6 << NXS_CommandArgType_NextBitOffset,
-    NXS_DataType_BF4 = 7 << NXS_CommandArgType_NextBitOffset,
-    NXS_DataType_I32 = 8 << NXS_CommandArgType_NextBitOffset,
-    NXS_DataType_U32 = 9 << NXS_CommandArgType_NextBitOffset,
-    NXS_DataType_I16 = 10 << NXS_CommandArgType_NextBitOffset,
-    NXS_DataType_U16 = 11 << NXS_CommandArgType_NextBitOffset,
-    NXS_DataType_I8 = 12 << NXS_CommandArgType_NextBitOffset,
-    NXS_DataType_U8 = 13 << NXS_CommandArgType_NextBitOffset,
-    NXS_DataType_I4 = 14 << NXS_CommandArgType_NextBitOffset,
-    NXS_DataType_U4 = 15 << NXS_CommandArgType_NextBitOffset,
-    NXS_DataType_F64 = 16 << NXS_CommandArgType_NextBitOffset,
-    NXS_DataType_I64 = 17 << NXS_CommandArgType_NextBitOffset,
-    NXS_DataType_U64 = 18 << NXS_CommandArgType_NextBitOffset,
-    NXS_DataType_Bool = 19 << NXS_CommandArgType_NextBitOffset,
-    NXS_DataType_Mask = 31 << NXS_CommandArgType_NextBitOffset,
-    NXS_DataType_PREFIX_LEN = 13,
+    NXS_DataType_F32 = 1,
+    NXS_DataType_F16 = 2,
+    NXS_DataType_BF16 = 3,
+    NXS_DataType_F8 = 4,
+    NXS_DataType_BF8 = 5,
+    NXS_DataType_F4 = 6,
+    NXS_DataType_BF4 = 7,
+    NXS_DataType_I32 = 8,
+    NXS_DataType_U32 = 9,
+    NXS_DataType_I16 = 10,
+    NXS_DataType_U16 = 11,
+    NXS_DataType_I8 = 12,
+    NXS_DataType_U8 = 13,
+    NXS_DataType_I4 = 14,
+    NXS_DataType_U4 = 15,
+    NXS_DataType_F64 = 16,
+    NXS_DataType_I64 = 17,
+    NXS_DataType_U64 = 18,
+    NXS_DataType_Bool = 19,
+    NXS_DataType_Mask = 31,
     /* Flags */
-    NXS_DataType_Block = 32 << NXS_CommandArgType_NextBitOffset,
-    NXS_DataType_Flags = 1 << (NXS_CommandArgType_NextBitOffset + 5),
-    NXS_DataType_NextBitOffset = NXS_CommandArgType_NextBitOffset + 6
+    NXS_DataType_Block = 32,
+    NXS_DataType_Block_8 = 33,
+    NXS_DataType_Block_16 = 34,
+    NXS_DataType_Block_32 = 35,
+    NXS_DataType_Flags_Mask = 3 << 5,
+
+    NXS_DataType_PREFIX_LEN = 13,
 };
 typedef enum _nxs_data_type nxs_data_type;
 
 nxs_data_type nxsGetDataType(nxs_uint settings);
 nxs_uint nxsGetDataTypeFlags(nxs_uint settings);
 nxs_uint nxsGetDataTypeSizeBits(nxs_uint settings);
-nxs_ulong nxsGetNumElements(nxs_shape shape);
+nxs_ulong nxsGetNumElements(const nxs_buffer_layout &layout);
 const char *nxsGetDataTypeName(nxs_data_type type);
 
 /* ENUM nxs_command_queue_properties

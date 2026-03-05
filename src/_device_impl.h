@@ -49,7 +49,7 @@ class DeviceImpl : public Impl {
   Library createLibrary(const std::string &path, nxs_uint settings = 0);
   Library createLibrary(void *libraryData, size_t size, nxs_uint settings = 0);
 
-  Buffer createBuffer(const Shape &shape, const void *data = nullptr,
+  Buffer createBuffer(const Layout &layout, const void *data = nullptr,
                       nxs_uint settings = 0);
   Buffer copyBuffer(Buffer buf, nxs_uint settings = 0);
   Buffer fillBuffer(void *value, nxs_uint value_size_bytes);
