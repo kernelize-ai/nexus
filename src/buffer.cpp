@@ -146,12 +146,25 @@ Buffer Buffer::getLocal() const {
   return get()->getLocal();
 }
 
-nxs_status Buffer::copy(void *_hostBuf, nxs_uint direction) { NEXUS_OBJ_MCALL(NXS_InvalidBuffer, copyData, _hostBuf, direction); }
-nxs_status Buffer::fill(void *value, nxs_uint size_bytes) { NEXUS_OBJ_MCALL(NXS_InvalidBuffer, fillData, value, size_bytes); }
+nxs_status Buffer::copy(void *_hostBuf, nxs_uint direction) {
+  NEXUS_OBJ_MCALL(NXS_InvalidBuffer, copyData, _hostBuf, direction);
+}
+nxs_status Buffer::fill(void *value, nxs_uint size_bytes) {
+  NEXUS_OBJ_MCALL(NXS_InvalidBuffer, fillData, value, size_bytes);
+}
 
+////////////////////////////////////////////////////////////////////////////////
+// This constructor is used to construct a layout from a shape and data type.
 Layout::Layout(nxs_ulong *_dims, nxs_uint _dims_count, nxs_uint _data_type)
     : layout{} {
   layout.data_type = _data_type;
   layout.rank = _dims_count;
-  std::copy(_dims, _dims + _dims_count, layout.dim);
+  for (nxs_uint i = 0; i < _dims_count; i++) {
+    layout.dim[i] = _dims[i];
+    if (i == 0) {
+      layout.stride[i] = 1;
+    } else {
+      layout.stride[i] = layout.dim[i-1] * layout.stride[i-1];
+    }
+  }
 }
