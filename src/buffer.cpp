@@ -27,24 +27,22 @@ detail::BufferImpl::BufferImpl(detail::Impl base, const Layout &layout, const ch
 detail::BufferImpl::~BufferImpl() { release(); }
 
 void detail::BufferImpl::release() {
-  if (data != nullptr) {
-    if (hasSetting(NXS_BufferSettings_Maintain)) {
-      delete static_cast<StorageType *>(data);
-    }
-    data = nullptr;
-  }
   size_bytes = 0;
+  data = nullptr;
 }
 
 void *detail::BufferImpl::getVoidData() const {
-  if (hasSetting(NXS_BufferSettings_Maintain)) {
-    return static_cast<void *>(static_cast<StorageType *>(data)->data());
-  }
   return data;
 }
 
-const char *detail::BufferImpl::getData() const {
-  return reinterpret_cast<const char *>(getVoidData());
+const char *detail::BufferImpl::getDataPtr() const {
+  auto rt = getParentOfType<RuntimeImpl>();
+  if (rt) {
+    if (auto property = rt->getAPIProperty<NF_nxsGetBufferProperty>(NP_Value, getId())) {
+      return reinterpret_cast<const char *>(property->template getValue<nxs_long>());
+    }
+  }
+  return nullptr;
 }
 
 std::optional<Property> detail::BufferImpl::getProperty(nxs_int prop) const {
@@ -68,41 +66,8 @@ std::optional<Property> detail::BufferImpl::getProperty(nxs_int prop) const {
 }
 
 void detail::BufferImpl::setData(nxs_ulong sz, const char *hostData) {
-  if (data != nullptr) {
-    release();
-  }
   size_bytes = sz;
-  if (getSettings() & NXS_BufferSettings_Maintain) {
-    NEXUS_LOG(NXS_LOG_NOTE, "setData: maintain: ", sz);
-    // SHOULD BE RARE
-    if (hostData != nullptr) {
-      data = new StorageType();
-      static_cast<StorageType *>(data)->assign(hostData, hostData + sz);
-    } else {
-      data = new StorageType(sz);
-    }
-  } else {
-    NEXUS_LOG(NXS_LOG_NOTE, "setData: not maintain: ", sz);
-    data = const_cast<void *>(reinterpret_cast<const void *>(hostData));
-  }
-}
-
-Buffer detail::BufferImpl::getLocal() {
-  NEXUS_LOG(NXS_LOG_NOTE, "getLocal: ", getVoidData());
-  void *lbuf = getVoidData();
-  if (!lbuf) {
-    setSetting(NXS_BufferSettings_Maintain);
-    setData(size_bytes, nullptr);
-    lbuf = getVoidData();
-  }
-  if (getParentOfType<DeviceImpl>()) {
-    auto *rt = getParentOfType<RuntimeImpl>();
-    if (nxs_success(rt->runAPIFunction<NF_nxsCopyBuffer>(getId(), lbuf, 0))) {
-      auto *sys = getParentOfType<detail::SystemImpl>();
-      return sys->createBuffer(layout, reinterpret_cast<const char *>(lbuf));
-    }
-  }
-  return *this;
+  data = const_cast<void *>(reinterpret_cast<const void *>(hostData));
 }
 
 nxs_status detail::BufferImpl::copyData(void *_hostBuf, nxs_uint direction) const {
@@ -112,9 +77,7 @@ nxs_status detail::BufferImpl::copyData(void *_hostBuf, nxs_uint direction) cons
     return (nxs_status)rt->runAPIFunction<NF_nxsCopyBuffer>(getId(), _hostBuf,
                                                             direction);
   }
-  NEXUS_LOG(NXS_LOG_NOTE, "copyData: from host: ", getSizeBytes());
-  std::memcpy(_hostBuf, getData(), getSizeBytes());
-  return NXS_Success;
+  return NXS_InvalidDevice;
 }
 
 nxs_status detail::BufferImpl::fillData(void *value, nxs_uint size_bytes) const {
@@ -140,11 +103,7 @@ nxs_ulong Buffer::getSizeBytes() const { NEXUS_OBJ_MCALL(0, getSizeBytes); }
 const Layout &Buffer::getLayout() const {
   return get()->getLayout();
 }
-const char *Buffer::getData() const { NEXUS_OBJ_MCALL(nullptr, getData); }
-
-Buffer Buffer::getLocal() const {
-  return get()->getLocal();
-}
+const char *Buffer::getDataPtr() const { NEXUS_OBJ_MCALL(nullptr, getDataPtr); }
 
 nxs_status Buffer::copy(void *_hostBuf, nxs_uint direction) {
   NEXUS_OBJ_MCALL(NXS_InvalidBuffer, copyData, _hostBuf, direction);

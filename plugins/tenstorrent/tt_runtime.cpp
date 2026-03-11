@@ -124,6 +124,28 @@ extern "C" nxs_int NXS_API_CALL nxsCreateBuffer(nxs_int device_id, nxs_buffer_la
 }
 
 /************************************************************************
+ * @def GetBufferProperty
+ * @brief Return Buffer properties
+ * @return Error status or Succes.
+ ***********************************************************************/
+ extern "C" nxs_status NXS_API_CALL nxsGetBufferProperty(nxs_int buffer_id, nxs_uint buffer_property_id,
+                                                     void *property_value, size_t *property_value_size) {
+  auto rt = getRuntime();
+  auto buffer = rt->get<TTBuffer>(buffer_id);
+  if (!buffer) return NXS_InvalidBuffer;
+
+  switch (buffer_property_id) {
+    case NP_Keys: {
+      nxs_long keys[] = {NP_Name, NP_Type, NP_Shape, NP_Size, NP_Value};
+      return rt::getPropertyVec(property_value, property_value_size, keys, 5);
+    }
+    case NP_Value:
+      return rt::getPropertyInt(property_value, property_value_size, reinterpret_cast<nxs_long>(buffer->getAddress()));
+  }
+  return NXS_InvalidProperty;
+}
+
+/************************************************************************
  * @def CopyBuffer
  * @brief Copy a buffer to the host
  * @return Error status or Succes.

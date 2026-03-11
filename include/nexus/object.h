@@ -53,7 +53,6 @@ class Impl {
 template <typename Timpl>
 class Object {
   typedef Timpl Impl;
-  // set of runtimes
   typedef std::shared_ptr<Timpl> ImplRef;
   ImplRef impl;
 

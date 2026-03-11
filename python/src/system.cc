@@ -460,7 +460,7 @@ void pynexus::init_system_bindings(py::module &m) {
     .def_property_readonly("size_bytes", [](Buffer &self) { return self.getSizeBytes(); })
     .def_property_readonly("nbytes", [](Buffer &self) { return self.getSizeBytes(); })
     .def_property_readonly("dtype", [](Buffer &self) { return self.getLayout().getDataType(); })
-    .def("data_ptr", [](Buffer &self) -> intptr_t { return reinterpret_cast<intptr_t>(self.getData()); }) // TODO: get Device pointer
+    .def("data_ptr", [](Buffer &self) -> intptr_t { return reinterpret_cast<intptr_t>(self.getDataPtr()); })
     .def("copy", [](Buffer &self, py::object tensor) {
       auto data_ptr = getPointer(tensor.ptr());
       if (!data_ptr.runtime_name.empty() && data_ptr.runtime_name != "cpu") {

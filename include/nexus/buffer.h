@@ -78,11 +78,8 @@ class Buffer : public Object<detail::BufferImpl> {
   nxs_ulong getSizeBytes() const;
   /// Shape/dtype metadata for this buffer.
   const Layout &getLayout() const;
-  /// Raw pointer to the buffer's host-visible storage, if available.
-  const char *getData() const;
-
-  /// Return a buffer alias that is local to the current device context.
-  Buffer getLocal() const;
+  /// Raw pointer to the buffer's device-visible storage, if available.
+  const char *getDataPtr() const;
 
   /// Copy buffer contents to/from host memory depending on direction.
   nxs_status copy(void *_hostBuf, nxs_uint direction = NXS_BufferDeviceToHost);

@@ -178,9 +178,10 @@ Buffer detail::DeviceImpl::createBuffer(const Layout &layout, const void *data,
 Buffer detail::DeviceImpl::copyBuffer(Buffer buf, nxs_uint settings) {
   NEXUS_LOG(NXS_LOG_NOTE, "  copyBuffer");
   settings |= buf.getSettings() & ~NXS_BufferSettings_OnDevice;
-  APICALL(nxsCreateBuffer, getId(), buf.getLayout().get(), (void *)buf.getData(),
+  auto *data_ptr = buf.getDataPtr();
+  APICALL(nxsCreateBuffer, getId(), buf.getLayout().get(), (void *)data_ptr,
           settings);
-  Buffer nbuf(Impl(this, apiResult, settings), buf.getLayout(), buf.getData());
+  Buffer nbuf(Impl(this, apiResult, settings), buf.getLayout(), data_ptr);
   buffers.add(nbuf);
   return nbuf;
 }

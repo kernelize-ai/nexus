@@ -17,7 +17,7 @@ class BufferImpl : public Impl {
 
   nxs_ulong getSizeBytes() const { return size_bytes; }
   const Layout &getLayout() const { return layout; }
-  const char *getData() const;
+  const char *getDataPtr() const;
 
   void setData(nxs_ulong sz, const char *hostData);
   void setData(void *_data) { data = _data; }

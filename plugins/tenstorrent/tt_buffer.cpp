@@ -20,8 +20,6 @@ TTBuffer::TTBuffer(TTDevice *dev, nxs_buffer_layout shape,
                    void *data_ptr, nxs_uint settings)
   : Buffer(shape, data_ptr, settings), device(dev) {
     if (shape.rank != 0) {
-      assert(shape.rank >= 2 && "Shape must be at least 2D");
-
       // Pad up to the nearest tile size
       rowCount = 1;
       paddedSize = 1;
@@ -29,6 +27,12 @@ TTBuffer::TTBuffer(TTDevice *dev, nxs_buffer_layout shape,
         tilizedShape.dim[i] = ((shape.dim[i] + tileWidth - 1) / tileWidth) * tileWidth;
         paddedSize *= tilizedShape.dim[i];
         if (i != 0) rowCount *= tilizedShape.dim[i];
+      }
+      if (shape.rank == 1) {
+        // pad up to the nearest tile size
+        tilizedShape.dim[1] = tileWidth;
+        rowCount = tileWidth;
+        paddedSize *= tileWidth;
       }
 
       // Size of a tile in bytes
