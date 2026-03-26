@@ -594,15 +594,27 @@ void pynexus::init_system_bindings(py::module &m) {
       .def("get_buffers", [](Device &self) { return self.getBuffers(); })
       .def("load_library",
            [](Device &self, const char *data, size_t size) {
-             return self.createLibrary((void *)data, size);
+             auto lib = self.createLibrary((void *)data, size);
+             if (!lib) {
+               throw std::runtime_error("load_library: failed to create library from data");
+             }
+             return lib;
            })
       .def("load_library",
            [](Device &self, Info catalog, const std::string &libraryName) {
-             return self.loadLibrary(catalog, libraryName);
+             auto lib = self.loadLibrary(catalog, libraryName);
+             if (!lib) {
+               throw std::runtime_error("load_library: failed to load library " + libraryName);
+             }
+             return lib;
            })
       .def("load_library",
            [](Device &self, const std::string &filepath) {
-             return self.createLibrary(filepath);
+             auto lib = self.createLibrary(filepath);
+             if (!lib) {
+               throw std::runtime_error("load_library: failed to load library " + filepath);
+             }
+             return lib;
            })
       .def("get_libraries", [](Device &self) { return self.getLibraries(); })
       .def(

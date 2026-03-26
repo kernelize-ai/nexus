@@ -270,7 +270,7 @@ extern "C" nxs_int NXS_API_CALL nxsCreateLibraryFromFile(
   if (!lib) {
     const char *error = dlerror();
     NXSAPI_LOG(nexus::NXS_LOG_ERROR, "createLibraryFromFile ", error);
-    throw std::invalid_argument(error ? error : "nxsCreateLibraryFromFile: Library not found");
+    return NXS_InvalidLibrary;
   }
   return rt->addObject(lib);
 }

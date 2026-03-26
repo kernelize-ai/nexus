@@ -8,7 +8,7 @@ class TestLoadLibraryMissing(unittest.TestCase):
     runtime = nexus.get_runtimes()[0]
     device = runtime.get_devices()[0]
 
-    with self.assertRaises(ValueError):
+    with self.assertRaises(RuntimeError):
       device.load_library("missing_kernel_file.so")
 
 
