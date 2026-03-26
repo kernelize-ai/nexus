@@ -12,6 +12,7 @@
 #include <functional>
 #include <magic_enum/magic_enum.hpp>
 #include <optional>
+#include <stdexcept>
 #include <vector>
 
 #define NXSAPI_LOG_MODULE "cpu_runtime"
@@ -267,8 +268,9 @@ extern "C" nxs_int NXS_API_CALL nxsCreateLibraryFromFile(
 
   void *lib = dlopen(library_path, RTLD_NOW);
   if (!lib) {
-    NXSAPI_LOG(nexus::NXS_LOG_ERROR, "createLibraryFromFile ", dlerror());
-    return NXS_InvalidLibrary;
+    const char *error = dlerror();
+    NXSAPI_LOG(nexus::NXS_LOG_ERROR, "createLibraryFromFile ", error);
+    throw std::invalid_argument(error ? error : "nxsCreateLibraryFromFile: Library not found");
   }
   return rt->addObject(lib);
 }
